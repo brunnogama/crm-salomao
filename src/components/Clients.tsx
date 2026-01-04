@@ -1,23 +1,14 @@
-Com certeza. Vamos reestilizar o card para torná-lo mais compacto ("condensado"), destacar as informações estratégicas (Sócio e Brinde) e ajustar os padrões de visualização conforme solicitado.
+O código do `src/components/Clients.tsx` estava **completamente corrompido** (cheio de caracteres inválidos, linhas quebradas e importações erradas). Isso pode ter acontecido se você copiou e colou apenas partes do código ou se o editor inseriu caracteres estranhos.
 
-As principais mudanças no código abaixo são:
+Vou reenviar o código do `Clients.tsx` **limpo e corrigido**, garantindo que não tenha nenhum erro de sintaxe.
 
-1. **Estado Inicial:** `viewMode` agora começa como `'card'` e `sortBy` como `'nome'`.
-2. **Design do Card:**
-* Reduzi o `padding` e o tamanho dos ícones/textos.
-* O **Sócio** ganhou destaque com uma cor e peso de fonte maior.
-* O **Local** agora mostra apenas o `client.estado` (UF).
-* Os botões de ação (Editar, WhatsApp, Ligar) agora são todos **ícones**, economizando espaço vertical.
+**Por favor, apague todo o conteúdo do arquivo `src/components/Clients.tsx` e cole este código novo:**
 
-
-
-Substitua **todo** o conteúdo de `src/components/Clients.tsx` pelo código abaixo:
-
-### Arquivo: `src/components/Clients.tsx` (Visual Cards Condensado)
+### Arquivo: `src/components/Clients.tsx` (Versão Limpa e Corrigida)
 
 ```tsx
 import { useState, useEffect, useMemo } from 'react'
-import { Plus, Filter, LayoutList, LayoutGrid, Pencil, Trash2, X, AlertTriangle, ChevronDown, FileSpreadsheet, RefreshCw, ArrowUpDown, MessageCircle, Phone, MapPin, Briefcase } from 'lucide-react'
+import { Plus, Filter, LayoutList, LayoutGrid, Pencil, Trash2, X, AlertTriangle, ChevronDown, FileSpreadsheet, RefreshCw, ArrowUpDown, MessageCircle, Phone, MapPin } from 'lucide-react'
 import { NewClientModal, ClientData } from './NewClientModal'
 import { utils, writeFile } from 'xlsx'
 import { supabase } from '../lib/supabase'
@@ -27,7 +18,6 @@ interface Client extends ClientData {
 }
 
 export function Clients() {
-  // 1. ALTERAÇÃO: Padrão agora é 'card'
   const [viewMode, setViewMode] = useState<'list' | 'card'>('card')
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -38,7 +28,6 @@ export function Clients() {
   const [socioFilter, setSocioFilter] = useState('')
   const [brindeFilter, setBrindeFilter] = useState('')
   
-  // 2. ALTERAÇÃO: Padrão de ordenação agora é por 'nome'
   const [sortBy, setSortBy] = useState<'nome' | 'socio' | null>('nome')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
 
@@ -49,7 +38,6 @@ export function Clients() {
     const { data, error } = await supabase
       .from('clientes')
       .select('*')
-      // Removemos o order do banco pois vamos ordenar no front pelo state inicial 'nome'
     
     if (error) {
       console.error('Erro ao buscar clientes:', error)
@@ -363,7 +351,6 @@ Agradecemos a atenção!`
             )}
 
             {viewMode === 'card' && (
-              // 3. ALTERAÇÃO: CARD CONDENSADO
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {processedClients.map((client) => (
                   <div key={client.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md transition-all relative group flex flex-col justify-between">
