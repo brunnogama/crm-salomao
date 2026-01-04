@@ -1,13 +1,17 @@
 import { 
   LayoutDashboard, 
   Users, 
-  FileWarning, 
   KanbanSquare, 
   BookOpen, 
   History, 
   Settings, 
   LogOut,
-  UserCircle
+  UserCircle,
+  FileText,     // Novo para Contratos
+  FileCheck,    // Novo para Propostas
+  ShieldCheck,  // Novo para Compliance
+  Folder,       // Novo para GED
+  BarChart3     // Novo para Volumetria
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
@@ -21,13 +25,13 @@ export function Sidebar({ activePage, onNavigate, userName }: SidebarProps) {
   
   const mainItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'contratos', label: 'Contratos', icon: FileWarning },
-    { id: 'propostas', label: 'Propostas', icon: FileWarning },
-    { id: 'volumetria', label: 'Volumetria', icon: LayoutDashboard },
-    { id: 'compliance', label: 'Compliance', icon: FileWarning },
+    { id: 'contratos', label: 'Contratos', icon: FileText },      // Ícone Corrigido
+    { id: 'propostas', label: 'Propostas', icon: FileCheck },     // Ícone Corrigido
+    { id: 'volumetria', label: 'Volumetria', icon: BarChart3 },   // Ícone Ajustado (Gráfico)
+    { id: 'compliance', label: 'Compliance', icon: ShieldCheck }, // Ícone Corrigido
     { id: 'clientes', label: 'Clientes', icon: Users },
     { id: 'kanban', label: 'Kanban', icon: KanbanSquare },
-    { id: 'ged', label: 'GED', icon: FileWarning },
+    { id: 'ged', label: 'GED', icon: Folder },                    // Ícone Corrigido
   ]
 
   const bottomItems = [
@@ -38,9 +42,8 @@ export function Sidebar({ activePage, onNavigate, userName }: SidebarProps) {
   return (
     <div className="h-screen w-64 bg-[#112240] text-gray-300 flex flex-col font-sans border-r border-gray-800 flex-shrink-0">
       
-      {/* 1. Logo MAIOR */}
+      {/* 1. Logo */}
       <div className="h-24 flex items-center px-6 bg-[#112240] flex-shrink-0">
-        {/* AUMENTEI AQUI: h-12 */}
         <img src="/logo-branca.png" alt="Salomão" className="h-12 w-auto object-contain" />
       </div>
 
@@ -80,9 +83,8 @@ export function Sidebar({ activePage, onNavigate, userName }: SidebarProps) {
         ))}
       </div>
 
-      {/* 4. Rodapé do Usuário (LAYOUT NOVO IGUAL AO PRINT) */}
+      {/* 4. Rodapé do Usuário */}
       <div className="p-4 bg-[#0d1b33] flex-shrink-0">
-        {/* Container interno com fundo um pouco mais claro e borda, igual ao print */}
         <div className="flex items-center justify-between rounded-lg bg-[#112240] p-3 border border-gray-800/50">
             
             {/* Lado Esquerdo: Ícone e Nome */}
@@ -93,7 +95,7 @@ export function Sidebar({ activePage, onNavigate, userName }: SidebarProps) {
                 </span>
             </div>
 
-            {/* Lado Direito: Botão de Sair (Ícone Vermelho/Laranja destacado) */}
+            {/* Lado Direito: Botão de Sair */}
             <button 
               onClick={() => supabase.auth.signOut()}
               className="text-red-500 hover:text-red-400 transition-colors p-1 hover:bg-white/5 rounded"
