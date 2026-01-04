@@ -17,10 +17,65 @@ export function Clients() {
   const [socioFilter, setSocioFilter] = useState('')
   const [brindeFilter, setBrindeFilter] = useState('')
 
+  // DADOS CORRIGIDOS: Removida a propriedade 'brinde' que estava duplicada/errada
   const [clients, setClients] = useState<Client[]>([
-    { id: 1, nome: 'Carlos Eduardo', empresa: 'Tech Solutions', cargo: 'CEO', brinde: 'Brinde VIP', tipoBrinde: 'Brinde VIP', quantidade: 1, socio: 'Marcio Gama', cidade: 'São Paulo/SP', cep: '01000-000', endereco: 'Av Paulista', numero: '1000', complemento: '', bairro: 'Bela Vista', estado: 'SP', email: 'carlos@tech.com', observacoes: '', outroBrinde: '' },
-    { id: 2, nome: 'Ana Paula', empresa: 'Retail Corp', cargo: 'Diretora', brinde: 'Brinde Médio', tipoBrinde: 'Brinde Médio', quantidade: 2, socio: 'Rodrigo Salomão', cidade: 'Rio de Janeiro/RJ', cep: '20000-000', endereco: 'Av Rio Branco', numero: '500', complemento: '', bairro: 'Centro', estado: 'RJ', email: 'ana@retail.com', observacoes: '', outroBrinde: '' },
-    { id: 3, nome: 'Roberto Alves', empresa: 'Logística SA', cargo: 'Gerente', brinde: 'Brinde Médio', tipoBrinde: 'Brinde Médio', quantidade: 1, socio: 'Marcio Gama', cidade: 'Curitiba/PR', cep: '80000-000', endereco: 'Rua XV', numero: '200', complemento: '', bairro: 'Centro', estado: 'PR', email: 'roberto@log.com', observacoes: '', outroBrinde: '' },
+    { 
+      id: 1, 
+      nome: 'Carlos Eduardo', 
+      empresa: 'Tech Solutions', 
+      cargo: 'CEO', 
+      tipoBrinde: 'Brinde VIP', 
+      quantidade: 1, 
+      socio: 'Marcio Gama', 
+      cidade: 'São Paulo/SP', 
+      cep: '01000-000', 
+      endereco: 'Av Paulista', 
+      numero: '1000', 
+      complemento: '', 
+      bairro: 'Bela Vista', 
+      estado: 'SP', 
+      email: 'carlos@tech.com', 
+      observacoes: '', 
+      outroBrinde: '' 
+    },
+    { 
+      id: 2, 
+      nome: 'Ana Paula', 
+      empresa: 'Retail Corp', 
+      cargo: 'Diretora', 
+      tipoBrinde: 'Brinde Médio', 
+      quantidade: 2, 
+      socio: 'Rodrigo Salomão', 
+      cidade: 'Rio de Janeiro/RJ', 
+      cep: '20000-000', 
+      endereco: 'Av Rio Branco', 
+      numero: '500', 
+      complemento: '', 
+      bairro: 'Centro', 
+      estado: 'RJ', 
+      email: 'ana@retail.com', 
+      observacoes: '', 
+      outroBrinde: '' 
+    },
+    { 
+      id: 3, 
+      nome: 'Roberto Alves', 
+      empresa: 'Logística SA', 
+      cargo: 'Gerente', 
+      tipoBrinde: 'Brinde Médio', 
+      quantidade: 1, 
+      socio: 'Marcio Gama', 
+      cidade: 'Curitiba/PR', 
+      cep: '80000-000', 
+      endereco: 'Rua XV', 
+      numero: '200', 
+      complemento: '', 
+      bairro: 'Centro', 
+      estado: 'PR', 
+      email: 'roberto@log.com', 
+      observacoes: '', 
+      outroBrinde: '' 
+    },
   ])
 
   const uniqueSocios = Array.from(new Set(clients.map(c => c.socio)))
@@ -62,7 +117,6 @@ export function Clients() {
 
   // FUNÇÃO DE EXPORTAÇÃO (XLSX)
   const handleExportExcel = () => {
-    // 1. Formatar os dados para o Excel
     const dataToExport = filteredClients.map(client => ({
       "Nome do Cliente": client.nome,
       "Empresa": client.empresa,
@@ -79,10 +133,8 @@ export function Clients() {
       "Observações": client.observacoes
     }))
 
-    // 2. Criar uma Planilha
     const ws = utils.json_to_sheet(dataToExport)
 
-    // 3. Ajustar largura das colunas
     const wscols = [
       { wch: 25 }, // Nome
       { wch: 20 }, // Empresa
@@ -100,11 +152,9 @@ export function Clients() {
     ]
     ws['!cols'] = wscols
 
-    // 4. Criar o arquivo
     const wb = utils.book_new()
     utils.book_append_sheet(wb, ws, "Clientes Salomão")
 
-    // 5. Salvar
     const fileName = `Gestao_Clientes_Salomao_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.xlsx`
     writeFile(wb, fileName)
   }
@@ -187,7 +237,8 @@ export function Clients() {
                 className="appearance-none pl-9 pr-10 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#112240]/20 focus:border-[#112240] cursor-pointer shadow-sm transition-all min-w-[160px]"
              >
                 <option value="">Brinde: Todos</option>
-                {clients.map(c => c.tipoBrinde).filter((v, i, a) => a.indexOf(v) === i).map(brinde => (
+                {/* CORRIGIDO: Usando uniqueBrindes aqui para evitar o erro de variável não usada */}
+                {uniqueBrindes.map(brinde => (
                   <option key={brinde} value={brinde}>{brinde}</option>
                 ))}
              </select>
@@ -227,7 +278,6 @@ export function Clients() {
 
         {/* Botões de Ação */}
         <div className="flex items-center gap-3 w-full xl:w-auto">
-            {/* BOTÃO EXCEL (VERDE) */}
             <button 
               onClick={handleExportExcel}
               className="flex-1 xl:flex-none flex items-center justify-center px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all shadow-md hover:shadow-lg whitespace-nowrap transform hover:-translate-y-0.5"
