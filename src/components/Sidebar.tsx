@@ -7,11 +7,7 @@ import {
   Settings, 
   LogOut,
   UserCircle,
-  FileText,     // Novo para Contratos
-  FileCheck,    // Novo para Propostas
-  ShieldCheck,  // Novo para Compliance
-  Folder,       // Novo para GED
-  BarChart3     // Novo para Volumetria
+  FileWarning // Ícone para Incompletos
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
@@ -23,18 +19,17 @@ interface SidebarProps {
 
 export function Sidebar({ activePage, onNavigate, userName }: SidebarProps) {
   
+  // Lista Principal (Focada no CRM)
   const mainItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'contratos', label: 'Contratos', icon: FileText },      // Ícone Corrigido
-    { id: 'propostas', label: 'Propostas', icon: FileCheck },     // Ícone Corrigido
-    { id: 'volumetria', label: 'Volumetria', icon: BarChart3 },   // Ícone Ajustado (Gráfico)
-    { id: 'compliance', label: 'Compliance', icon: ShieldCheck }, // Ícone Corrigido
     { id: 'clientes', label: 'Clientes', icon: Users },
+    { id: 'incompletos', label: 'Incompletos', icon: FileWarning },
     { id: 'kanban', label: 'Kanban', icon: KanbanSquare },
-    { id: 'ged', label: 'GED', icon: Folder },                    // Ícone Corrigido
   ]
 
+  // Lista Inferior (Utilitários)
   const bottomItems = [
+    { id: 'manual', label: 'Manual do Sistema', icon: BookOpen },
     { id: 'historico', label: 'Histórico', icon: History },
     { id: 'configuracoes', label: 'Configurações', icon: Settings },
   ]
@@ -65,7 +60,7 @@ export function Sidebar({ activePage, onNavigate, userName }: SidebarProps) {
         ))}
       </div>
 
-      {/* 3. Menu Inferior (Histórico...) */}
+      {/* 3. Menu Inferior (Manual, Histórico, Config) */}
       <div className="pt-4 pb-2 px-3 bg-[#112240] flex-shrink-0">
         <div className="border-t border-gray-700/50 mb-4 mx-2"></div>
         
