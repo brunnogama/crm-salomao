@@ -1,12 +1,3 @@
-O código do `src/components/Clients.tsx` estava **completamente corrompido** (cheio de caracteres inválidos, linhas quebradas e importações erradas). Isso pode ter acontecido se você copiou e colou apenas partes do código ou se o editor inseriu caracteres estranhos.
-
-Vou reenviar o código do `Clients.tsx` **limpo e corrigido**, garantindo que não tenha nenhum erro de sintaxe.
-
-**Por favor, apague todo o conteúdo do arquivo `src/components/Clients.tsx` e cole este código novo:**
-
-### Arquivo: `src/components/Clients.tsx` (Versão Limpa e Corrigida)
-
-```tsx
 import { useState, useEffect, useMemo } from 'react'
 import { Plus, Filter, LayoutList, LayoutGrid, Pencil, Trash2, X, AlertTriangle, ChevronDown, FileSpreadsheet, RefreshCw, ArrowUpDown, MessageCircle, Phone, MapPin } from 'lucide-react'
 import { NewClientModal, ClientData } from './NewClientModal'
@@ -442,5 +433,3 @@ Agradecemos a atenção!`
     </div>
   )
 }
-
-```
