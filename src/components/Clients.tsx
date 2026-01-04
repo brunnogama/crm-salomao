@@ -17,7 +17,6 @@ export function Clients() {
   const [socioFilter, setSocioFilter] = useState('')
   const [brindeFilter, setBrindeFilter] = useState('')
 
-  // DADOS CORRIGIDOS: Note que NÃO EXISTE MAIS a propriedade "brinde", apenas "tipoBrinde"
   const [clients, setClients] = useState<Client[]>([
     { 
       id: 1, 
@@ -89,6 +88,20 @@ export function Clients() {
     })
   }, [clients, socioFilter, brindeFilter])
 
+  // LÓGICA DE SALVAMENTO (NOVO OU EDIÇÃO)
+  const handleSaveClient = (clientData: ClientData) => {
+    if (clientToEdit) {
+      // Edição: Atualiza o cliente existente
+      setClients(clients.map(c => c.id === clientToEdit.id ? { ...clientData, id: clientToEdit.id } : c))
+    } else {
+      // Novo: Gera um ID novo e adiciona
+      const newId = clients.length > 0 ? Math.max(...clients.map(c => c.id)) + 1 : 1
+      setClients([...clients, { ...clientData, id: newId }])
+    }
+    setIsModalOpen(false)
+    setClientToEdit(null)
+  }
+
   const handleEdit = (client: Client) => {
     setClientToEdit(client)
     setIsModalOpen(true)
@@ -115,7 +128,6 @@ export function Clients() {
     setBrindeFilter('')
   }
 
-  // FUNÇÃO DE EXPORTAÇÃO (XLSX)
   const handleExportExcel = () => {
     const dataToExport = filteredClients.map(client => ({
       "Nome do Cliente": client.nome,
@@ -136,19 +148,19 @@ export function Clients() {
     const ws = utils.json_to_sheet(dataToExport)
 
     const wscols = [
-      { wch: 25 }, // Nome
-      { wch: 20 }, // Empresa
-      { wch: 15 }, // Cargo
-      { wch: 20 }, // Sócio
-      { wch: 15 }, // Brinde
-      { wch: 10 }, // Qtd
-      { wch: 20 }, // Outro
-      { wch: 25 }, // Email
-      { wch: 20 }, // Cidade
-      { wch: 5 },  // UF
-      { wch: 40 }, // Endereço
-      { wch: 10 }, // CEP
-      { wch: 30 }, // Obs
+      { wch: 25 }, 
+      { wch: 20 }, 
+      { wch: 15 }, 
+      { wch: 20 }, 
+      { wch: 15 }, 
+      { wch: 10 }, 
+      { wch: 20 }, 
+      { wch: 25 }, 
+      { wch: 20 }, 
+      { wch: 5 },  
+      { wch: 40 }, 
+      { wch: 10 }, 
+      { wch: 30 }, 
     ]
     ws['!cols'] = wscols
 
@@ -162,9 +174,11 @@ export function Clients() {
   return (
     <div className="h-full flex flex-col relative">
       
+      {/* Passamos o onSave para o Modal */}
       <NewClientModal 
         isOpen={isModalOpen} 
         onClose={closeModal} 
+        onSave={handleSaveClient}
         clientToEdit={clientToEdit} 
       />
 
@@ -202,10 +216,8 @@ export function Clients() {
         </div>
       )}
 
-      {/* TOOLBAR */}
       <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-6 gap-4">
         
-        {/* Filtros */}
         <div className="flex items-center gap-3 w-full xl:w-auto overflow-x-auto pb-2 xl:pb-0 px-1">
            
            <div className="relative group">
@@ -237,7 +249,6 @@ export function Clients() {
                 className="appearance-none pl-9 pr-10 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#112240]/20 focus:border-[#112240] cursor-pointer shadow-sm transition-all min-w-[160px]"
              >
                 <option value="">Brinde: Todos</option>
-                {/* Aqui estamos usando a variável uniqueBrindes corretamente */}
                 {uniqueBrindes.map(brinde => (
                   <option key={brinde} value={brinde}>{brinde}</option>
                 ))}
@@ -276,9 +287,7 @@ export function Clients() {
            </div>
         </div>
 
-        {/* Botões de Ação */}
         <div className="flex items-center gap-3 w-full xl:w-auto">
-            {/* BOTÃO EXCEL (VERDE) */}
             <button 
               onClick={handleExportExcel}
               className="flex-1 xl:flex-none flex items-center justify-center px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all shadow-md hover:shadow-lg whitespace-nowrap transform hover:-translate-y-0.5"
@@ -307,7 +316,6 @@ export function Clients() {
           </div>
         ) : (
           <>
-            {/* MODO LISTA */}
             {viewMode === 'list' && (
               <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
                 <table className="min-w-full divide-y divide-gray-200">
@@ -374,7 +382,6 @@ export function Clients() {
               </div>
             )}
 
-            {/* MODO CARDS */}
             {viewMode === 'card' && (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredClients.map((client) => (
