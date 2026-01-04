@@ -31,13 +31,13 @@ export default function Login() {
       {/* LADO ESQUERDO - Formulário (Fundo Branco) */}
       <div className="w-full md:w-1/2 bg-white flex flex-col justify-center px-12 sm:px-24 relative">
         
-        {/* LOGO CENTRALIZADO E MAIOR */}
-        <div className="mb-8 text-center w-full">
+        {/* LOGO CENTRALIZADO - Tamanho Ajustado (Intermediário) */}
+        <div className="mb-10 text-center w-full">
           <img 
             src="/logo-salomao.png" 
             alt="Salomão Advogados" 
-            // AUMENTEI AQUI: h-28 para mobile, h-32 para desktop
-            className="h-28 md:h-32 object-contain mx-auto" 
+            // AJUSTE: h-20 (mobile) e h-24 (desktop) - Equilibrado
+            className="h-20 md:h-24 object-contain mx-auto" 
           />
         </div>
 
@@ -109,33 +109,39 @@ export default function Login() {
 
         <div className="absolute bottom-8 left-0 w-full text-center">
            <p className="text-[10px] text-gray-400 tracking-widest uppercase">
-             © 2026 Salomão Advogados • v1.2.0
+             © 2026 Salomão Advogados • v1.0.0
            </p>
         </div>
       </div>
 
-      {/* LADO DIREITO - Banner */}
+      {/* LADO DIREITO - Texto VOLTOU ao original (Gestão) */}
       <div className="hidden md:flex md:w-1/2 bg-[#112240] flex-col justify-center px-24 relative overflow-hidden">
+        
         <div className="absolute top-1/2 left-24 -translate-y-[180%]">
              <div className="h-12 w-12 rounded-full border border-gray-600 flex items-center justify-center">
                 <ArrowRight className="text-salomao-gold h-5 w-5" />
              </div>
         </div>
+
         <div className="relative z-10">
           <h2 className="text-4xl font-bold text-white mb-2 leading-tight">
-            Controladoria Jurídica<br/>
+            Portal de Gestão<br/>
             Estratégica
           </h2>
           <div className="h-1 w-16 bg-yellow-600 mb-6 mt-4"></div>
+
           <p className="text-gray-300 text-lg font-light leading-relaxed max-w-md">
-            Gestão inteligente de processos e contratos. A tecnologia garantindo a segurança e eficiência do <strong className="text-white font-semibold">Salomão Advogados</strong>.
+            Centralização inteligente de CRM, Recursos Humanos e Contatos. 
+            Tecnologia impulsionando a eficiência organizacional do <strong className="text-white font-semibold">Salomão Advogados</strong>.
           </p>
         </div>
+
         <div className="absolute bottom-8 left-24">
            <p className="text-[10px] text-gray-500 tracking-widest">
-             © 2026 Salomão Advogados • v2.5.0
+             © 2026 Salomão Advogados • Portal Gestão
            </p>
         </div>
+        
         <div className="absolute top-0 right-0 w-full h-full bg-gradient-to-bl from-white/5 to-transparent pointer-events-none"></div>
       </div>
     </div>
