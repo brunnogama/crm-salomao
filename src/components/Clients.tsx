@@ -21,7 +21,7 @@ export function Clients() {
 
   const [clients, setClients] = useState<Client[]>([])
 
-  // 1. CARREGAR DADOS DO SUPABASE
+  // 1. BUSCAR DADOS DO SUPABASE
   const fetchClients = async () => {
     setLoading(true)
     const { data, error } = await supabase
@@ -32,7 +32,7 @@ export function Clients() {
     if (error) {
       console.error('Erro ao buscar clientes:', error)
     } else {
-      // Mapear do formato do Banco (snake_case) para o App (camelCase)
+      // Converte snake_case (banco) para camelCase (app)
       const formattedClients: Client[] = data.map((item: any) => ({
         id: item.id,
         nome: item.nome,
@@ -57,7 +57,7 @@ export function Clients() {
     setLoading(false)
   }
 
-  // Carrega ao abrir a tela
+  // Carrega lista ao abrir a tela
   useEffect(() => {
     fetchClients()
   }, [])
@@ -73,9 +73,9 @@ export function Clients() {
     })
   }, [clients, socioFilter, brindeFilter])
 
-  // 2. SALVAR NO SUPABASE (NOVO OU EDIÇÃO)
+  // 2. SALVAR DADOS (Novo ou Edição)
   const handleSaveClient = async (clientData: ClientData) => {
-    // Prepara o objeto para o formato do banco
+    // Prepara objeto para o banco (snake_case)
     const dbData = {
       nome: clientData.nome,
       empresa: clientData.empresa,
@@ -96,7 +96,7 @@ export function Clients() {
     }
 
     if (clientToEdit) {
-      // ATUALIZAR
+      // UPDATE
       const { error } = await supabase
         .from('clientes')
         .update(dbData)
@@ -104,7 +104,7 @@ export function Clients() {
       
       if (error) console.error('Erro ao atualizar:', error)
     } else {
-      // CRIAR NOVO
+      // INSERT
       const { error } = await supabase
         .from('clientes')
         .insert([dbData])
@@ -117,7 +117,7 @@ export function Clients() {
     setClientToEdit(null)
   }
 
-  // 3. EXCLUIR NO SUPABASE
+  // 3. EXCLUIR DADOS
   const confirmDelete = async () => {
     if (clientToDelete) {
       const { error } = await supabase
@@ -189,7 +189,7 @@ export function Clients() {
   return (
     <div className="h-full flex flex-col relative">
       
-      {/* AQUI ESTAVA O ERRO: Agora estamos passando o onSave */}
+      {/* MODAL CONECTADO CORRETAMENTE */}
       <NewClientModal 
         isOpen={isModalOpen} 
         onClose={closeModal} 
