@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react'
-import { Download, Upload, FileSpreadsheet, CheckCircle, AlertCircle, FileUp } from 'lucide-react'
+import { Download, Upload, FileSpreadsheet, CheckCircle, AlertCircle } from 'lucide-react' // Removido 'FileUp'
 import { utils, read, writeFile } from 'xlsx'
 import { supabase } from '../lib/supabase'
 
