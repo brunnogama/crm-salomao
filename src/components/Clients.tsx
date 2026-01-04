@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Plus, Filter, LayoutList, LayoutGrid, Pencil, Trash2, X, AlertTriangle, ChevronDown, FileSpreadsheet, RefreshCw, ArrowUpDown } from 'lucide-react'
+import { Plus, Filter, LayoutList, LayoutGrid, Pencil, Trash2, X, AlertTriangle, ChevronDown, FileSpreadsheet, RefreshCw, ArrowUpDown, MessageCircle, Phone } from 'lucide-react'
 import { NewClientModal, ClientData } from './NewClientModal'
 import { utils, writeFile } from 'xlsx'
 import { supabase } from '../lib/supabase'
@@ -16,17 +16,14 @@ export function Clients() {
   const [clientToEdit, setClientToEdit] = useState<Client | null>(null)
   const [clientToDelete, setClientToDelete] = useState<Client | null>(null)
 
-  // Filtros
   const [socioFilter, setSocioFilter] = useState('')
   const [brindeFilter, setBrindeFilter] = useState('')
   
-  // Ordenação
   const [sortBy, setSortBy] = useState<'nome' | 'socio' | null>(null)
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
 
   const [clients, setClients] = useState<Client[]>([])
 
-  // 1. BUSCAR DADOS
   const fetchClients = async () => {
     setLoading(true)
     const { data, error } = await supabase
@@ -42,6 +39,7 @@ export function Clients() {
         nome: item.nome,
         empresa: item.empresa,
         cargo: item.cargo,
+        telefone: item.telefone, // Mapeando o novo campo
         tipoBrinde: item.tipo_brinde,
         outroBrinde: item.outro_brinde,
         quantidade: item.quantidade,
@@ -68,27 +66,20 @@ export function Clients() {
   const uniqueSocios = Array.from(new Set(clients.map(c => c.socio).filter(Boolean)))
   const uniqueBrindes = Array.from(new Set(clients.map(c => c.tipoBrinde).filter(Boolean)))
 
-  // LÓGICA DE FILTRO E ORDENAÇÃO
   const processedClients = useMemo(() => {
-    // 1. Filtrar
     let result = clients.filter(client => {
       const matchesSocio = socioFilter ? client.socio === socioFilter : true
       const matchesBrinde = brindeFilter ? client.tipoBrinde === brindeFilter : true
       return matchesSocio && matchesBrinde
     })
 
-    // 2. Ordenar
     if (sortBy) {
       result.sort((a, b) => {
         let valA = (sortBy === 'nome' ? a.nome : a.socio) || ''
         let valB = (sortBy === 'nome' ? b.nome : b.socio) || ''
-        
-        return sortDirection === 'asc' 
-          ? valA.localeCompare(valB)
-          : valB.localeCompare(valA)
+        return sortDirection === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA)
       })
     }
-
     return result
   }, [clients, socioFilter, brindeFilter, sortBy, sortDirection])
 
@@ -101,12 +92,28 @@ export function Clients() {
     }
   }
 
-  // 2. SALVAR DADOS
+  // AÇÕES DE TELEFONE E WHATSAPP
+  const handleWhatsApp = (phone: string, name: string) => {
+    const cleanPhone = phone.replace(/\D/g, '')
+    // Mensagem formal e amigável
+    const message = `Olá Sr(a). ${name}, somos do Salomão Advogados.\n\nEstamos atualizando nossa base de dados e gostaríamos de confirmar suas informações de contato e endereço.\n\nTeria um momento?`
+    // Link do WhatsApp
+    const url = `https://wa.me/55${cleanPhone}?text=${encodeURIComponent(message)}`
+    window.open(url, '_blank')
+  }
+
+  const handle3CX = (phone: string) => {
+    const cleanPhone = phone.replace(/\D/g, '')
+    // Protocolo 'tel:' abre o app padrão de chamadas (3CX se configurado)
+    window.location.href = `tel:${cleanPhone}`
+  }
+
   const handleSaveClient = async (clientData: ClientData) => {
     const dbData = {
       nome: clientData.nome,
       empresa: clientData.empresa,
       cargo: clientData.cargo,
+      telefone: clientData.telefone, // Salvando o novo campo
       tipo_brinde: clientData.tipoBrinde,
       outro_brinde: clientData.outroBrinde,
       quantidade: clientData.quantidade,
@@ -138,7 +145,6 @@ export function Clients() {
     }
   }
 
-  // 3. EXCLUIR DADOS
   const confirmDelete = async () => {
     if (clientToDelete) {
       try {
@@ -152,7 +158,6 @@ export function Clients() {
     }
   }
 
-  // DEFINIÇÃO DA FUNÇÃO QUE ESTAVA FALTANDO
   const handleEdit = (client: Client) => {
     setClientToEdit(client)
     setIsModalOpen(true)
@@ -165,6 +170,7 @@ export function Clients() {
     const dataToExport = processedClients.map(client => ({
       "Nome do Cliente": client.nome,
       "Empresa": client.empresa,
+      "Telefone": client.telefone,
       "Cargo": client.cargo,
       "Sócio Responsável": client.socio,
       "Tipo de Brinde": client.tipoBrinde,
@@ -179,7 +185,7 @@ export function Clients() {
     }))
 
     const ws = utils.json_to_sheet(dataToExport)
-    const wscols = [{ wch: 25 }, { wch: 20 }, { wch: 15 }, { wch: 20 }, { wch: 15 }, { wch: 10 }, { wch: 20 }, { wch: 25 }, { wch: 20 }, { wch: 5 }, { wch: 40 }, { wch: 10 }, { wch: 30 }]
+    const wscols = [{ wch: 25 }, { wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 20 }, { wch: 15 }, { wch: 10 }, { wch: 20 }, { wch: 25 }, { wch: 20 }, { wch: 5 }, { wch: 40 }, { wch: 10 }, { wch: 30 }]
     ws['!cols'] = wscols
     const wb = utils.book_new()
     utils.book_append_sheet(wb, ws, "Clientes Salomão")
@@ -209,7 +215,6 @@ export function Clients() {
       {/* TOOLBAR */}
       <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-6 gap-4">
         <div className="flex items-center gap-3 w-full xl:w-auto overflow-x-auto pb-2 xl:pb-0 px-1">
-           {/* Filtros Dropdown */}
            <div className="relative group">
              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"><Filter className="h-4 w-4" /></div>
              <select value={socioFilter} onChange={(e) => setSocioFilter(e.target.value)} className="appearance-none pl-9 pr-10 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#112240]/20 min-w-[160px]">
@@ -228,22 +233,9 @@ export function Clients() {
              <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400"><ChevronDown className="h-4 w-4" /></div>
            </div>
 
-           {/* BOTÕES DE ORDENAÇÃO */}
            <div className="flex bg-white border border-gray-200 rounded-lg p-1 gap-1">
-              <button 
-                onClick={() => toggleSort('nome')}
-                className={`flex items-center px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${sortBy === 'nome' ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-50'}`}
-                title="Ordenar por Nome"
-              >
-                <ArrowUpDown className="h-3 w-3 mr-1" /> Nome
-              </button>
-              <button 
-                onClick={() => toggleSort('socio')}
-                className={`flex items-center px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${sortBy === 'socio' ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-50'}`}
-                title="Ordenar por Sócio"
-              >
-                <ArrowUpDown className="h-3 w-3 mr-1" /> Sócio
-              </button>
+              <button onClick={() => toggleSort('nome')} className={`flex items-center px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${sortBy === 'nome' ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-50'}`}><ArrowUpDown className="h-3 w-3 mr-1" /> Nome</button>
+              <button onClick={() => toggleSort('socio')} className={`flex items-center px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${sortBy === 'socio' ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-50'}`}><ArrowUpDown className="h-3 w-3 mr-1" /> Sócio</button>
            </div>
            
            {(socioFilter || brindeFilter || sortBy) && (
@@ -287,7 +279,7 @@ export function Clients() {
                       <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Cargo</th>
                       <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Brinde</th>
                       <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer hover:text-[#112240]" onClick={() => toggleSort('socio')}>Sócio {sortBy === 'socio' && (sortDirection === 'asc' ? '↑' : '↓')}</th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Local</th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Contato</th>
                       <th className="relative px-6 py-4"><span className="sr-only">Ações</span></th>
                     </tr>
                   </thead>
@@ -312,7 +304,16 @@ export function Clients() {
                                 {client.socio || '-'}
                             </div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{client.cidade}</td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {client.telefone ? (
+                            <div className="flex items-center gap-2">
+                              <button onClick={() => handleWhatsApp(client.telefone, client.nome)} className="p-1.5 bg-green-50 text-green-600 hover:bg-green-100 rounded-full transition-colors" title="Enviar WhatsApp"><MessageCircle className="h-4 w-4" /></button>
+                              <button onClick={() => handle3CX(client.telefone)} className="p-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-full transition-colors" title="Ligar com 3CX"><Phone className="h-4 w-4" /></button>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-gray-400">Sem telefone</span>
+                          )}
+                        </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                           <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                             <button onClick={() => handleEdit(client)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md" title="Editar"><Pencil className="h-4 w-4" /></button>
@@ -342,6 +343,15 @@ export function Clients() {
                           <p className="text-sm text-gray-500">{client.empresa}</p>
                       </div>
                     </div>
+                    
+                    {/* BOTÕES DE AÇÃO RÁPIDA NO CARD */}
+                    {client.telefone && (
+                      <div className="flex gap-2 mb-4">
+                        <button onClick={() => handleWhatsApp(client.telefone, client.nome)} className="flex-1 py-1.5 bg-green-50 text-green-700 hover:bg-green-100 rounded text-xs font-bold flex items-center justify-center gap-1"><MessageCircle className="h-3 w-3" /> WhatsApp</button>
+                        <button onClick={() => handle3CX(client.telefone)} className="flex-1 py-1.5 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded text-xs font-bold flex items-center justify-center gap-1"><Phone className="h-3 w-3" /> Ligar</button>
+                      </div>
+                    )}
+
                     <div className="space-y-2.5 text-sm text-gray-600 bg-gray-50/50 p-3 rounded-lg border border-gray-100">
                       <p className="flex justify-between"><span className="text-gray-400">Cargo:</span> <span className="font-medium text-gray-800">{client.cargo}</span></p>
                       <p className="flex justify-between"><span className="text-gray-400">Sócio:</span> <span className="font-medium text-gray-800">{client.socio}</span></p>
