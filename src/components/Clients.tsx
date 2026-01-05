@@ -3,6 +3,7 @@ import { Plus, Filter, LayoutList, LayoutGrid, Pencil, Trash2, X, AlertTriangle,
 import { NewClientModal, ClientData } from './NewClientModal'
 import { utils, writeFile } from 'xlsx'
 import { supabase } from '../lib/supabase'
+import { logAction } from '../lib/logger' // IMPORTANTE
 
 interface Client extends ClientData {
   id: number;
@@ -94,77 +95,35 @@ export function Clients() {
     }
   }
 
-  // --- AÇÕES DE CONTATO ---
-
+  // AÇÕES DE CONTATO (Mantidas iguais ao anterior...)
   const handleWhatsApp = (client: Client, e?: React.MouseEvent) => {
     if(e) { e.preventDefault(); e.stopPropagation(); }
-    
     const phoneToClean = client.telefone || '';
     const cleanPhone = phoneToClean.replace(/\D/g, '');
-    
     if(!cleanPhone) { alert("Telefone não cadastrado."); return; }
-
-    const message = `Olá Sr(a). ${client.nome}, somos do Salomão Advogados.
-
-Estamos atualizando nossa base de dados. Poderia, por gentileza, confirmar se as informações abaixo estão corretas?
-
-🏢 *Empresa:* ${client.empresa || '-'}
-📮 *CEP:* ${client.cep || '-'}
-📍 *Endereço:* ${client.endereco || '-'}
-🔢 *Número:* ${client.numero || '-'}
-🏘️ *Bairro:* ${client.bairro || '-'}
-🏙️ *Cidade/UF:* ${client.cidade || '-'}/${client.estado || '-'}
-📝 *Complemento:* ${client.complemento || '-'}
-📧 *E-mail:* ${client.email || '-'}
-
-📱 *Outro número de telefone:* (Caso possua, por favor informar)
-
-Agradecemos a atenção!`;
-
+    const message = `Olá Sr(a). ${client.nome}, somos do Salomão Advogados.\n\nEstamos atualizando nossa base de dados. Poderia, por gentileza, confirmar se as informações abaixo estão corretas?\n\n🏢 *Empresa:* ${client.empresa || '-'}\n📮 *CEP:* ${client.cep || '-'}\n📍 *Endereço:* ${client.endereco || '-'}\n🔢 *Número:* ${client.numero || '-'}\n🏘️ *Bairro:* ${client.bairro || '-'}\n🏙️ *Cidade/UF:* ${client.cidade || '-'}/${client.estado || '-'}\n📝 *Complemento:* ${client.complemento || '-'}\n📧 *E-mail:* ${client.email || '-'}\n\n📱 *Outro número de telefone:* (Caso possua, por favor informar)\n\nAgradecemos a atenção!`;
     const url = `https://wa.me/55${cleanPhone}?text=${encodeURIComponent(message)}`;
     window.open(url, '_blank');
   }
 
   const handle3CX = (client: Client, e?: React.MouseEvent) => {
     if(e) { e.preventDefault(); e.stopPropagation(); }
-    
     const phoneToCall = client.telefone || '';
     const cleanPhone = phoneToCall.replace(/\D/g, '');
-    
     if(!cleanPhone) { alert("Telefone não cadastrado."); return; }
     window.location.href = `tel:${cleanPhone}`;
   }
 
   const handleEmail = (client: Client, e?: React.MouseEvent) => {
     if(e) { e.preventDefault(); e.stopPropagation(); }
-
     if(!client.email) { alert("E-mail não cadastrado."); return; }
-
     const subject = encodeURIComponent("Atualização Cadastral - Salomão Advogados");
-    
-    // CORPO DO E-MAIL ATUALIZADO
-    const bodyText = `Olá Sr(a). ${client.nome}.
-
-Somos do Salomão Advogados e estamos atualizando nossa base de dados.
-Poderia, por gentileza, confirmar se as informações abaixo estão corretas?
-
-🏢 Empresa: ${client.empresa || '-'}
-📮 CEP: ${client.cep || '-'}
-📍 Endereço: ${client.endereco || '-'}
-🔢 Número: ${client.numero || '-'}
-🏘️ Bairro: ${client.bairro || '-'}
-🏙️ Cidade/UF: ${client.cidade || '-'}/${client.estado || '-'}
-📝 Complemento: ${client.complemento || '-'}
-📧 E-mail: ${client.email || '-'}
-📱 Outro número de telefone: (Caso possua, por favor informar)
-
-Agradecemos a atenção!
-
-Agradecemos desde já!`;
-
+    const bodyText = `Olá Sr(a). ${client.nome}.\n\nSomos do Salomão Advogados e estamos atualizando nossa base de dados.\nPoderia, por gentileza, confirmar se as informações abaixo estão corretas?\n\n🏢 Empresa: ${client.empresa || '-'}\n📮 CEP: ${client.cep || '-'}\n📍 Endereço: ${client.endereco || '-'}\n🔢 Número: ${client.numero || '-'}\n🏘️ Bairro: ${client.bairro || '-'}\n🏙️ Cidade/UF: ${client.cidade || '-'}/${client.estado || '-'}\n📝 Complemento: ${client.complemento || '-'}\n📧 E-mail: ${client.email || '-'}\n📱 Outro número de telefone: (Caso possua, por favor informar)\n\nAgradecemos a atenção!\n\nAgradecemos desde já!`;
     const body = encodeURIComponent(bodyText);
     window.location.href = `mailto:${client.email}?subject=${subject}&body=${body}`;
   }
+
+  // --- FUNÇÕES COM LOG ---
 
   const handleSaveClient = async (clientData: ClientData) => {
     const dbData = {
@@ -192,9 +151,11 @@ Agradecemos desde já!`;
       if (clientToEdit) {
         const { error } = await supabase.from('clientes').update(dbData).eq('id', clientToEdit.id)
         if (error) throw error
+        await logAction('EDITAR', 'CLIENTES', `Atualizou dados de: ${clientData.nome}`)
       } else {
         const { error } = await supabase.from('clientes').insert([dbData])
         if (error) throw error
+        await logAction('CRIAR', 'CLIENTES', `Novo cliente cadastrado: ${clientData.nome}`)
       }
       await fetchClients()
       setIsModalOpen(false)
@@ -205,24 +166,30 @@ Agradecemos desde já!`;
     }
   }
 
-  const handleEdit = (client: Client, e?: React.MouseEvent) => {
-    if(e) { e.preventDefault(); e.stopPropagation(); }
-    setSelectedClient(null);
-    setClientToEdit(client);
-    setTimeout(() => { setIsModalOpen(true); }, 10);
-  }
-
   const handleDeleteClick = (client: Client, e?: React.MouseEvent) => {
     if(e) { e.preventDefault(); e.stopPropagation(); }
     setClientToDelete(client);
   }
 
-  const handleExportExcel = () => {
+  const confirmDelete = async () => {
+    if (clientToDelete) {
+        await supabase.from('clientes').delete().eq('id', clientToDelete.id);
+        await logAction('EXCLUIR', 'CLIENTES', `Removeu cliente: ${clientToDelete.nome}`)
+        fetchClients();
+        setClientToDelete(null);
+        setSelectedClient(null);
+    }
+  }
+
+  const handleExportExcel = async () => {
     const ws = utils.json_to_sheet(processedClients)
     const wb = utils.book_new()
     utils.book_append_sheet(wb, ws, "Clientes")
     writeFile(wb, "Relatorio_Clientes.xlsx")
+    await logAction('EXPORTAR', 'CLIENTES', `Exportou lista com ${processedClients.length} clientes`)
   }
+
+  // ... (O Restante do JSX permanece igual, apenas atualize o onClick do botão de excluir no modal para chamar confirmDelete)
 
   return (
     <div className="h-full flex flex-col relative">
@@ -238,17 +205,14 @@ Agradecemos desde já!`;
              <p className="text-gray-600 mb-6">Deseja remover <strong>{clientToDelete.nome}</strong> permanentemente?</p>
              <div className="flex justify-end gap-3">
                <button onClick={() => setClientToDelete(null)} className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg">Cancelar</button>
-               <button onClick={async () => {
-                 await supabase.from('clientes').delete().eq('id', clientToDelete.id);
-                 fetchClients();
-                 setClientToDelete(null);
-                 setSelectedClient(null);
-               }} className="px-4 py-2 text-white bg-red-600 hover:bg-red-700 rounded-lg flex items-center gap-2"><Trash2 className="h-4 w-4" /> Excluir</button>
+               <button onClick={confirmDelete} className="px-4 py-2 text-white bg-red-600 hover:bg-red-700 rounded-lg flex items-center gap-2"><Trash2 className="h-4 w-4" /> Excluir</button>
              </div>
           </div>
         </div>
       )}
 
+      {/* ... (O restante do SelectedClient e Toolbar permanece igual ao código anterior) */}
+      
       {selectedClient && (
         <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm animate-fadeIn">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden border border-gray-100 animate-scaleIn">
@@ -287,8 +251,9 @@ Agradecemos desde já!`;
         </div>
       )}
 
+      {/* TOOLBAR */}
       <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-6 gap-4">
-        <div className="flex items-center gap-3 w-full xl:w-auto overflow-x-auto pb-2 xl:pb-0 px-1">
+        <div className="flex items-center gap-3 w-full xl:w-auto overflow-x-auto pb-2 px-1">
            <div className="relative group">
              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"><Filter className="h-4 w-4" /></div>
              <select value={socioFilter} onChange={(e) => setSocioFilter(e.target.value)} className="appearance-none pl-9 pr-10 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:border-gray-300 outline-none focus:ring-2 focus:ring-[#112240]/20 min-w-[160px]">
@@ -337,6 +302,7 @@ Agradecemos desde já!`;
                     <span className={`px-2 py-0.5 text-[10px] font-semibold rounded-full flex-shrink-0 ${client.tipoBrinde === 'Brinde VIP' ? 'bg-purple-100 text-purple-800' : 'bg-green-100 text-green-800'}`}>{client.tipoBrinde}</span>
                   </div>
                   
+                  {/* CARD COM ALINHAMENTO */}
                   <div className="bg-gray-50/50 rounded-md p-2 border border-gray-100 mb-3 text-xs space-y-1">
                     <div className="flex justify-between items-center">
                         <span className="text-gray-400">Sócio:</span>
@@ -365,16 +331,9 @@ Agradecemos desde já!`;
 
                   <div className="border-t border-gray-100 pt-3 flex justify-between items-center transition-opacity">
                     <div className="flex gap-2">
-                      {/* BOTÕES DE CONTATO (WhatsApp, Phone, Email) */}
-                      {client.telefone && (
-                        <>
-                            <button onClick={(e) => handleWhatsApp(client, e)} className="p-1.5 text-green-600 bg-green-50 hover:bg-green-100 rounded-md transition-colors"><MessageCircle className="h-4 w-4" /></button>
-                            <button onClick={(e) => handle3CX(client, e)} className="p-1.5 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-md transition-colors"><Phone className="h-4 w-4" /></button>
-                        </>
-                      )}
-                      {client.email && (
-                        <button onClick={(e) => handleEmail(client, e)} className="p-1.5 text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-md transition-colors"><Mail className="h-4 w-4" /></button>
-                      )}
+                      <button onClick={(e) => handleWhatsApp(client, e)} className="p-1.5 text-green-600 bg-green-50 hover:bg-green-100 rounded-md transition-colors"><MessageCircle className="h-4 w-4" /></button>
+                      <button onClick={(e) => handle3CX(client, e)} className="p-1.5 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-md transition-colors"><Phone className="h-4 w-4" /></button>
+                      <button onClick={(e) => handleEmail(client, e)} className="p-1.5 text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-md transition-colors"><Mail className="h-4 w-4" /></button>
                     </div>
                     <div className="flex gap-1">
                       <button onClick={(e) => handleEdit(client, e)} className="p-1.5 text-gray-500 hover:text-[#112240] rounded-md transition-colors"><Pencil className="h-4 w-4" /></button>
@@ -385,6 +344,7 @@ Agradecemos desde já!`;
               ))
             ) : (
               <table className="min-w-full divide-y divide-gray-200">
+                {/* Cabeçalho da tabela... */}
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Cliente</th>
