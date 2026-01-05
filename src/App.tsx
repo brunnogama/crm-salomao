@@ -6,7 +6,7 @@ import { IncompleteClients } from './components/IncompleteClients'
 import { Auth } from './components/Auth'
 import { supabase } from './lib/supabase'
 
-function App() {
+export default function App() {
   const [session, setSession] = useState<any>(null)
   const [activeTab, setActiveTab] = useState<'dashboard' | 'clients' | 'incomplete'>('dashboard')
 
@@ -33,8 +33,8 @@ function App() {
   return (
     <div className="flex h-screen bg-gray-50">
       <Sidebar 
-        activeTab={activeTab} // CORRIGIDO: Era activePage, agora é activeTab
-        setActiveTab={setActiveTab} // CORRIGIDO: Era onNavigate
+        activeTab={activeTab} 
+        setActiveTab={setActiveTab} 
         userName={session.user.email} 
         onLogout={handleLogout} 
       />
@@ -48,5 +48,3 @@ function App() {
     </div>
   )
 }
-
-export default App
