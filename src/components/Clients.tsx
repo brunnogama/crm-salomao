@@ -49,7 +49,6 @@ export function Clients() {
 
   return (
     <div className="h-full flex flex-col space-y-6 animate-fadeIn pb-10 relative">
-      {/* Toolbar Glassmorphism */}
       <div className="bg-white/70 backdrop-blur-md p-4 rounded-2xl border border-white/40 shadow-sm flex flex-wrap gap-4 items-center justify-between z-10">
         <div className="flex gap-3 items-center flex-1 min-w-[300px]">
           <div className="relative flex-1">
@@ -61,16 +60,15 @@ export function Clients() {
           </button>
         </div>
         <div className="flex gap-3">
-          <button className="flex items-center gap-2 bg-emerald-600 text-white px-5 py-2.5 rounded-xl text-xs font-bold shadow-lg shadow-emerald-200 hover:bg-emerald-700 transition-all active:scale-95">
+          <button className="flex items-center gap-2 bg-emerald-600 text-white px-5 py-2.5 rounded-xl text-xs font-bold shadow-lg shadow-emerald-200 hover:bg-emerald-700 transition-all">
             <Download className="h-4 w-4" /> EXPORTAR
           </button>
-          <button className="flex items-center gap-2 bg-[#112240] text-white px-5 py-2.5 rounded-xl text-xs font-bold shadow-lg shadow-blue-900/20 hover:bg-black transition-all active:scale-95">
+          <button className="flex items-center gap-2 bg-[#112240] text-white px-5 py-2.5 rounded-xl text-xs font-bold shadow-lg shadow-blue-900/20 hover:bg-black transition-all">
             <Plus className="h-4 w-4" /> NOVO CLIENTE
           </button>
         </div>
       </div>
 
-      {/* Grid de Clientes com Expansão */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 overflow-y-auto pr-2 custom-scrollbar">
         {clients.map((client) => (
           <div 
@@ -109,19 +107,10 @@ export function Clients() {
                 <span className="text-[10px] font-medium">{client.telefone || '(00) 00000-0000'}</span>
               </div>
             </div>
-
-            <div className="mt-5 flex items-center justify-between">
-              <div className="flex items-center gap-1.5 text-gray-400">
-                <MapPin className="h-3 w-3" />
-                <span className="text-[10px] font-bold">{client.uf || 'UF'}</span>
-              </div>
-              <span className="text-[9px] font-black text-blue-600/40 uppercase tracking-widest">Clique para expandir</span>
-            </div>
           </div>
         ))}
       </div>
 
-      {/* Modal de Detalhes Glassmorphism */}
       {selectedClient && (
         <div className="fixed inset-0 bg-[#112240]/40 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-fadeIn">
           <div className="bg-white/90 backdrop-blur-xl w-full max-w-2xl rounded-[3rem] shadow-2xl border border-white overflow-hidden animate-scaleIn">
@@ -130,60 +119,29 @@ export function Clients() {
                 <div className="w-16 h-16 bg-white/10 backdrop-blur-md rounded-[1.5rem] flex items-center justify-center text-2xl font-black">
                   {selectedClient.nome.charAt(0)}
                 </div>
-                <div>
-                  <h2 className="text-2xl font-black tracking-tight">{selectedClient.nome}</h2>
-                  <p className="text-white/50 text-xs font-bold uppercase tracking-widest">Ficha Completa</p>
-                </div>
+                <h2 className="text-2xl font-black tracking-tight">{selectedClient.nome}</h2>
               </div>
-              <button onClick={() => setSelectedClient(null)} className="p-3 hover:bg-white/10 rounded-2xl transition-colors">
-                <X className="h-6 w-6" />
-              </button>
+              <button onClick={() => setSelectedClient(null)} className="p-3 hover:bg-white/10 rounded-2xl transition-colors"><X className="h-6 w-6" /></button>
             </div>
-
             <div className="p-10 grid grid-cols-2 gap-8">
               <div className="space-y-6">
-                <div>
-                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">Responsável</label>
-                  <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-2xl border border-gray-100">
-                    <User className="h-5 w-5 text-blue-600" />
-                    <span className="font-bold text-[#112240]">{selectedClient.socio}</span>
-                  </div>
+                <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100 flex items-center gap-3">
+                  <User className="h-5 w-5 text-blue-600" />
+                  <span className="font-bold text-[#112240]">{selectedClient.socio}</span>
                 </div>
-                <div>
-                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">Contato</label>
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-2xl border border-gray-100">
-                      <Phone className="h-5 w-5 text-gray-400" />
-                      <span className="text-sm font-medium">{selectedClient.telefone || 'Não informado'}</span>
-                    </div>
-                    <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-2xl border border-gray-100">
-                      <Mail className="h-5 w-5 text-gray-400" />
-                      <span className="text-sm font-medium">{selectedClient.email || 'Não informado'}</span>
-                    </div>
-                  </div>
+                <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100 flex items-center gap-3">
+                  <Mail className="h-5 w-5 text-gray-400" />
+                  <span className="text-sm font-medium">{selectedClient.email || 'Não informado'}</span>
                 </div>
               </div>
-
               <div className="space-y-6">
-                <div>
-                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">Brinde</label>
-                  <div className="p-4 rounded-2xl border flex items-center justify-between" style={{ borderColor: `${getBrindeColor(selectedClient.tipo_brinde)}30`, backgroundColor: `${getBrindeColor(selectedClient.tipo_brinde)}05` }}>
-                    <span className="font-black text-sm uppercase" style={{ color: getBrindeColor(selectedClient.tipo_brinde) }}>{selectedClient.tipo_brinde}</span>
-                    <Gift className="h-5 w-5" style={{ color: getBrindeColor(selectedClient.tipo_brinde) }} />
-                  </div>
+                <div className="p-4 rounded-2xl border flex items-center justify-between" style={{ borderColor: `${getBrindeColor(selectedClient.tipo_brinde)}30`, backgroundColor: `${getBrindeColor(selectedClient.tipo_brinde)}05` }}>
+                  <span className="font-black text-sm uppercase" style={{ color: getBrindeColor(selectedClient.tipo_brinde) }}>{selectedClient.tipo_brinde}</span>
+                  <Gift className="h-5 w-5" style={{ color: getBrindeColor(selectedClient.tipo_brinde) }} />
                 </div>
-                <div>
-                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">Localização</label>
-                  <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100 flex items-center gap-3">
-                    <MapPin className="h-5 w-5 text-gray-400" />
-                    <span className="text-sm font-bold text-[#112240]">{selectedClient.uf} - {selectedClient.cidade || 'N/A'}</span>
-                  </div>
-                </div>
-                <div className="pt-4 flex gap-3">
-                  <button className="flex-1 bg-blue-600 text-white py-4 rounded-2xl font-black text-xs shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all">EDITAR</button>
-                  <button onClick={(e) => { deleteClient(selectedClient.id, e); setSelectedClient(null); }} className="p-4 bg-red-50 text-red-600 rounded-2xl hover:bg-red-100 transition-all">
-                    <Trash2 className="h-5 w-5" />
-                  </button>
+                <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100 flex items-center gap-3">
+                  <MapPin className="h-5 w-5 text-gray-400" />
+                  <span className="text-sm font-bold text-[#112240]">{selectedClient.uf}</span>
                 </div>
               </div>
             </div>
