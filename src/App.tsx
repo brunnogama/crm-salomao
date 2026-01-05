@@ -7,7 +7,7 @@ import { Settings } from './components/Settings'
 import { IncompleteClients } from './components/IncompleteClients'
 import { Kanban } from './components/Kanban'
 import { Dashboard } from './components/Dashboard'
-import { History } from './components/History' // Importe o novo componente
+import { History } from './components/History'
 
 export default function App() {
   const [session, setSession] = useState<any>(null)
@@ -20,7 +20,17 @@ export default function App() {
     incompletos: 'Atenção: Cadastros que necessitam de preenchimento.',
     kanban: 'Gerencie suas tarefas de forma visual.',
     configuracoes: 'Preferências do sistema e gestão de acessos.',
-    historico: 'Audit Log: Rastreabilidade de ações no sistema.' // Descrição
+    historico: 'Audit Log: Rastreabilidade de ações no sistema.'
+  }
+
+  // Títulos personalizados para cada página
+  const pageTitles: Record<string, string> = {
+    dashboard: 'Dashboard',
+    clientes: 'Clientes',
+    incompletos: 'Cadastros Incompletos',
+    kanban: 'Kanban',
+    configuracoes: 'Configurações',
+    historico: 'Histórico de Atividades'
   }
 
   useEffect(() => {
@@ -48,9 +58,9 @@ export default function App() {
       <main className="flex-1 flex flex-col h-screen overflow-hidden min-w-0">
         <header className="bg-white border-b border-gray-200 h-20 flex items-center px-8 justify-between flex-shrink-0 z-10">
             <div className="flex flex-col justify-center">
+                {/* Título Corrigido usando o objeto pageTitles */}
                 <h1 className="text-2xl font-bold text-[#112240] capitalize leading-tight">
-                    {activePage === 'incompletos' ? 'Cadastros Incompletos' : activePage}
-                    {activePage === 'historico' && 'Histórico de Atividades'}
+                    {pageTitles[activePage] || activePage}
                 </h1>
                 <span className="text-sm text-gray-500 font-normal">{moduleDescriptions[activePage]}</span>
             </div>
