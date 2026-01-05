@@ -1,12 +1,11 @@
 import { useState, useEffect, useMemo } from 'react'
-import { LayoutList, LayoutGrid, Pencil, X, RefreshCw, ChevronDown, ArrowUpDown, FileSpreadsheet, EyeOff, Briefcase, Mail, Gift, Info } from 'lucide-react'
+import { LayoutList, LayoutGrid, Pencil, X, RefreshCw, Briefcase, Mail, Gift, Info } from 'lucide-react'
 import { NewClientModal, ClientData } from './NewClientModal'
 import { utils, writeFile } from 'xlsx'
 import { supabase } from '../lib/supabase'
 
 interface Client extends ClientData {
   id: number;
-  ignored_fields?: string[];
 }
 
 export function IncompleteClients() {
@@ -19,30 +18,21 @@ export function IncompleteClients() {
 
   const [socioFilter, setSocioFilter] = useState('')
   const [brindeFilter, setBrindeFilter] = useState('')
-  const [sortBy, setSortBy] = useState<'nome' | 'socio' | null>('nome')
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
+  const [sortBy] = useState<'nome' | 'socio' | null>('nome')
+  const [sortDirection] = useState<'asc' | 'desc'>('asc')
 
   const [incompleteClients, setIncompleteClients] = useState<Client[]>([])
 
   const getMissingFields = (client: Client) => {
-    const ignored = client.ignored_fields || [];
     const missing: string[] = []
-
     if (!client.nome) missing.push('Nome')
     if (!client.empresa) missing.push('Empresa')
-    if (!client.cargo) missing.push('Cargo')
-    // if (!client.telefone) missing.push('Telefone') // REMOVIDO
     if (!client.tipoBrinde) missing.push('Tipo Brinde')
     if (!client.cep) missing.push('CEP')
-    if (!client.endereco) missing.push('Endereço')
-    if (!client.numero) missing.push('Número')
-    if (!client.bairro) missing.push('Bairro')
-    if (!client.cidade) missing.push('Cidade')
-    if (!client.estado) missing.push('UF')
     if (!client.email) missing.push('Email')
     if (!client.socio) missing.push('Sócio')
-    
-    return missing.filter(field => !ignored.includes(field));
+    if (!client.telefone) missing.push('Telefone')
+    return missing
   }
 
   const fetchIncompleteClients = async () => {
@@ -53,8 +43,24 @@ export function IncompleteClients() {
       console.error('Erro ao buscar:', error)
     } else {
       const formatted: Client[] = data.map((item: any) => ({
-        ...item,
-        ignored_fields: item.ignored_fields || []
+        id: item.id,
+        nome: item.nome,
+        empresa: item.empresa,
+        cargo: item.cargo,
+        telefone: item.telefone,
+        tipoBrinde: item.tipo_brinde,
+        outroBrinde: item.outro_brinde,
+        quantidade: item.quantidade,
+        cep: item.cep,
+        endereco: item.endereco,
+        numero: item.numero,
+        complemento: item.complemento,
+        bairro: item.bairro,
+        cidade: item.cidade,
+        estado: item.estado,
+        email: item.email,
+        socio: item.socio,
+        observacoes: item.observacoes
       }))
       const incomplete = formatted.filter(c => getMissingFields(c).length > 0)
       setIncompleteClients(incomplete)
@@ -64,27 +70,13 @@ export function IncompleteClients() {
 
   useEffect(() => { fetchIncompleteClients() }, [])
 
-  const handleDismissField = async (client: Client, field: string) => {
-    if (!confirm(`Deseja dispensar o preenchimento de "${field}" para este cliente?`)) return;
+  const uniqueSocios = useMemo(() => {
+    return Array.from(new Set(incompleteClients.map(c => c.socio).filter(Boolean))).sort();
+  }, [incompleteClients]);
 
-    const currentIgnored = client.ignored_fields || [];
-    const newIgnored = [...currentIgnored, field];
-
-    const { error } = await supabase
-      .from('clientes')
-      .update({ ignored_fields: newIgnored })
-      .eq('id', client.id);
-
-    if (error) {
-      alert('Erro ao dispensar campo.');
-    } else {
-      fetchIncompleteClients();
-      if(selectedClient?.id === client.id) setSelectedClient(null);
-    }
-  }
-
-  const uniqueSocios = useMemo(() => Array.from(new Set(incompleteClients.map(c => c.socio).filter(Boolean))).sort(), [incompleteClients]);
-  const uniqueBrindes = useMemo(() => Array.from(new Set(incompleteClients.map(c => c.tipoBrinde).filter(Boolean))).sort(), [incompleteClients]);
+  const uniqueBrindes = useMemo(() => {
+    return Array.from(new Set(incompleteClients.map(c => c.tipoBrinde).filter(Boolean))).sort();
+  }, [incompleteClients]);
 
   const filteredClients = useMemo(() => {
     let result = [...incompleteClients].filter(client => {
@@ -103,10 +95,16 @@ export function IncompleteClients() {
   }, [incompleteClients, socioFilter, brindeFilter, sortBy, sortDirection])
 
   const handleExportExcel = () => {
-    const ws = utils.json_to_sheet(filteredClients.map(c => ({ "Nome": c.nome, "Pendências": getMissingFields(c).join(', ') })))
+    const dataToExport = filteredClients.map(client => ({
+      "Nome": client.nome,
+      "Empresa": client.empresa,
+      "Sócio": client.socio,
+      "Pendências": getMissingFields(client).join(', ')
+    }))
+    const ws = utils.json_to_sheet(dataToExport)
     const wb = utils.book_new()
     utils.book_append_sheet(wb, ws, "Pendências")
-    writeFile(wb, "Relatorio_Incompletos.xlsx")
+    writeFile(wb, "Relatorio_Incompletos_Salomao.xlsx")
   }
 
   const handleEdit = (client: Client, e?: React.MouseEvent) => {
@@ -114,11 +112,6 @@ export function IncompleteClients() {
     setSelectedClient(null);
     setClientToEdit(client);
     setTimeout(() => setIsModalOpen(true), 10);
-  }
-
-  const toggleSort = (field: 'nome' | 'socio') => {
-    if (sortBy === field) setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc')
-    else { setSortBy(field); setSortDirection('asc'); }
   }
 
   return (
@@ -131,19 +124,16 @@ export function IncompleteClients() {
             <div className="bg-red-600 p-6 text-white flex justify-between items-center">
               <div className="flex items-center gap-4">
                 <div className="h-12 w-12 rounded-full bg-white/20 flex items-center justify-center text-xl font-bold">!</div>
-                <h2 className="text-xl font-bold">{selectedClient.nome}</h2>
+                <h2 className="text-xl font-bold">{selectedClient.nome || 'Cadastro Incompleto'}</h2>
               </div>
               <button onClick={() => setSelectedClient(null)} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X className="h-6 w-6" /></button>
             </div>
             <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-8 overflow-y-auto max-h-[70vh]">
               <div className="space-y-4">
                 <h3 className="text-xs font-bold text-red-400 uppercase border-b pb-2">Pendências</h3>
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-wrap gap-2">
                   {getMissingFields(selectedClient).map(field => (
-                    <div key={field} className="flex items-center justify-between p-2 bg-red-50 rounded border border-red-100">
-                        <span className="text-xs font-bold text-red-800">{field}</span>
-                        <button onClick={() => handleDismissField(selectedClient, field)} className="text-xs text-gray-500 hover:text-gray-800 flex items-center gap-1"><EyeOff className="h-3 w-3" /> Dispensar</button>
-                    </div>
+                    <span key={field} className="px-2 py-1 text-xs bg-red-50 text-red-700 rounded border border-red-100 font-bold">{field}</span>
                   ))}
                 </div>
                 <p className="text-sm flex items-center gap-3"><Briefcase className="h-4 w-4 text-gray-400" /> {selectedClient.empresa || '-'}</p>
@@ -164,38 +154,29 @@ export function IncompleteClients() {
         </div>
       )}
 
+      {/* TOOLBAR */}
       <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-6 gap-4">
         <div className="flex items-center gap-3 w-full xl:w-auto overflow-x-auto pb-2 px-1">
-          <div className="relative group">
-            <select value={socioFilter} onChange={(e) => setSocioFilter(e.target.value)} className="appearance-none px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium min-w-[160px] outline-none">
-              <option value="">Sócio: Todos</option>
-              {uniqueSocios.map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
-            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400"><ChevronDown className="h-4 w-4" /></div>
-          </div>
-          <div className="relative group">
-            <select value={brindeFilter} onChange={(e) => setBrindeFilter(e.target.value)} className="appearance-none px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium min-w-[160px] outline-none">
-              <option value="">Brinde: Todos</option>
-              {uniqueBrindes.map(b => <option key={b} value={b}>{b}</option>)}
-            </select>
-            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400"><ChevronDown className="h-4 w-4" /></div>
-          </div>
-          <div className="flex bg-white border border-gray-200 rounded-lg p-1 gap-1 shadow-sm">
-            <button onClick={() => toggleSort('nome')} className={`flex items-center px-3 py-1.5 text-sm rounded-md transition-colors ${sortBy === 'nome' ? 'bg-blue-50 text-blue-700' : 'text-gray-600'}`}><ArrowUpDown className="h-3 w-3 mr-1" /> Nome</button>
-            <button onClick={() => toggleSort('socio')} className={`flex items-center px-3 py-1.5 text-sm rounded-md transition-colors ${sortBy === 'socio' ? 'bg-blue-50 text-blue-700' : 'text-gray-600'}`}><ArrowUpDown className="h-3 w-3 mr-1" /> Sócio</button>
-          </div>
+          <select value={socioFilter} onChange={(e) => setSocioFilter(e.target.value)} className="appearance-none px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium min-w-[160px] outline-none">
+            <option value="">Sócio: Todos</option>
+            {uniqueSocios.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+          <select value={brindeFilter} onChange={(e) => setBrindeFilter(e.target.value)} className="appearance-none px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium min-w-[160px] outline-none">
+            <option value="">Brinde: Todos</option>
+            {uniqueBrindes.map(b => <option key={b} value={b}>{b}</option>)}
+          </select>
           <div className="flex bg-white border border-gray-200 rounded-lg p-1 shadow-sm">
             <button onClick={() => setViewMode('list')} className={`p-1.5 rounded-md ${viewMode === 'list' ? 'bg-gray-100 text-[#112240]' : 'text-gray-400'}`}><LayoutList className="h-5 w-5" /></button>
             <button onClick={() => setViewMode('card')} className={`p-1.5 rounded-md ${viewMode === 'card' ? 'bg-gray-100 text-[#112240]' : 'text-gray-400'}`}><LayoutGrid className="h-5 w-5" /></button>
           </div>
-          <button onClick={fetchIncompleteClients} className="p-2.5 bg-white border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50 shadow-sm"><RefreshCw className={`h-5 w-5 ${loading ? 'animate-spin' : ''}`} /></button>
+          <button onClick={fetchIncompleteClients} className="p-2.5 bg-white border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50"><RefreshCw className={`h-5 w-5 ${loading ? 'animate-spin' : ''}`} /></button>
         </div>
-        <div className="flex items-center gap-3 w-full xl:w-auto">
-          <button onClick={handleExportExcel} className="flex-1 xl:flex-none flex items-center justify-center px-4 py-2.5 bg-green-600 text-white rounded-lg gap-2 font-medium text-sm transition-all hover:bg-green-700"><FileSpreadsheet className="h-5 w-5" /> Exportar</button>
+        <div className="flex items-center gap-3">
+          <button onClick={handleExportExcel} className="flex items-center px-4 py-2.5 bg-green-600 text-white rounded-lg gap-2 text-sm font-medium transition-all hover:bg-green-700">Exportar</button>
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto pb-4 font-medium">
+      <div className="flex-1 overflow-auto pb-4">
         {viewMode === 'list' ? (
           <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
             <table className="min-w-full divide-y divide-gray-200">
