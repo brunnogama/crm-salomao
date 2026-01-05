@@ -3,7 +3,7 @@ import { Plus, Filter, LayoutList, LayoutGrid, Pencil, Trash2, X, AlertTriangle,
 import { NewClientModal, ClientData } from './NewClientModal'
 import { utils, writeFile } from 'xlsx'
 import { supabase } from '../lib/supabase'
-import { logAction } from '../lib/logger' // IMPORTANTE
+import { logAction } from '../lib/logger'
 
 interface Client extends ClientData {
   id: number;
@@ -95,35 +95,78 @@ export function Clients() {
     }
   }
 
-  // AÇÕES DE CONTATO (Mantidas iguais ao anterior...)
+  // --- AÇÕES DE CONTATO ---
+
   const handleWhatsApp = (client: Client, e?: React.MouseEvent) => {
     if(e) { e.preventDefault(); e.stopPropagation(); }
+    
     const phoneToClean = client.telefone || '';
     const cleanPhone = phoneToClean.replace(/\D/g, '');
+    
     if(!cleanPhone) { alert("Telefone não cadastrado."); return; }
-    const message = `Olá Sr(a). ${client.nome}, somos do Salomão Advogados.\n\nEstamos atualizando nossa base de dados. Poderia, por gentileza, confirmar se as informações abaixo estão corretas?\n\n🏢 *Empresa:* ${client.empresa || '-'}\n📮 *CEP:* ${client.cep || '-'}\n📍 *Endereço:* ${client.endereco || '-'}\n🔢 *Número:* ${client.numero || '-'}\n🏘️ *Bairro:* ${client.bairro || '-'}\n🏙️ *Cidade/UF:* ${client.cidade || '-'}/${client.estado || '-'}\n📝 *Complemento:* ${client.complemento || '-'}\n📧 *E-mail:* ${client.email || '-'}\n\n📱 *Outro número de telefone:* (Caso possua, por favor informar)\n\nAgradecemos a atenção!`;
+
+    const message = `Olá Sr(a). ${client.nome}, somos do Salomão Advogados.
+
+Estamos atualizando nossa base de dados. Poderia, por gentileza, confirmar se as informações abaixo estão corretas?
+
+🏢 *Empresa:* ${client.empresa || '-'}
+📮 *CEP:* ${client.cep || '-'}
+📍 *Endereço:* ${client.endereco || '-'}
+🔢 *Número:* ${client.numero || '-'}
+🏘️ *Bairro:* ${client.bairro || '-'}
+🏙️ *Cidade/UF:* ${client.cidade || '-'}/${client.estado || '-'}
+📝 *Complemento:* ${client.complemento || '-'}
+📧 *E-mail:* ${client.email || '-'}
+
+📱 *Outro número de telefone:* (Caso possua, por favor informar)
+
+Agradecemos a atenção!`;
+
     const url = `https://wa.me/55${cleanPhone}?text=${encodeURIComponent(message)}`;
     window.open(url, '_blank');
   }
 
   const handle3CX = (client: Client, e?: React.MouseEvent) => {
     if(e) { e.preventDefault(); e.stopPropagation(); }
+    
     const phoneToCall = client.telefone || '';
     const cleanPhone = phoneToCall.replace(/\D/g, '');
+    
     if(!cleanPhone) { alert("Telefone não cadastrado."); return; }
     window.location.href = `tel:${cleanPhone}`;
   }
 
   const handleEmail = (client: Client, e?: React.MouseEvent) => {
     if(e) { e.preventDefault(); e.stopPropagation(); }
+
     if(!client.email) { alert("E-mail não cadastrado."); return; }
+
     const subject = encodeURIComponent("Atualização Cadastral - Salomão Advogados");
-    const bodyText = `Olá Sr(a). ${client.nome}.\n\nSomos do Salomão Advogados e estamos atualizando nossa base de dados.\nPoderia, por gentileza, confirmar se as informações abaixo estão corretas?\n\n🏢 Empresa: ${client.empresa || '-'}\n📮 CEP: ${client.cep || '-'}\n📍 Endereço: ${client.endereco || '-'}\n🔢 Número: ${client.numero || '-'}\n🏘️ Bairro: ${client.bairro || '-'}\n🏙️ Cidade/UF: ${client.cidade || '-'}/${client.estado || '-'}\n📝 Complemento: ${client.complemento || '-'}\n📧 E-mail: ${client.email || '-'}\n📱 Outro número de telefone: (Caso possua, por favor informar)\n\nAgradecemos a atenção!\n\nAgradecemos desde já!`;
+    
+    const bodyText = `Olá Sr(a). ${client.nome}.
+
+Somos do Salomão Advogados e estamos atualizando nossa base de dados.
+Poderia, por gentileza, confirmar se as informações abaixo estão corretas?
+
+🏢 Empresa: ${client.empresa || '-'}
+📮 CEP: ${client.cep || '-'}
+📍 Endereço: ${client.endereco || '-'}
+🔢 Número: ${client.numero || '-'}
+🏘️ Bairro: ${client.bairro || '-'}
+🏙️ Cidade/UF: ${client.cidade || '-'}/${client.estado || '-'}
+📝 Complemento: ${client.complemento || '-'}
+📧 E-mail: ${client.email || '-'}
+📱 Outro número de telefone: (Caso possua, por favor informar)
+
+Agradecemos a atenção!
+
+Agradecemos desde já!`;
+
     const body = encodeURIComponent(bodyText);
     window.location.href = `mailto:${client.email}?subject=${subject}&body=${body}`;
   }
 
-  // --- FUNÇÕES COM LOG ---
+  // --- FUNÇÕES DE CRUD COM LOG ---
 
   const handleSaveClient = async (clientData: ClientData) => {
     const dbData = {
@@ -166,6 +209,14 @@ export function Clients() {
     }
   }
 
+  // FUNÇÃO QUE ESTAVA FALTANDO
+  const handleEdit = (client: Client, e?: React.MouseEvent) => {
+    if(e) { e.preventDefault(); e.stopPropagation(); }
+    setSelectedClient(null);
+    setClientToEdit(client);
+    setTimeout(() => { setIsModalOpen(true); }, 10);
+  }
+
   const handleDeleteClick = (client: Client, e?: React.MouseEvent) => {
     if(e) { e.preventDefault(); e.stopPropagation(); }
     setClientToDelete(client);
@@ -189,8 +240,6 @@ export function Clients() {
     await logAction('EXPORTAR', 'CLIENTES', `Exportou lista com ${processedClients.length} clientes`)
   }
 
-  // ... (O Restante do JSX permanece igual, apenas atualize o onClick do botão de excluir no modal para chamar confirmDelete)
-
   return (
     <div className="h-full flex flex-col relative">
       <NewClientModal isOpen={isModalOpen} onClose={() => { setIsModalOpen(false); setClientToEdit(null); }} onSave={handleSaveClient} clientToEdit={clientToEdit} />
@@ -211,8 +260,6 @@ export function Clients() {
         </div>
       )}
 
-      {/* ... (O restante do SelectedClient e Toolbar permanece igual ao código anterior) */}
-      
       {selectedClient && (
         <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm animate-fadeIn">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden border border-gray-100 animate-scaleIn">
@@ -251,7 +298,6 @@ export function Clients() {
         </div>
       )}
 
-      {/* TOOLBAR */}
       <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-6 gap-4">
         <div className="flex items-center gap-3 w-full xl:w-auto overflow-x-auto pb-2 px-1">
            <div className="relative group">
@@ -302,7 +348,6 @@ export function Clients() {
                     <span className={`px-2 py-0.5 text-[10px] font-semibold rounded-full flex-shrink-0 ${client.tipoBrinde === 'Brinde VIP' ? 'bg-purple-100 text-purple-800' : 'bg-green-100 text-green-800'}`}>{client.tipoBrinde}</span>
                   </div>
                   
-                  {/* CARD COM ALINHAMENTO */}
                   <div className="bg-gray-50/50 rounded-md p-2 border border-gray-100 mb-3 text-xs space-y-1">
                     <div className="flex justify-between items-center">
                         <span className="text-gray-400">Sócio:</span>
@@ -344,7 +389,6 @@ export function Clients() {
               ))
             ) : (
               <table className="min-w-full divide-y divide-gray-200">
-                {/* Cabeçalho da tabela... */}
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Cliente</th>
