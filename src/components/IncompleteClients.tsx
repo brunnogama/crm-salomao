@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { LayoutList, LayoutGrid, Pencil, X, RefreshCw, Briefcase, Mail, Gift, Info, ChevronDown, ArrowUpDown, FileSpreadsheet, Filter, EyeOff, Trash2 } from 'lucide-react'
+import { LayoutList, LayoutGrid, Pencil, X, RefreshCw, Briefcase, Mail, Gift, Info, ChevronDown, ArrowUpDown, FileSpreadsheet, Filter, EyeOff, Trash2, Ban } from 'lucide-react'
 import { NewClientModal, ClientData } from './NewClientModal'
 import { utils, writeFile } from 'xlsx'
 import { supabase } from '../lib/supabase'
@@ -82,7 +82,7 @@ export function IncompleteClients() {
 
   useEffect(() => { fetchIncompleteClients() }, [])
 
-  // Função para dispensar pendência
+  // Função para dispensar uma pendência específica
   const handleDismissField = async (client: Client, field: string) => {
     if (!confirm(`Deseja dispensar a pendência de "${field}" para este cliente?`)) return;
 
@@ -102,24 +102,29 @@ export function IncompleteClients() {
     }
   }
 
-  const uniqueSocios = useMemo(() => Array.from(new Set(incompleteClients.map(c => c.socio).filter(Boolean))).sort(), [incompleteClients]);
-  const uniqueBrindes = useMemo(() => Array.from(new Set(incompleteClients.map(c => c.tipoBrinde).filter(Boolean))).sort(), [incompleteClients]);
+  // NOVA FUNÇÃO: Descartar Cliente da Lista
+  const handleDiscardClient = async (client: Client, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
 
-  const filteredClients = useMemo(() => {
-    let result = [...incompleteClients].filter(client => {
-      const matchesSocio = socioFilter ? client.socio === socioFilter : true
-      const matchesBrinde = brindeFilter ? client.tipoBrinde === brindeFilter : true
-      return matchesSocio && matchesBrinde
-    })
-    if (sortBy) {
-      result.sort((a, b) => {
-        const valA = (sortBy === 'nome' ? a.nome : a.socio) || ''
-        const valB = (sortBy === 'nome' ? b.nome : b.socio) || ''
-        return sortDirection === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA)
-      })
+    if (!confirm(`Deseja realmente DESCARTAR este cliente da lista de incompletos?\n\nEle continuará salvo no sistema com os dados atuais, mas não será mais cobrado o preenchimento.\n\nEsta ação é definitiva para este módulo.`)) return;
+
+    const missing = getMissingFields(client);
+    const currentIgnored = client.ignored_fields || [];
+    // Adiciona todas as pendências atuais à lista de ignorados
+    const newIgnored = Array.from(new Set([...currentIgnored, ...missing]));
+
+    const { error } = await supabase
+      .from('clientes')
+      .update({ ignored_fields: newIgnored })
+      .eq('id', client.id);
+
+    if (error) {
+      alert('Erro ao descartar cliente.');
+    } else {
+      fetchIncompleteClients();
+      if (selectedClient?.id === client.id) setSelectedClient(null);
     }
-    return result
-  }, [incompleteClients, socioFilter, brindeFilter, sortBy, sortDirection])
+  }
 
   const handleExportExcel = () => {
     const dataToExport = filteredClients.map(client => ({
@@ -141,13 +146,10 @@ export function IncompleteClients() {
     setTimeout(() => setIsModalOpen(true), 10);
   }
 
-  // NOVA FUNÇÃO DE EXCLUIR
   const handleDelete = async (client: Client, e?: React.MouseEvent) => {
     if(e) e.stopPropagation();
-    
-    if (confirm(`Tem certeza que deseja excluir o cadastro de ${client.nome}?`)) {
+    if (confirm(`Tem certeza que deseja excluir permanentemente o cadastro de ${client.nome}?`)) {
         const { error } = await supabase.from('clientes').delete().eq('id', client.id);
-        
         if (error) {
             alert('Erro ao excluir cliente.');
         } else {
@@ -156,6 +158,25 @@ export function IncompleteClients() {
         }
     }
   }
+
+  const uniqueSocios = useMemo(() => Array.from(new Set(incompleteClients.map(c => c.socio).filter(Boolean))).sort(), [incompleteClients]);
+  const uniqueBrindes = useMemo(() => Array.from(new Set(incompleteClients.map(c => c.tipoBrinde).filter(Boolean))).sort(), [incompleteClients]);
+
+  const filteredClients = useMemo(() => {
+    let result = [...incompleteClients].filter(client => {
+      const matchesSocio = socioFilter ? client.socio === socioFilter : true
+      const matchesBrinde = brindeFilter ? client.tipoBrinde === brindeFilter : true
+      return matchesSocio && matchesBrinde
+    })
+    if (sortBy) {
+      result.sort((a, b) => {
+        const valA = (sortBy === 'nome' ? a.nome : a.socio) || ''
+        const valB = (sortBy === 'nome' ? b.nome : b.socio) || ''
+        return sortDirection === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA)
+      })
+    }
+    return result
+  }, [incompleteClients, socioFilter, brindeFilter, sortBy, sortDirection])
 
   const toggleSort = (field: 'nome' | 'socio') => {
     if (sortBy === field) setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc')
@@ -204,11 +225,14 @@ export function IncompleteClients() {
               </div>
             </div>
             <div className="p-6 bg-gray-50 border-t border-gray-100 flex justify-end gap-3">
+              <button onClick={(e) => handleDiscardClient(selectedClient, e)} className="px-5 py-2.5 bg-gray-100 text-gray-600 rounded-lg font-bold text-sm flex items-center gap-2 hover:bg-gray-200 transition-all">
+                <Ban className="h-4 w-4" /> Descartar
+              </button>
               <button onClick={(e) => handleDelete(selectedClient, e)} className="px-5 py-2.5 bg-red-100 text-red-700 rounded-lg font-bold text-sm flex items-center gap-2 hover:bg-red-200 transition-all">
                 <Trash2 className="h-4 w-4" /> Excluir
               </button>
               <button onClick={(e) => handleEdit(selectedClient, e)} className="px-5 py-2.5 bg-[#112240] text-white rounded-lg font-bold text-sm flex items-center gap-2 hover:bg-black transition-all shadow-md">
-                <Pencil className="h-4 w-4" /> Completar Cadastro
+                <Pencil className="h-4 w-4" /> Completar
               </button>
             </div>
           </div>
@@ -276,8 +300,10 @@ export function IncompleteClients() {
                       </div>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      {/* BOTÕES DE AÇÃO SEMPRE VISÍVEIS */}
                       <div className="flex justify-end gap-2">
+                        <button onClick={(e) => handleDiscardClient(client, e)} className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-md transition-colors" title="Descartar da Lista">
+                            <Ban className="h-4 w-4" />
+                        </button>
                         <button onClick={(e) => handleEdit(client, e)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors" title="Editar">
                             <Pencil className="h-4 w-4" />
                         </button>
@@ -311,8 +337,11 @@ export function IncompleteClients() {
                   ))}
                 </div>
                 <div className="flex gap-2">
+                    <button onClick={(e) => handleDiscardClient(client, e)} className="px-3 py-2 bg-gray-100 text-gray-600 rounded-lg border border-gray-200 hover:bg-gray-200" title="Descartar">
+                        <Ban className="h-4 w-4" />
+                    </button>
                     <button onClick={(e) => handleEdit(client, e)} className="flex-1 py-2 bg-[#112240] text-white rounded-lg font-bold text-sm">Completar</button>
-                    <button onClick={(e) => handleDelete(client, e)} className="px-3 py-2 bg-red-50 text-red-600 rounded-lg border border-red-100 hover:bg-red-100">
+                    <button onClick={(e) => handleDelete(client, e)} className="px-3 py-2 bg-red-50 text-red-600 rounded-lg border border-red-100 hover:bg-red-100" title="Excluir">
                         <Trash2 className="h-4 w-4" />
                     </button>
                 </div>
