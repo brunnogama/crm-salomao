@@ -6,7 +6,6 @@ import { supabase } from '../lib/supabase'
 
 interface Client extends ClientData {
   id: number;
-  ignored_fields?: string[]; // Adicionado para suportar a função de dispensar
 }
 
 export function Clients() {
@@ -25,11 +24,6 @@ export function Clients() {
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
 
   const [clients, setClients] = useState<Client[]>([])
-
-  // Helper para verificar se o campo foi dispensado
-  const isIgnored = (field: string) => {
-    return selectedClient?.ignored_fields?.includes(field) ? 'text-gray-400 italic' : 'text-gray-900';
-  }
 
   const fetchClients = async () => {
     setLoading(true)
@@ -56,8 +50,7 @@ export function Clients() {
         estado: item.estado,
         email: item.email,
         socio: item.socio,
-        observacoes: item.observacoes,
-        ignored_fields: item.ignored_fields || [] // Mapeamento do campo novo
+        observacoes: item.observacoes
       }))
       setClients(formattedClients)
     }
@@ -169,9 +162,7 @@ Agradecemos a atenção!`;
       estado: clientData.estado,
       email: clientData.email,
       socio: clientData.socio,
-      observacoes: clientData.observacoes,
-      // Não enviamos ignored_fields aqui para não sobrescrever acidentalmente,
-      // a menos que o NewClientModal passe a gerenciar isso também.
+      observacoes: clientData.observacoes
     }
 
     try {
@@ -192,20 +183,14 @@ Agradecemos a atenção!`;
   }
 
   const handleEdit = (client: Client, e?: React.MouseEvent) => {
-    if(e) {
-        e.preventDefault();
-        e.stopPropagation();
-    }
+    if(e) e.stopPropagation();
     setSelectedClient(null);
     setClientToEdit(client);
     setTimeout(() => { setIsModalOpen(true); }, 10);
   }
 
   const handleDeleteClick = (client: Client, e?: React.MouseEvent) => {
-    if(e) {
-        e.preventDefault();
-        e.stopPropagation();
-    }
+    if(e) e.stopPropagation();
     setClientToDelete(client);
   }
 
@@ -254,40 +239,18 @@ Agradecemos a atenção!`;
             <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-8 overflow-y-auto max-h-[70vh]">
               <div className="space-y-4">
                 <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest border-b pb-2">Informações Pessoais</h3>
-                
-                {/* Campos com verificação se foram dispensados */}
-                <p className={`text-sm flex items-center gap-3 ${isIgnored('Empresa')}`}>
-                    <Briefcase className="h-4 w-4 text-blue-600" /> <strong>Empresa:</strong> {selectedClient.empresa}
-                </p>
-                <p className={`text-sm flex items-center gap-3 ${isIgnored('Cargo')}`}>
-                    <User className="h-4 w-4 text-blue-600" /> <strong>Cargo:</strong> {selectedClient.cargo || '-'}
-                </p>
-                <p className={`text-sm flex items-center gap-3 ${isIgnored('Email')}`}>
-                    <Mail className="h-4 w-4 text-blue-600" /> <strong>E-mail:</strong> {selectedClient.email || '-'}
-                </p>
-                <p className={`text-sm flex items-center gap-3 ${isIgnored('Telefone')}`}>
-                    <Phone className="h-4 w-4 text-blue-600" /> <strong>Telefone:</strong> {selectedClient.telefone || '-'}
-                </p>
+                <p className="text-sm flex items-center gap-3"><Briefcase className="h-4 w-4 text-blue-600" /> <strong>Empresa:</strong> {selectedClient.empresa}</p>
+                <p className="text-sm flex items-center gap-3"><User className="h-4 w-4 text-blue-600" /> <strong>Cargo:</strong> {selectedClient.cargo || '-'}</p>
+                <p className="text-sm flex items-center gap-3"><Mail className="h-4 w-4 text-blue-600" /> <strong>E-mail:</strong> {selectedClient.email || '-'}</p>
+                <p className="text-sm flex items-center gap-3"><Phone className="h-4 w-4 text-blue-600" /> <strong>Telefone:</strong> {selectedClient.telefone || '-'}</p>
               </div>
-              
               <div className="space-y-4">
                 <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest border-b pb-2">Endereço e Logística</h3>
-                
-                <p className={`text-sm flex items-center gap-3 ${isIgnored('Endereço')}`}>
-                    <MapPin className="h-4 w-4 text-blue-600" /> {selectedClient.endereco}, {selectedClient.numero}
-                </p>
-                <p className={`text-sm ml-7 ${isIgnored('Bairro')}`}>
-                    {selectedClient.bairro} - {selectedClient.cidade}/{selectedClient.estado}
-                </p>
-                
-                <p className={`text-sm flex items-center gap-3 ${isIgnored('Tipo Brinde')}`}>
-                    <Gift className="h-4 w-4 text-blue-600" /> <strong>Brinde:</strong> {selectedClient.tipoBrinde} ({selectedClient.quantidade}x)
-                </p>
-                <p className={`text-sm flex items-center gap-3 ${isIgnored('Sócio')}`}>
-                    <Info className="h-4 w-4 text-blue-600" /> <strong>Sócio:</strong> {selectedClient.socio}
-                </p>
+                <p className="text-sm flex items-center gap-3"><MapPin className="h-4 w-4 text-blue-600" /> {selectedClient.endereco}, {selectedClient.numero}</p>
+                <p className="text-sm text-gray-600 ml-7">{selectedClient.bairro} - {selectedClient.cidade}/{selectedClient.estado}</p>
+                <p className="text-sm flex items-center gap-3"><Gift className="h-4 w-4 text-blue-600" /> <strong>Brinde:</strong> {selectedClient.tipoBrinde} ({selectedClient.quantidade}x)</p>
+                <p className="text-sm flex items-center gap-3"><Info className="h-4 w-4 text-blue-600" /> <strong>Sócio:</strong> {selectedClient.socio}</p>
               </div>
-              
               <div className="md:col-span-2 bg-gray-50 p-4 rounded-xl border border-gray-100">
                 <p className="text-xs font-bold text-gray-400 uppercase mb-2">Observações</p>
                 <p className="text-sm text-gray-600 italic">{selectedClient.observacoes || 'Nenhuma observação cadastrada.'}</p>
@@ -351,10 +314,11 @@ Agradecemos a atenção!`;
                     <span className={`px-2 py-0.5 text-[10px] font-semibold rounded-full flex-shrink-0 ${client.tipoBrinde === 'Brinde VIP' ? 'bg-purple-100 text-purple-800' : 'bg-green-100 text-green-800'}`}>{client.tipoBrinde}</span>
                   </div>
                   
-                  {/* Endereço e Telefone no Card */}
+                  {/* MODIFICADO: Bloco de endereço e telefone sempre visível no card */}
                   <div className="bg-gray-50/50 rounded-md p-2 border border-gray-100 mb-3 text-xs space-y-1">
                     <div className="flex justify-between items-center"><span className="text-gray-400">Sócio:</span><span className="font-bold text-[#112240]">{client.socio}</span></div>
                     
+                    {/* Endereço compactado com tooltip */}
                     {(client.endereco) && (
                          <div className="flex justify-between items-start gap-2">
                             <span className="text-gray-400 whitespace-nowrap">End:</span>
@@ -374,6 +338,7 @@ Agradecemos a atenção!`;
 
                   <div className="border-t border-gray-100 pt-3 flex justify-between items-center transition-opacity">
                     <div className="flex gap-2">
+                      {/* Ícones de contato sempre visíveis se houver telefone */}
                       {client.telefone && (
                         <>
                             <button onClick={(e) => handleWhatsApp(client, e)} className="p-1.5 text-green-600 bg-green-50 hover:bg-green-100 rounded-md transition-colors"><MessageCircle className="h-4 w-4" /></button>
