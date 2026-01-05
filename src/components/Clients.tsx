@@ -16,7 +16,6 @@ interface Client {
 export function Clients() {
   const [clients, setClients] = useState<Client[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [loading, setLoading] = useState(true);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   
   // Estados para o Formulário (Novo/Editar)
@@ -32,10 +31,8 @@ export function Clients() {
   });
 
   const fetchClients = async () => {
-    setLoading(true);
     const { data } = await supabase.from('clientes').select('*').order('nome');
     if (data) setClients(data as Client[]);
-    setLoading(false);
   };
 
   useEffect(() => { fetchClients(); }, []);
@@ -99,7 +96,7 @@ export function Clients() {
 
   return (
     <div className="h-full flex flex-col space-y-6 pb-10">
-      {/* Toolbar */}
+      {/* Barra de Ferramentas */}
       <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-wrap gap-4 items-center justify-between">
         <div className="flex gap-3 items-center flex-1 min-w-[300px]">
           <div className="relative flex-1">
@@ -112,29 +109,35 @@ export function Clients() {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <button onClick={fetchClients} className="p-2.5 bg-white border border-gray-200 rounded-lg hover:bg-gray-50"><RefreshCcw className="h-4 w-4 text-gray-500" /></button>
+          <button onClick={fetchClients} className="p-2.5 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-all active:scale-95 shadow-sm">
+            <RefreshCcw className="h-4 w-4 text-gray-500" />
+          </button>
         </div>
         <div className="flex gap-3">
-          <button onClick={exportToExcel} className="flex items-center gap-2 bg-emerald-600 text-white px-5 py-2.5 rounded-lg text-xs font-bold hover:bg-emerald-700 shadow-sm"><Download className="h-4 w-4" /> EXPORTAR XLS</button>
-          <button onClick={openNewForm} className="flex items-center gap-2 bg-[#112240] text-white px-5 py-2.5 rounded-lg text-xs font-bold hover:bg-black shadow-sm"><Plus className="h-4 w-4" /> NOVO CLIENTE</button>
+          <button onClick={exportToExcel} className="flex items-center gap-2 bg-emerald-600 text-white px-5 py-2.5 rounded-xl text-xs font-bold hover:bg-emerald-700 shadow-sm transition-all active:scale-95">
+            <Download className="h-4 w-4" /> EXPORTAR XLS
+          </button>
+          <button onClick={openNewForm} className="flex items-center gap-2 bg-[#112240] text-white px-5 py-2.5 rounded-xl text-xs font-bold hover:bg-black shadow-sm transition-all active:scale-95">
+            <Plus className="h-4 w-4" /> NOVO CLIENTE
+          </button>
         </div>
       </div>
 
-      {/* Grid */}
+      {/* Grid de Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 overflow-y-auto pr-2 custom-scrollbar">
         {filteredClients.map((client) => (
-          <div key={client.id} onClick={() => setSelectedClient(client)} className="group bg-white p-6 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-all cursor-pointer">
+          <div key={client.id} onClick={() => setSelectedClient(client)} className="group bg-white p-6 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-all cursor-pointer relative overflow-hidden">
             <div className="flex justify-between items-start mb-4">
               <div className="h-10 w-10 bg-gray-50 text-[#112240] flex items-center justify-center rounded-xl font-bold border border-gray-100">{client.nome?.charAt(0)}</div>
               <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button onClick={(e) => openEditForm(client, e)} className="p-1.5 bg-white border border-gray-200 text-gray-400 hover:text-blue-600 rounded-md"><Pencil className="h-3.5 w-3.5" /></button>
-                <button onClick={(e) => handleDelete(client.id, e)} className="p-1.5 bg-white border border-gray-200 text-gray-400 hover:text-red-600 rounded-md"><Trash2 className="h-3.5 w-3.5" /></button>
+                <button onClick={(e) => openEditForm(client, e)} className="p-1.5 bg-white border border-gray-100 text-gray-400 hover:text-blue-600 rounded-md transition-all"><Pencil className="h-3.5 w-3.5" /></button>
+                <button onClick={(e) => handleDelete(client.id, e)} className="p-1.5 bg-white border border-gray-100 text-gray-400 hover:text-red-600 rounded-md transition-all"><Trash2 className="h-3.5 w-3.5" /></button>
               </div>
             </div>
             <h4 className="font-bold text-[#112240] text-sm mb-3 truncate">{client.nome}</h4>
             <div className="space-y-2 text-xs text-gray-500">
-              <p className="flex items-center gap-2"><User className="h-3 w-3" /> {client.socio}</p>
-              <p className="flex items-center gap-2"><Phone className="h-3 w-3" /> {client.telefone}</p>
+              <p className="flex items-center gap-2"><User className="h-3 w-3" /> {client.socio || 'N/A'}</p>
+              <p className="flex items-center gap-2"><Phone className="h-3 w-3" /> {client.telefone || 'N/A'}</p>
             </div>
           </div>
         ))}
@@ -142,11 +145,11 @@ export function Clients() {
 
       {/* Modal de Formulário (Novo/Editar) */}
       {isFormOpen && (
-        <div className="fixed inset-0 bg-black/50 z-[110] flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/50 z-[110] flex items-center justify-center p-4 backdrop-blur-sm animate-fadeIn">
           <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
             <div className="bg-[#112240] p-6 text-white flex justify-between items-center">
               <h3 className="font-bold">{editingClient ? 'Editar Cliente' : 'Novo Cliente'}</h3>
-              <button onClick={() => setIsFormOpen(false)}><X className="h-5 w-5" /></button>
+              <button onClick={() => setIsFormOpen(false)} className="hover:bg-white/10 rounded-lg p-1 transition-colors"><X className="h-5 w-5" /></button>
             </div>
             <form onSubmit={handleSaveClient} className="p-6 space-y-4">
               <div>
@@ -175,7 +178,7 @@ export function Clients() {
                   <option value="Brinde Simples">Brinde Simples</option>
                 </select>
               </div>
-              <button type="submit" className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold text-xs mt-4 flex items-center justify-center gap-2 hover:bg-blue-700">
+              <button type="submit" className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold text-xs mt-4 flex items-center justify-center gap-2 hover:bg-blue-700 transition-colors">
                 <Save className="h-4 w-4" /> SALVAR DADOS
               </button>
             </form>
@@ -185,20 +188,20 @@ export function Clients() {
 
       {/* Modal de Detalhes (Visualização) */}
       {selectedClient && !isFormOpen && (
-        <div className="fixed inset-0 bg-black/40 z-[100] flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-xl rounded-3xl shadow-2xl overflow-hidden">
+        <div className="fixed inset-0 bg-black/40 z-[100] flex items-center justify-center p-4 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-white w-full max-w-xl rounded-3xl shadow-2xl overflow-hidden border border-gray-200">
             <div className="bg-[#112240] p-8 text-white flex justify-between items-center">
               <h2 className="text-xl font-bold">{selectedClient.nome}</h2>
-              <button onClick={() => setSelectedClient(null)}><X className="h-6 w-6" /></button>
+              <button onClick={() => setSelectedClient(null)} className="hover:bg-white/10 rounded-lg p-1 transition-colors"><X className="h-6 w-6" /></button>
             </div>
             <div className="p-8 grid grid-cols-2 gap-8">
               <div className="space-y-4">
-                <p className="text-sm font-medium"><Mail className="inline h-4 w-4 mr-2" /> {selectedClient.email}</p>
-                <p className="text-sm font-medium"><User className="inline h-4 w-4 mr-2" /> {selectedClient.socio}</p>
+                <p className="text-sm font-medium flex items-center gap-3"><Mail className="h-4 w-4 text-gray-400" /> {selectedClient.email || 'Não informado'}</p>
+                <p className="text-sm font-medium flex items-center gap-3"><User className="h-4 w-4 text-gray-400" /> {selectedClient.socio || 'Não informado'}</p>
               </div>
               <div className="space-y-4">
-                <p className="text-sm font-medium"><Gift className="inline h-4 w-4 mr-2" /> {selectedClient.tipo_brinde}</p>
-                <p className="text-sm font-medium"><MapPin className="inline h-4 w-4 mr-2" /> {selectedClient.uf}</p>
+                <p className="text-sm font-medium flex items-center gap-3"><Gift className="h-4 w-4 text-gray-400" /> {selectedClient.tipo_brinde || 'Não informado'}</p>
+                <p className="text-sm font-medium flex items-center gap-3"><MapPin className="h-4 w-4 text-gray-400" /> {selectedClient.uf || 'Não informado'}</p>
               </div>
             </div>
           </div>
