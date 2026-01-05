@@ -43,16 +43,18 @@ export function Settings() {
 
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // --- CHANGELOG ---
+  // --- CHANGELOG ATUALIZADO ---
   const changelog = [
     {
       version: '1.4',
       date: '05/01/2026',
       type: 'feat',
-      title: 'Gestão de Acessos',
+      title: 'Gestão de Acessos e Segurança',
       items: [
-        'Novo módulo de Gerenciamento de Usuários nas Configurações.',
-        'Controle de cadastro, inativação e permissões de usuários.',
+        'Novo painel administrativo para Gestão de Usuários.',
+        'Funcionalidade de criar, editar e excluir acessos ao sistema.',
+        'Controle de bloqueio/desbloqueio imediato de usuários (Inativar).',
+        'Definição de níveis de cargo (Admin, Sócio, Colaborador).'
       ]
     },
     {
@@ -61,11 +63,44 @@ export function Settings() {
       type: 'fix',
       title: 'Estabilidade e UX Mobile',
       items: [
-        'Correção crítica no Logout.',
-        'Ajuste na Sidebar Mobile.',
+        'Correção crítica no Logout: Saída do sistema agora é instantânea.',
+        'Ajuste na Sidebar Mobile: Botão fechar reposicionado e altura corrigida.',
+        'Correção de sobreposição do rodapé do usuário em telas pequenas.'
       ]
     },
-    // ... versões anteriores mantidas ...
+    {
+      version: '1.3',
+      date: '05/01/2026',
+      type: 'feat',
+      title: 'Interatividade e Mobilidade',
+      items: [
+        'Suporte completo a dispositivos móveis (Menu Responsivo).',
+        'Impressão de Fichas Cadastrais (PDF) e Relatórios em Lista.',
+        'Interatividade no Dashboard (Drill-down).',
+        'Filtros por Data no Histórico.'
+      ]
+    },
+    {
+      version: '1.2.1',
+      date: '05/01/2026',
+      type: 'fix',
+      title: 'Polimento Visual',
+      items: ['Correção de tooltips no Dashboard', 'Ajuste de cards', 'Formatação de e-mail']
+    },
+    {
+      version: '1.2',
+      date: '05/01/2026',
+      type: 'feat',
+      title: 'Auditoria',
+      items: ['Sistema de Logs', 'Rastreabilidade de ações']
+    },
+    {
+      version: '1.0',
+      date: '01/01/2026',
+      type: 'major',
+      title: 'Lançamento',
+      items: ['Estrutura inicial', 'Autenticação', 'Kanban', 'Gestão de Clientes']
+    }
   ];
 
   // --- BUSCAS INICIAIS ---
@@ -131,11 +166,10 @@ export function Settings() {
     }
   }
 
-  // --- GESTÃO DE USUÁRIOS (NOVO) ---
+  // --- GESTÃO DE USUÁRIOS ---
   const fetchUsers = async () => {
     setLoadingUsers(true)
     try {
-      // Busca na tabela que criamos no SQL
       const { data, error } = await supabase.from('usuarios_permitidos').select('*').order('nome')
       if (error) throw error
       setUsers(data || [])
@@ -154,7 +188,6 @@ export function Settings() {
 
     try {
       if (editingUser) {
-        // Editar
         const { error } = await supabase
           .from('usuarios_permitidos')
           .update({ nome: userForm.nome, email: userForm.email, cargo: userForm.cargo })
@@ -163,7 +196,6 @@ export function Settings() {
         if (error) throw error
         await logAction('EDITAR', 'USUARIOS', `Editou usuário: ${userForm.email}`)
       } else {
-        // Criar Novo
         const { error } = await supabase
           .from('usuarios_permitidos')
           .insert([{ nome: userForm.nome, email: userForm.email, cargo: userForm.cargo, ativo: true }])
@@ -221,7 +253,6 @@ export function Settings() {
     setIsUserModalOpen(true)
   }
 
-
   // --- RESET TOTAL ---
   const handleSystemReset = async () => {
     const confirmation = prompt("ATENÇÃO: ISSO APAGARÁ TODOS OS DADOS!\n\nDigite 'DELETAR' para confirmar o reset completo do sistema.");
@@ -232,7 +263,6 @@ export function Settings() {
             await supabase.from('clientes').delete().neq('id', 0);
             await supabase.from('tasks').delete().neq('id', '00000000-0000-0000-0000-000000000000'); 
             await supabase.from('logs').delete().neq('id', 0);
-            // Opcional: limpar usuários também? Por segurança, melhor não limpar usuários no reset geral
             
             await logAction('EXCLUIR', 'SISTEMA', 'Realizou RESET TOTAL do sistema');
             alert('Sistema resetado com sucesso.');
@@ -360,7 +390,7 @@ export function Settings() {
         </div>
       )}
 
-      {/* --- SEÇÃO NOVA: GESTÃO DE USUÁRIOS --- */}
+      {/* --- GESTÃO DE USUÁRIOS --- */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
             <div className="flex items-center gap-3">
@@ -424,9 +454,6 @@ export function Settings() {
             </tbody>
           </table>
         </div>
-        <p className="mt-2 text-xs text-gray-400 italic">
-          Nota: Ao criar um usuário aqui, você libera o acesso dele. A criação da senha deve ser feita pelo próprio usuário na tela de Login/Cadastro usando o mesmo e-mail.
-        </p>
       </div>
 
       {/* SEÇÃO 2: GESTÃO SÓCIOS E IMPORTAÇÃO */}
@@ -475,7 +502,7 @@ export function Settings() {
             </div>
         </div>
 
-        {/* Importação de Dados */}
+        {/* Importação */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="flex items-center gap-3 mb-6">
                 <div className="p-2 bg-blue-50 rounded-lg text-blue-700"><FileSpreadsheet className="h-6 w-6" /></div>
@@ -509,7 +536,6 @@ export function Settings() {
       {/* SEÇÃO 3: CRÉDITOS E ZONA DE PERIGO */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         
-        {/* CARD DE CRÉDITOS */}
         <div className="md:col-span-2 bg-[#112240] text-white rounded-xl shadow-lg p-8 relative overflow-hidden">
             <div className="relative z-10">
                 <div className="flex items-center gap-3 mb-6 border-b border-white/10 pb-4">
@@ -558,7 +584,6 @@ export function Settings() {
             <div className="absolute -bottom-10 -right-10 w-64 h-64 bg-blue-600/20 rounded-full blur-3xl pointer-events-none"></div>
         </div>
 
-        {/* ZONA DE PERIGO (RESET) */}
         <div className="bg-red-50 rounded-xl border border-red-100 p-6 flex flex-col justify-center items-center text-center">
             <div className="p-3 bg-red-100 rounded-full text-red-600 mb-4">
                 <AlertTriangle className="h-8 w-8" />
