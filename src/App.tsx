@@ -8,6 +8,7 @@ import { IncompleteClients } from './components/IncompleteClients'
 import { Kanban } from './components/Kanban'
 import { Dashboard } from './components/Dashboard'
 import { History } from './components/History'
+import { Manual } from './components/Manual' // NOVO COMPONENTE
 import { Menu } from 'lucide-react'
 import { ModuleSelector } from './components/ModuleSelector'
 import { UnderConstruction } from './components/UnderConstruction'
@@ -30,7 +31,8 @@ export default function App() {
     incompletos: 'Atenção: Cadastros que necessitam de preenchimento.',
     kanban: 'Gerencie suas tarefas de forma visual.',
     configuracoes: 'Preferências do sistema e gestão de acessos.',
-    historico: 'Audit Log: Rastreabilidade de ações no sistema.'
+    historico: 'Audit Log: Rastreabilidade de ações no sistema.',
+    manual: 'Documentação completa e guias de uso.' // DESCRIÇÃO DO MANUAL
   }
 
   const pageTitles: Record<string, string> = {
@@ -39,7 +41,8 @@ export default function App() {
     incompletos: 'Cadastros Incompletos',
     kanban: 'Kanban',
     configuracoes: 'Configurações',
-    historico: 'Histórico de Atividades'
+    historico: 'Histórico de Atividades',
+    manual: 'Manual do Sistema' // TÍTULO DO MANUAL
   }
 
   useEffect(() => {
@@ -90,8 +93,7 @@ export default function App() {
         userName={getUserDisplayName()} 
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
-        // A LINHA ABAIXO CORRIGE O ERRO TS2741:
-        onSwitchModule={() => setCurrentModule('home')} 
+        onSwitchModule={() => setCurrentModule('home')}
       />
       
       <main className="flex-1 flex flex-col h-screen overflow-hidden min-w-0 relative">
@@ -129,6 +131,7 @@ export default function App() {
             {activePage === 'incompletos' && <IncompleteClients />}
             {activePage === 'kanban' && <Kanban />}
             {activePage === 'historico' && <History />} 
+            {activePage === 'manual' && <Manual />} 
             {activePage === 'configuracoes' && (
                 <div className="h-full overflow-y-auto pr-2 custom-scrollbar"><Settings /></div>
             )}
