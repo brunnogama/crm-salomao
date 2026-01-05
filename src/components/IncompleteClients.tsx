@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { LayoutList, LayoutGrid, Pencil, X, RefreshCw, Briefcase, Mail, Gift, Info, ChevronDown, ArrowUpDown, FileSpreadsheet, Filter, EyeOff } from 'lucide-react'
+import { LayoutList, LayoutGrid, Pencil, X, RefreshCw, Briefcase, Mail, Gift, Info, ChevronDown, ArrowUpDown, FileSpreadsheet, Filter, EyeOff, Trash2 } from 'lucide-react'
 import { NewClientModal, ClientData } from './NewClientModal'
 import { utils, writeFile } from 'xlsx'
 import { supabase } from '../lib/supabase'
@@ -24,7 +24,7 @@ export function IncompleteClients() {
 
   const [incompleteClients, setIncompleteClients] = useState<Client[]>([])
 
-  // NOVA LÓGICA RIGOROSA: Tudo obrigatório exceto Complemento, Obs e Telefone
+  // Lógica rigorosa de pendências (exceto o que foi dispensado)
   const getMissingFields = (client: Client) => {
     const ignored = client.ignored_fields || [];
     const missing: string[] = []
@@ -32,7 +32,7 @@ export function IncompleteClients() {
     if (!client.nome) missing.push('Nome')
     if (!client.empresa) missing.push('Empresa')
     if (!client.cargo) missing.push('Cargo')
-    // if (!client.telefone) missing.push('Telefone') // Removido da obrigatoriedade
+    // Telefone não é obrigatório para lista de incompletos
     if (!client.tipoBrinde) missing.push('Tipo Brinde')
     if (!client.cep) missing.push('CEP')
     if (!client.endereco) missing.push('Endereço')
@@ -43,7 +43,6 @@ export function IncompleteClients() {
     if (!client.email) missing.push('Email')
     if (!client.socio) missing.push('Sócio')
     
-    // Retorna apenas o que NÃO foi dispensado pelo usuário
     return missing.filter(field => !ignored.includes(field));
   }
 
@@ -83,9 +82,9 @@ export function IncompleteClients() {
 
   useEffect(() => { fetchIncompleteClients() }, [])
 
-  // Função para dispensar um campo
+  // Função para dispensar pendência
   const handleDismissField = async (client: Client, field: string) => {
-    if (!confirm(`Deseja dispensar o preenchimento de "${field}" para este cliente?`)) return;
+    if (!confirm(`Deseja dispensar a pendência de "${field}" para este cliente?`)) return;
 
     const currentIgnored = client.ignored_fields || [];
     const newIgnored = [...currentIgnored, field];
@@ -96,20 +95,15 @@ export function IncompleteClients() {
       .eq('id', client.id);
 
     if (error) {
-      alert('Erro ao dispensar campo.');
+      alert('Erro ao atualizar. Tente novamente.');
     } else {
       fetchIncompleteClients();
       if(selectedClient?.id === client.id) setSelectedClient(null);
     }
   }
 
-  const uniqueSocios = useMemo(() => {
-    return Array.from(new Set(incompleteClients.map(c => c.socio).filter(Boolean))).sort();
-  }, [incompleteClients]);
-
-  const uniqueBrindes = useMemo(() => {
-    return Array.from(new Set(incompleteClients.map(c => c.tipoBrinde).filter(Boolean))).sort();
-  }, [incompleteClients]);
+  const uniqueSocios = useMemo(() => Array.from(new Set(incompleteClients.map(c => c.socio).filter(Boolean))).sort(), [incompleteClients]);
+  const uniqueBrindes = useMemo(() => Array.from(new Set(incompleteClients.map(c => c.tipoBrinde).filter(Boolean))).sort(), [incompleteClients]);
 
   const filteredClients = useMemo(() => {
     let result = [...incompleteClients].filter(client => {
@@ -147,6 +141,22 @@ export function IncompleteClients() {
     setTimeout(() => setIsModalOpen(true), 10);
   }
 
+  // NOVA FUNÇÃO DE EXCLUIR
+  const handleDelete = async (client: Client, e?: React.MouseEvent) => {
+    if(e) e.stopPropagation();
+    
+    if (confirm(`Tem certeza que deseja excluir o cadastro de ${client.nome}?`)) {
+        const { error } = await supabase.from('clientes').delete().eq('id', client.id);
+        
+        if (error) {
+            alert('Erro ao excluir cliente.');
+        } else {
+            fetchIncompleteClients();
+            if(selectedClient?.id === client.id) setSelectedClient(null);
+        }
+    }
+  }
+
   const toggleSort = (field: 'nome' | 'socio') => {
     if (sortBy === field) setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc')
     else { setSortBy(field); setSortDirection('asc'); }
@@ -168,23 +178,22 @@ export function IncompleteClients() {
             </div>
             <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-8 overflow-y-auto max-h-[70vh]">
               <div className="space-y-4">
-                <h3 className="text-xs font-bold text-red-400 uppercase border-b pb-2">Gerenciar Pendências</h3>
+                <h3 className="text-xs font-bold text-red-400 uppercase border-b pb-2">Pendências</h3>
                 
-                {/* LISTA DE PENDÊNCIAS COM BOTÃO DE DISPENSAR */}
                 <div className="flex flex-col gap-2">
                   {getMissingFields(selectedClient).map(field => (
                     <div key={field} className="flex items-center justify-between p-2 bg-red-50 rounded border border-red-100">
                         <span className="text-xs font-bold text-red-800">{field}</span>
                         <button 
                             onClick={() => handleDismissField(selectedClient, field)} 
-                            className="text-xs text-gray-500 hover:text-gray-800 flex items-center gap-1 bg-white px-2 py-1 rounded border border-gray-200"
+                            className="text-xs text-gray-500 hover:text-gray-800 flex items-center gap-1 bg-white px-2 py-1 rounded border border-gray-200 hover:shadow-sm transition-all"
+                            title="Ignorar esta pendência"
                         >
                             <EyeOff className="h-3 w-3" /> Dispensar
                         </button>
                     </div>
                   ))}
                 </div>
-
                 <p className="text-sm flex items-center gap-3 mt-4"><Briefcase className="h-4 w-4 text-gray-400" /> {selectedClient.empresa || '-'}</p>
                 <p className="text-sm flex items-center gap-3"><Mail className="h-4 w-4 text-gray-400" /> {selectedClient.email || '-'}</p>
               </div>
@@ -194,9 +203,12 @@ export function IncompleteClients() {
                 <p className="text-sm flex items-center gap-3"><Info className="h-4 w-4 text-gray-400" /> <strong>Sócio:</strong> {selectedClient.socio || '-'}</p>
               </div>
             </div>
-            <div className="p-6 bg-gray-50 border-t border-gray-100 flex justify-end">
+            <div className="p-6 bg-gray-50 border-t border-gray-100 flex justify-end gap-3">
+              <button onClick={(e) => handleDelete(selectedClient, e)} className="px-5 py-2.5 bg-red-100 text-red-700 rounded-lg font-bold text-sm flex items-center gap-2 hover:bg-red-200 transition-all">
+                <Trash2 className="h-4 w-4" /> Excluir
+              </button>
               <button onClick={(e) => handleEdit(selectedClient, e)} className="px-5 py-2.5 bg-[#112240] text-white rounded-lg font-bold text-sm flex items-center gap-2 hover:bg-black transition-all shadow-md">
-                <Pencil className="h-4 w-4" /> Editar/Completar
+                <Pencil className="h-4 w-4" /> Completar Cadastro
               </button>
             </div>
           </div>
@@ -264,7 +276,15 @@ export function IncompleteClients() {
                       </div>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <button onClick={(e) => handleEdit(client, e)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md opacity-0 group-hover:opacity-100 transition-opacity"><Pencil className="h-4 w-4" /></button>
+                      {/* BOTÕES DE AÇÃO SEMPRE VISÍVEIS */}
+                      <div className="flex justify-end gap-2">
+                        <button onClick={(e) => handleEdit(client, e)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors" title="Editar">
+                            <Pencil className="h-4 w-4" />
+                        </button>
+                        <button onClick={(e) => handleDelete(client, e)} className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors" title="Excluir">
+                            <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -290,7 +310,12 @@ export function IncompleteClients() {
                     <span key={f} className="px-2 py-0.5 text-[10px] font-bold bg-red-50 text-red-700 rounded border border-red-200 uppercase">{f}</span>
                   ))}
                 </div>
-                <button onClick={(e) => handleEdit(client, e)} className="w-full py-2 bg-[#112240] text-white rounded-lg font-bold text-sm">Completar</button>
+                <div className="flex gap-2">
+                    <button onClick={(e) => handleEdit(client, e)} className="flex-1 py-2 bg-[#112240] text-white rounded-lg font-bold text-sm">Completar</button>
+                    <button onClick={(e) => handleDelete(client, e)} className="px-3 py-2 bg-red-50 text-red-600 rounded-lg border border-red-100 hover:bg-red-100">
+                        <Trash2 className="h-4 w-4" />
+                    </button>
+                </div>
               </div>
             ))}
           </div>
