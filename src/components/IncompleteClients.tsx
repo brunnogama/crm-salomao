@@ -1,11 +1,12 @@
 import { useState, useEffect, useMemo } from 'react'
-import { LayoutList, LayoutGrid, Pencil, X, RefreshCw, Briefcase, Mail, Gift, Info, ChevronDown, ArrowUpDown, FileSpreadsheet, Filter } from 'lucide-react'
+import { LayoutList, LayoutGrid, Pencil, X, RefreshCw, Briefcase, Mail, Gift, Info, ChevronDown, ArrowUpDown, FileSpreadsheet, Filter, EyeOff } from 'lucide-react'
 import { NewClientModal, ClientData } from './NewClientModal'
 import { utils, writeFile } from 'xlsx'
 import { supabase } from '../lib/supabase'
 
 interface Client extends ClientData {
   id: number;
+  ignored_fields?: string[];
 }
 
 export function IncompleteClients() {
@@ -23,17 +24,27 @@ export function IncompleteClients() {
 
   const [incompleteClients, setIncompleteClients] = useState<Client[]>([])
 
-  // Lógica de identificação de pendências (TELEFONE REMOVIDO)
+  // NOVA LÓGICA RIGOROSA: Tudo obrigatório exceto Complemento, Obs e Telefone
   const getMissingFields = (client: Client) => {
+    const ignored = client.ignored_fields || [];
     const missing: string[] = []
+
     if (!client.nome) missing.push('Nome')
     if (!client.empresa) missing.push('Empresa')
+    if (!client.cargo) missing.push('Cargo')
+    // if (!client.telefone) missing.push('Telefone') // Removido da obrigatoriedade
     if (!client.tipoBrinde) missing.push('Tipo Brinde')
     if (!client.cep) missing.push('CEP')
+    if (!client.endereco) missing.push('Endereço')
+    if (!client.numero) missing.push('Número')
+    if (!client.bairro) missing.push('Bairro')
+    if (!client.cidade) missing.push('Cidade')
+    if (!client.estado) missing.push('UF')
     if (!client.email) missing.push('Email')
     if (!client.socio) missing.push('Sócio')
-    // Telefone não é mais obrigatório para considerar incompleto
-    return missing
+    
+    // Retorna apenas o que NÃO foi dispensado pelo usuário
+    return missing.filter(field => !ignored.includes(field));
   }
 
   const fetchIncompleteClients = async () => {
@@ -61,7 +72,8 @@ export function IncompleteClients() {
         estado: item.estado,
         email: item.email,
         socio: item.socio,
-        observacoes: item.observacoes
+        observacoes: item.observacoes,
+        ignored_fields: item.ignored_fields || []
       }))
       const incomplete = formatted.filter(c => getMissingFields(c).length > 0)
       setIncompleteClients(incomplete)
@@ -70,6 +82,26 @@ export function IncompleteClients() {
   }
 
   useEffect(() => { fetchIncompleteClients() }, [])
+
+  // Função para dispensar um campo
+  const handleDismissField = async (client: Client, field: string) => {
+    if (!confirm(`Deseja dispensar o preenchimento de "${field}" para este cliente?`)) return;
+
+    const currentIgnored = client.ignored_fields || [];
+    const newIgnored = [...currentIgnored, field];
+
+    const { error } = await supabase
+      .from('clientes')
+      .update({ ignored_fields: newIgnored })
+      .eq('id', client.id);
+
+    if (error) {
+      alert('Erro ao dispensar campo.');
+    } else {
+      fetchIncompleteClients();
+      if(selectedClient?.id === client.id) setSelectedClient(null);
+    }
+  }
 
   const uniqueSocios = useMemo(() => {
     return Array.from(new Set(incompleteClients.map(c => c.socio).filter(Boolean))).sort();
@@ -136,13 +168,24 @@ export function IncompleteClients() {
             </div>
             <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-8 overflow-y-auto max-h-[70vh]">
               <div className="space-y-4">
-                <h3 className="text-xs font-bold text-red-400 uppercase border-b pb-2">Pendências</h3>
-                <div className="flex flex-wrap gap-2">
+                <h3 className="text-xs font-bold text-red-400 uppercase border-b pb-2">Gerenciar Pendências</h3>
+                
+                {/* LISTA DE PENDÊNCIAS COM BOTÃO DE DISPENSAR */}
+                <div className="flex flex-col gap-2">
                   {getMissingFields(selectedClient).map(field => (
-                    <span key={field} className="px-2 py-1 text-xs bg-red-50 text-red-700 rounded border border-red-100 font-bold">{field}</span>
+                    <div key={field} className="flex items-center justify-between p-2 bg-red-50 rounded border border-red-100">
+                        <span className="text-xs font-bold text-red-800">{field}</span>
+                        <button 
+                            onClick={() => handleDismissField(selectedClient, field)} 
+                            className="text-xs text-gray-500 hover:text-gray-800 flex items-center gap-1 bg-white px-2 py-1 rounded border border-gray-200"
+                        >
+                            <EyeOff className="h-3 w-3" /> Dispensar
+                        </button>
+                    </div>
                   ))}
                 </div>
-                <p className="text-sm flex items-center gap-3"><Briefcase className="h-4 w-4 text-gray-400" /> {selectedClient.empresa || '-'}</p>
+
+                <p className="text-sm flex items-center gap-3 mt-4"><Briefcase className="h-4 w-4 text-gray-400" /> {selectedClient.empresa || '-'}</p>
                 <p className="text-sm flex items-center gap-3"><Mail className="h-4 w-4 text-gray-400" /> {selectedClient.email || '-'}</p>
               </div>
               <div className="space-y-4">
@@ -153,7 +196,7 @@ export function IncompleteClients() {
             </div>
             <div className="p-6 bg-gray-50 border-t border-gray-100 flex justify-end">
               <button onClick={(e) => handleEdit(selectedClient, e)} className="px-5 py-2.5 bg-[#112240] text-white rounded-lg font-bold text-sm flex items-center gap-2 hover:bg-black transition-all shadow-md">
-                <Pencil className="h-4 w-4" /> Completar Cadastro
+                <Pencil className="h-4 w-4" /> Editar/Completar
               </button>
             </div>
           </div>
@@ -190,11 +233,11 @@ export function IncompleteClients() {
           <button onClick={fetchIncompleteClients} className="p-2.5 bg-white border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50 shadow-sm"><RefreshCw className={`h-5 w-5 ${loading ? 'animate-spin' : ''}`} /></button>
         </div>
         <div className="flex items-center gap-3 w-full xl:w-auto">
-          <button onClick={handleExportExcel} className="flex-1 xl:flex-none flex items-center justify-center px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all shadow-md gap-2 font-medium text-sm"><FileSpreadsheet className="h-5 w-5" /> Exportar</button>
+          <button onClick={handleExportExcel} className="flex-1 xl:flex-none flex items-center justify-center px-4 py-2.5 bg-green-600 text-white rounded-lg gap-2 font-medium text-sm transition-all hover:bg-green-700"><FileSpreadsheet className="h-5 w-5" /> Exportar</button>
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto pb-4 font-medium">
+      <div className="flex-1 overflow-auto pb-4">
         {viewMode === 'list' ? (
           <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
             <table className="min-w-full divide-y divide-gray-200">
