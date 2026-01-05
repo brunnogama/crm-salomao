@@ -8,7 +8,6 @@ import { supabase } from './lib/supabase'
 
 function App() {
   const [session, setSession] = useState<any>(null)
-  // Estado unificado para controle de abas
   const [activeTab, setActiveTab] = useState<'dashboard' | 'clients' | 'incomplete'>('dashboard')
 
   useEffect(() => {
@@ -33,10 +32,9 @@ function App() {
 
   return (
     <div className="flex h-screen bg-gray-50">
-      {/* Passando as props corretas conforme definido na interface SidebarProps */}
       <Sidebar 
-        activeTab={activeTab} 
-        setActiveTab={setActiveTab} 
+        activeTab={activeTab} // CORRIGIDO: Era activePage, agora é activeTab
+        setActiveTab={setActiveTab} // CORRIGIDO: Era onNavigate
         userName={session.user.email} 
         onLogout={handleLogout} 
       />
