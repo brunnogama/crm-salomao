@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, LabelList } from 'recharts';
-import { Users, Gift, LayoutGrid, Award } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, LabelList, PieChart, Pie } from 'recharts';
+import { Users, Gift, LayoutGrid, Award, Map } from 'lucide-react';
 
 interface SocioData {
   name: string;
@@ -9,11 +9,17 @@ interface SocioData {
   brindes: { tipo: string; qtd: number }[];
 }
 
+interface StateData {
+  name: string;
+  value: number;
+}
+
 interface DashboardStats {
   totalClients: number;
   brindeCounts: Record<string, number>;
   lastClients: any[];
   socioData: SocioData[];
+  stateData: StateData[];
 }
 
 export function Dashboard() {
@@ -21,7 +27,8 @@ export function Dashboard() {
     totalClients: 0, 
     brindeCounts: {}, 
     lastClients: [], 
-    socioData: [] 
+    socioData: [],
+    stateData: []
   });
   const [loading, setLoading] = useState(true);
 
@@ -40,18 +47,22 @@ export function Dashboard() {
         .order('created_at', { ascending: false })
         .limit(10);
 
+      // Agora buscamos também o campo 'estado'
       const { data: allData } = await supabase
         .from('clientes')
-        .select('tipo_brinde, socio');
+        .select('tipo_brinde, socio, estado');
 
       const brindeCounts: Record<string, number> = {};
       const socioMap: Record<string, any> = {};
+      const stateMap: Record<string, number> = {};
 
       allData?.forEach(item => {
+        // Contagem de Brindes
         if (item.tipo_brinde) {
           brindeCounts[item.tipo_brinde] = (brindeCounts[item.tipo_brinde] || 0) + 1;
         }
 
+        // Contagem por Sócio
         if (item.socio) {
           if (!socioMap[item.socio]) {
             socioMap[item.socio] = { name: item.socio, total: 0, brindes: {} };
@@ -59,6 +70,11 @@ export function Dashboard() {
           socioMap[item.socio].total += 1;
           const tBrinde = item.tipo_brinde || 'Outro';
           socioMap[item.socio].brindes[tBrinde] = (socioMap[item.socio].brindes[tBrinde] || 0) + 1;
+        }
+
+        // Contagem por Estado
+        if (item.estado) {
+          stateMap[item.estado] = (stateMap[item.estado] || 0) + 1;
         }
       });
 
@@ -71,11 +87,17 @@ export function Dashboard() {
         }))
       }));
 
+      // Formatação dos dados de Estado para o gráfico
+      const formattedStateData = Object.entries(stateMap)
+        .map(([name, value]) => ({ name, value }))
+        .sort((a, b) => b.value - a.value); // Ordenar do maior para o menor
+
       setStats({
         totalClients: allData?.length || 0,
         brindeCounts,
         lastClients: lastClients || [],
-        socioData: formattedSocioData
+        socioData: formattedSocioData,
+        stateData: formattedStateData
       });
     } catch (err) {
       console.error("Erro ao carregar dashboard:", err);
@@ -102,7 +124,7 @@ export function Dashboard() {
       {/* Cards de Resumo */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         
-        {/* CARD TOTAL GERAL (NOVO) */}
+        {/* CARD TOTAL GERAL */}
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 flex items-center gap-4 relative overflow-hidden group">
             <div className="absolute right-0 top-0 h-full w-1 bg-blue-600"></div>
             <div className="p-3 bg-blue-50 rounded-xl text-blue-700 group-hover:scale-110 transition-transform">
@@ -137,7 +159,6 @@ export function Dashboard() {
             <h3 className="font-bold text-[#112240] text-xl">Clientes por Sócio</h3>
           </div>
           
-          {/* GRID AJUSTADO PARA 3 COLUNAS */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {stats.socioData.map((socio) => (
               <div key={socio.name} className="bg-gray-50/80 p-5 rounded-xl border border-gray-200 hover:border-blue-200 transition-colors flex flex-col h-full">
@@ -180,31 +201,67 @@ export function Dashboard() {
           </div>
         </div>
 
-        {/* Bloco Últimos Cadastros */}
-        <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-200 flex flex-col h-fit">
-          <div className="flex items-center gap-3 mb-8">
-            <div className="p-2 bg-blue-50 rounded-lg text-blue-600"><Users className="h-6 w-6" /></div>
-            <h3 className="font-bold text-[#112240] text-xl">Últimos Cadastros</h3>
-          </div>
-          <div className="space-y-4 overflow-y-auto custom-scrollbar pr-2 max-h-[600px]">
-            {stats.lastClients.map((client) => (
-              <div key={client.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-transparent hover:border-gray-200 transition-all group">
-                <div className="min-w-0">
-                  <p className="text-sm font-bold text-gray-800 truncate mb-1">{client.nome}</p>
-                  <p className="text-xs text-gray-500 font-medium uppercase tracking-wide group-hover:text-blue-600 transition-colors">
-                    {client.socio || 'Sem Sócio'}
-                  </p>
+        {/* COLUNA LATERAL DIREITA: Estados + Últimos Cadastros */}
+        <div className="space-y-8">
+            
+            {/* Bloco Distribuição Geográfica (Estados) - NOVO */}
+            <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-200 flex flex-col">
+                <div className="flex items-center gap-3 mb-6">
+                    <div className="p-2 bg-indigo-50 rounded-lg text-indigo-600"><Map className="h-6 w-6" /></div>
+                    <h3 className="font-bold text-[#112240] text-xl">Por Estado</h3>
                 </div>
-                <span 
-                  className="text-[10px] px-3 py-1 rounded-full font-bold bg-white border border-gray-200 shadow-sm shrink-0 uppercase tracking-wider" 
-                  style={{ color: getBrindeColor(client.tipo_brinde), borderColor: `${getBrindeColor(client.tipo_brinde)}30` }}
-                >
-                  {client.tipo_brinde?.replace('Brinde ', '') || 'BRINDE'}
-                </span>
-              </div>
-            ))}
-          </div>
+                <div className="h-48 w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={stats.stateData} layout="vertical" margin={{ left: 0, right: 30, top: 0, bottom: 0 }}>
+                            <XAxis type="number" hide />
+                            <YAxis 
+                                dataKey="name" 
+                                type="category" 
+                                axisLine={false} 
+                                tickLine={false} 
+                                fontSize={11} 
+                                width={30}
+                                tick={{fill: '#64748b', fontWeight: 700}}
+                            />
+                            <Tooltip 
+                                cursor={{fill: '#f1f5f9'}}
+                                contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)'}}
+                            />
+                            <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={20} fill="#6366f1">
+                                <LabelList dataKey="value" position="right" style={{ fontSize: '11px', fontWeight: 'bold', fill: '#112240' }} />
+                            </Bar>
+                        </BarChart>
+                    </ResponsiveContainer>
+                </div>
+            </div>
+
+            {/* Bloco Últimos Cadastros */}
+            <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-200 flex flex-col h-fit">
+            <div className="flex items-center gap-3 mb-8">
+                <div className="p-2 bg-blue-50 rounded-lg text-blue-600"><Users className="h-6 w-6" /></div>
+                <h3 className="font-bold text-[#112240] text-xl">Últimos</h3>
+            </div>
+            <div className="space-y-4 overflow-y-auto custom-scrollbar pr-2 max-h-[400px]">
+                {stats.lastClients.map((client) => (
+                <div key={client.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-transparent hover:border-gray-200 transition-all group">
+                    <div className="min-w-0">
+                    <p className="text-sm font-bold text-gray-800 truncate mb-1">{client.nome}</p>
+                    <p className="text-xs text-gray-500 font-medium uppercase tracking-wide group-hover:text-blue-600 transition-colors">
+                        {client.socio || 'Sem Sócio'}
+                    </p>
+                    </div>
+                    <span 
+                    className="text-[10px] px-3 py-1 rounded-full font-bold bg-white border border-gray-200 shadow-sm shrink-0 uppercase tracking-wider" 
+                    style={{ color: getBrindeColor(client.tipo_brinde), borderColor: `${getBrindeColor(client.tipo_brinde)}30` }}
+                    >
+                    {client.tipo_brinde?.replace('Brinde ', '') || 'BRINDE'}
+                    </span>
+                </div>
+                ))}
+            </div>
+            </div>
         </div>
+
       </div>
     </div>
   );
