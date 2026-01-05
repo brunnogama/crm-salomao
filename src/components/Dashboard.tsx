@@ -72,10 +72,9 @@ export function Dashboard() {
           socioMap[item.socio].brindes[tBrinde] = (socioMap[item.socio].brindes[tBrinde] || 0) + 1;
         }
 
-        // Contagem por Estado
-        if (item.estado) {
-          stateMap[item.estado] = (stateMap[item.estado] || 0) + 1;
-        }
+        // Contagem por Estado (Normaliza para Maiúsculas e trata nulos)
+        const estado = item.estado ? item.estado.toUpperCase().trim() : 'ND';
+        stateMap[estado] = (stateMap[estado] || 0) + 1;
       });
 
       const formattedSocioData = Object.values(socioMap).map((s: any) => ({
@@ -182,6 +181,7 @@ export function Dashboard() {
                         fontSize={10} 
                         width={70}
                         tick={{fill: '#64748b', fontWeight: 600}}
+                        interval={0} // Força exibir todos os labels
                       />
                       <Tooltip 
                         cursor={{fill: 'transparent'}}
@@ -204,31 +204,33 @@ export function Dashboard() {
         {/* COLUNA LATERAL DIREITA: Estados + Últimos Cadastros */}
         <div className="space-y-8">
             
-            {/* Bloco Distribuição Geográfica (Estados) - NOVO */}
+            {/* Bloco Distribuição Geográfica (Estados) */}
             <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-200 flex flex-col">
                 <div className="flex items-center gap-3 mb-6">
                     <div className="p-2 bg-indigo-50 rounded-lg text-indigo-600"><Map className="h-6 w-6" /></div>
                     <h3 className="font-bold text-[#112240] text-xl">Por Estado</h3>
                 </div>
-                <div className="h-48 w-full">
+                {/* Altura aumentada para comportar mais estados se necessário */}
+                <div className="h-64 w-full"> 
                     <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={stats.stateData} layout="vertical" margin={{ left: 0, right: 30, top: 0, bottom: 0 }}>
+                        <BarChart data={stats.stateData} layout="vertical" margin={{ left: 0, right: 30, top: 5, bottom: 5 }}>
                             <XAxis type="number" hide />
                             <YAxis 
                                 dataKey="name" 
                                 type="category" 
                                 axisLine={false} 
                                 tickLine={false} 
-                                fontSize={11} 
-                                width={30}
+                                fontSize={12} // Fonte um pouco maior
+                                width={35}   // Largura maior para garantir que caiba a sigla
                                 tick={{fill: '#64748b', fontWeight: 700}}
+                                interval={0} // OBRIGATÓRIO: Exibe todos os nomes mesmo se houver pouco espaço
                             />
                             <Tooltip 
                                 cursor={{fill: '#f1f5f9'}}
                                 contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)'}}
                             />
-                            <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={20} fill="#6366f1">
-                                <LabelList dataKey="value" position="right" style={{ fontSize: '11px', fontWeight: 'bold', fill: '#112240' }} />
+                            <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={24} fill="#6366f1">
+                                <LabelList dataKey="value" position="right" style={{ fontSize: '12px', fontWeight: 'bold', fill: '#112240' }} />
                             </Bar>
                         </BarChart>
                     </ResponsiveContainer>
