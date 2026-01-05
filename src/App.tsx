@@ -7,6 +7,7 @@ import { Settings } from './components/Settings'
 import { IncompleteClients } from './components/IncompleteClients'
 import { Kanban } from './components/Kanban'
 import { Dashboard } from './components/Dashboard'
+import { History } from './components/History' // Importe o novo componente
 
 export default function App() {
   const [session, setSession] = useState<any>(null)
@@ -18,7 +19,8 @@ export default function App() {
     clientes: 'Gerencie a base de prospects e clientes ativos.',
     incompletos: 'Atenção: Cadastros que necessitam de preenchimento.',
     kanban: 'Gerencie suas tarefas de forma visual.',
-    configuracoes: 'Preferências do sistema e gestão de acessos.'
+    configuracoes: 'Preferências do sistema e gestão de acessos.',
+    historico: 'Audit Log: Rastreabilidade de ações no sistema.' // Descrição
   }
 
   useEffect(() => {
@@ -48,6 +50,7 @@ export default function App() {
             <div className="flex flex-col justify-center">
                 <h1 className="text-2xl font-bold text-[#112240] capitalize leading-tight">
                     {activePage === 'incompletos' ? 'Cadastros Incompletos' : activePage}
+                    {activePage === 'historico' && 'Histórico de Atividades'}
                 </h1>
                 <span className="text-sm text-gray-500 font-normal">{moduleDescriptions[activePage]}</span>
             </div>
@@ -57,6 +60,7 @@ export default function App() {
             {activePage === 'clientes' && <Clients />}
             {activePage === 'incompletos' && <IncompleteClients />}
             {activePage === 'kanban' && <Kanban />}
+            {activePage === 'historico' && <History />} 
             {activePage === 'configuracoes' && (
                 <div className="h-full overflow-y-auto pr-2 custom-scrollbar"><Settings /></div>
             )}
