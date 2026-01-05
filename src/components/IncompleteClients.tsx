@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { LayoutList, LayoutGrid, Pencil, X, RefreshCw, Briefcase, Mail, Gift, Info, ChevronDown, ArrowUpDown, FileSpreadsheet, Filter, EyeOff } from 'lucide-react'
+import { LayoutList, LayoutGrid, Pencil, X, RefreshCw, ChevronDown, ArrowUpDown, FileSpreadsheet, EyeOff } from 'lucide-react'
 import { NewClientModal, ClientData } from './NewClientModal'
 import { utils, writeFile } from 'xlsx'
 import { supabase } from '../lib/supabase'
@@ -24,12 +24,11 @@ export function IncompleteClients() {
 
   const [incompleteClients, setIncompleteClients] = useState<Client[]>([])
 
-  // NOVA LÓGICA RIGOROSA: Tudo é obrigatório exceto Complemento e Observações
+  // Lógica de identificação de pendências
   const getMissingFields = (client: Client) => {
     const ignored = client.ignored_fields || [];
     const missing: string[] = []
 
-    // Lista de campos obrigatórios no módulo Incompletos
     if (!client.nome) missing.push('Nome')
     if (!client.empresa) missing.push('Empresa')
     if (!client.cargo) missing.push('Cargo')
@@ -44,7 +43,6 @@ export function IncompleteClients() {
     if (!client.email) missing.push('Email')
     if (!client.socio) missing.push('Sócio')
     
-    // Filtra os campos que o usuário decidiu dispensar/ignorar
     return missing.filter(field => !ignored.includes(field));
   }
 
@@ -56,10 +54,9 @@ export function IncompleteClients() {
       console.error('Erro ao buscar:', error)
     } else {
       const formatted: Client[] = data.map((item: any) => ({
-        ...item, // Pega todos os campos
-        ignored_fields: item.ignored_fields || [] // Garante que é array
+        ...item,
+        ignored_fields: item.ignored_fields || []
       }))
-      // Filtra apenas clientes que ainda possuem pendências não ignoradas
       const incomplete = formatted.filter(c => getMissingFields(c).length > 0)
       setIncompleteClients(incomplete)
     }
@@ -82,7 +79,7 @@ export function IncompleteClients() {
     if (error) {
       alert('Erro ao dispensar campo.');
     } else {
-      fetchIncompleteClients(); // Recarrega a lista para remover se não houver mais pendências
+      fetchIncompleteClients();
       if(selectedClient?.id === client.id) setSelectedClient(null);
     }
   }
@@ -165,10 +162,10 @@ export function IncompleteClients() {
         </div>
       )}
 
-      {/* TOOLBAR (Mantida igual, apenas resumida aqui para focar na lógica) */}
       <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-6 gap-4">
         <div className="flex items-center gap-3 w-full xl:w-auto overflow-x-auto pb-2 px-1">
           <div className="relative group">
+            {/* Ícone de filtro removido da importação, removido daqui também se não for usado ou substituído por SVG direto se necessário */}
             <select value={socioFilter} onChange={(e) => setSocioFilter(e.target.value)} className="appearance-none px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium min-w-[160px] outline-none">
               <option value="">Sócio: Todos</option>
               {uniqueSocios.map(s => <option key={s} value={s}>{s}</option>)}
