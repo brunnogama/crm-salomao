@@ -59,7 +59,6 @@ export function Clients() {
 
   useEffect(() => { fetchClients() }, [])
 
-  // Menus suspensos em ordem alfabética
   const uniqueSocios = useMemo(() => {
     return Array.from(new Set(clients.map(c => c.socio).filter(Boolean))).sort();
   }, [clients]);
@@ -94,7 +93,6 @@ export function Clients() {
     }
   }
 
-  // PARTE DA MENSAGEM PERSONALIZADA NO WHATSAPP
   const handleWhatsApp = (client: Client, e?: React.MouseEvent) => {
     if(e) e.stopPropagation();
     const cleanPhone = client.telefone ? client.telefone.replace(/\D/g, '') : ''
@@ -317,19 +315,44 @@ Agradecemos a atenção!`
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Cliente</th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Brinde</th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Empresa</th>
                     <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Sócio</th>
-                    <th className="px-6 py-4"></th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Brinde</th>
+                    <th className="px-6 py-4 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">WhatsApp</th>
+                    <th className="px-6 py-4 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Ligar</th>
+                    <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Ações</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {processedClients.map(client => (
                     <tr key={client.id} onClick={() => setSelectedClient(client)} className="hover:bg-blue-50/30 transition-colors cursor-pointer group">
-                      <td className="px-6 py-4 whitespace-nowrap"><div className="text-sm font-bold text-gray-900">{client.nome}</div><div className="text-xs text-gray-500">{client.empresa}</div></td>
-                      <td className="px-6 py-4"><span className="text-xs font-medium px-2 py-0.5 rounded-full bg-gray-100">{client.tipoBrinde}</span></td>
-                      <td className="px-6 py-4 text-sm text-gray-600">{client.socio}</td>
-                      <td className="px-6 py-4 text-right opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onClick={(e) => handleEdit(client, e)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md"><Pencil className="h-4 w-4" /></button>
+                      <td className="px-6 py-4 whitespace-nowrap"><div className="text-sm font-bold text-gray-900">{client.nome}</div></td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{client.empresa}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{client.socio}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`px-2 py-0.5 text-[10px] font-semibold rounded-full ${client.tipoBrinde === 'Brinde VIP' ? 'bg-purple-100 text-purple-800' : 'bg-green-100 text-green-800'}`}>
+                          {client.tipoBrinde}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <button onClick={(e) => handleWhatsApp(client, e)} className="p-1.5 text-green-600 bg-green-50 hover:bg-green-100 rounded-md transition-colors">
+                          <MessageCircle className="h-4 w-4" />
+                        </button>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <button onClick={(e) => handle3CX(client.telefone, e)} className="p-1.5 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-md transition-colors">
+                          <Phone className="h-4 w-4" />
+                        </button>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex justify-end gap-2">
+                          <button onClick={(e) => handleEdit(client, e)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md">
+                            <Pencil className="h-4 w-4" />
+                          </button>
+                          <button onClick={(e) => handleDeleteClick(client, e)} className="p-1.5 text-red-600 hover:bg-red-50 rounded-md">
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
