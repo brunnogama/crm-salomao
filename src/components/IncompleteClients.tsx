@@ -70,7 +70,7 @@ export function IncompleteClients() {
             </div>
             <div className="p-10 text-center">
                <p className="text-gray-500 mb-6">Este cadastro possui informações pendentes.</p>
-               <button className="bg-[#112240] text-white px-8 py-4 rounded-2xl font-black text-xs shadow-xl">CORRIGIR AGORA</button>
+               <button className="bg-[#112240] text-white px-8 py-4 rounded-2xl font-black text-xs shadow-xl hover:bg-black transition-all">CORRIGIR AGORA</button>
             </div>
           </div>
         </div>
