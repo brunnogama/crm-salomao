@@ -135,9 +135,10 @@ export function Clients() {
       </html>`;
     printWindow.document.write(htmlContent);
     printWindow.document.close();
+    logAction('EXPORTAR', 'CLIENTES', `Imprimiu ficha cadastral de: ${client.nome}`);
   }
 
-  // --- FUNÇÃO DE IMPRESSÃO EM LOTE (NOVA) ---
+  // --- FUNÇÃO DE IMPRESSÃO EM LOTE ---
   const handlePrintList = () => {
     if (processedClients.length === 0) {
         alert("Nenhum cliente na lista para imprimir.");
@@ -173,36 +174,14 @@ export function Clients() {
             .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #112240; padding-bottom: 10px; }
             .title { font-size: 20px; font-weight: 800; color: #112240; text-transform: uppercase; }
             .meta { font-size: 12px; color: #666; margin-top: 5px; }
-            
-            /* GRID LAYOUT PARA OTIMIZAÇÃO DE ESPAÇO */
-            .grid-container {
-                display: grid;
-                grid-template-columns: 1fr 1fr; /* Duas colunas por folha */
-                gap: 15px;
-            }
-
-            .card {
-                border: 1px solid #ddd;
-                border-radius: 6px;
-                padding: 10px;
-                page-break-inside: avoid; /* NÃO QUEBRAR O CARD NO MEIO */
-                background: #f9fafb;
-            }
-
-            .card-header {
-                display: flex; justify-content: space-between; align-items: center;
-                border-bottom: 1px solid #eee; padding-bottom: 5px; margin-bottom: 8px;
-            }
+            .grid-container { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+            .card { border: 1px solid #ddd; border-radius: 6px; padding: 10px; page-break-inside: avoid; background: #f9fafb; }
+            .card-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 5px; margin-bottom: 8px; }
             .name { font-weight: 800; font-size: 14px; color: #112240; }
             .socio { font-size: 10px; background: #e0e7ff; color: #3730a3; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
-            
             .card-body { font-size: 11px; color: #374151; }
             .row { margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-            
-            @media print {
-              @page { margin: 1cm; size: A4; }
-              body { padding: 0; }
-            }
+            @media print { @page { margin: 1cm; size: A4; } body { padding: 0; } }
           </style>
         </head>
         <body>
@@ -210,9 +189,7 @@ export function Clients() {
             <div class="title">Relatório de Clientes</div>
             <div class="meta">Total: ${processedClients.length} registros | Gerado em: ${new Date().toLocaleDateString()}</div>
           </div>
-          <div class="grid-container">
-            ${clientsHtml}
-          </div>
+          <div class="grid-container">${clientsHtml}</div>
           <script>window.onload = () => { setTimeout(() => { window.print(); window.close(); }, 500); };</script>
         </body>
       </html>
@@ -377,6 +354,7 @@ export function Clients() {
               <button onClick={() => handlePrint(selectedClient)} className="px-4 py-2.5 bg-white border border-gray-300 text-gray-700 rounded-lg font-bold text-sm flex items-center gap-2 hover:bg-gray-50 transition-all shadow-sm">
                 <Printer className="h-4 w-4" /> Imprimir Ficha
               </button>
+              
               <div className="flex gap-3">
                 <button onClick={(e) => handleEdit(selectedClient, e)} className="px-5 py-2.5 bg-[#112240] text-white rounded-lg font-bold text-sm flex items-center gap-2 hover:bg-[#1a3a6c] transition-all shadow-md">
                     <Pencil className="h-4 w-4" /> Editar
@@ -390,7 +368,6 @@ export function Clients() {
         </div>
       )}
 
-      {/* BARRA DE FERRAMENTAS */}
       <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-6 gap-4">
         <div className="flex items-center gap-3 w-full xl:w-auto overflow-x-auto pb-2 xl:pb-0 px-1">
            <div className="relative group">
@@ -447,18 +424,21 @@ export function Clients() {
                         <span className="text-gray-400">Sócio:</span>
                         <span className="font-bold text-[#112240]">{client.socio || '-'}</span>
                     </div>
+                    
                     <div className="flex justify-between items-start gap-2">
                         <span className="text-gray-400 whitespace-nowrap">End:</span>
                         <span className="text-gray-600 font-medium truncate text-right" title={`${client.endereco}, ${client.numero || ''} - ${client.bairro || ''}`}>
                             {client.endereco ? `${client.endereco}, ${client.numero || ''}` : '-'}
                         </span>
                     </div>
+
                     <div className="flex justify-between items-center">
                         <span className="text-gray-400">Local:</span>
                         <span className="text-gray-600 font-medium">
                             {client.cidade || client.estado ? `${client.cidade || ''}/${client.estado || ''}` : '-'}
                         </span>
                     </div>
+
                     <div className="flex justify-between items-center">
                         <span className="text-gray-400">Tel:</span>
                         <span className="text-gray-600 font-medium">{client.telefone || '-'}</span>
@@ -531,7 +511,7 @@ export function Clients() {
                         )}
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex justify-end gap-2">
                           <button onClick={(e) => handleEdit(client, e)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md">
                             <Pencil className="h-4 w-4" />
                           </button>
