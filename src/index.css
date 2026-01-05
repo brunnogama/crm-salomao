@@ -6,52 +6,19 @@
   font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
 }
 
-html, body, #root {
-  margin: 0;
-  padding: 0;
-  width: 100%;
-  height: 100%;
-}
-
 body {
-  background-color: #f3f4f6;
-  color: #112240;
-  overflow: hidden;
+  margin: 0;
+  background-color: #f8fafc;
+  color: #1e293b;
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes scaleIn {
-  from { transform: scale(0.95); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
-}
-
-.animate-fadeIn {
-  animation: fadeIn 0.2s ease-out forwards;
-}
-
-.animate-scaleIn {
-  animation: scaleIn 0.2s ease-out forwards;
-}
-
-.line-clamp-2 {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-/* Customização de Scrollbar para as colunas e áreas de conteúdo */
 .custom-scrollbar::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
+  width: 6px;
+  height: 6px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
+  background: #f1f5f9;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
@@ -61,4 +28,13 @@ body {
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-in-out;
 }
