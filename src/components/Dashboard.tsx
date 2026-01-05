@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, LabelList } from 'recharts';
-import { Users, Gift, Award, LayoutGrid } from 'lucide-react';
+import { Users, Gift, LayoutGrid } from 'lucide-react';
 
 interface SocioData {
   name: string;
@@ -42,12 +42,10 @@ export function Dashboard() {
       const socioMap: Record<string, any> = {};
 
       allData?.forEach(item => {
-        // Contagem global de brindes
         if (item.tipo_brinde) {
           brindeCounts[item.tipo_brinde] = (brindeCounts[item.tipo_brinde] || 0) + 1;
         }
 
-        // Agrupamento por sócio e tipo de brinde
         if (item.socio) {
           if (!socioMap[item.socio]) {
             socioMap[item.socio] = { name: item.socio, total: 0, brindes: {} };
@@ -58,7 +56,6 @@ export function Dashboard() {
         }
       });
 
-      // Formata os dados para o gráfico horizontal por sócio
       const formattedSocioData = Object.values(socioMap).map((s: any) => ({
         name: s.name,
         total: s.total,
@@ -98,7 +95,6 @@ export function Dashboard() {
   return (
     <div className="h-full overflow-y-auto pr-2 custom-scrollbar space-y-8 pb-10">
       
-      {/* Cards de Resumo de Brindes */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {Object.entries(stats.brindeCounts).map(([tipo, qtd]) => (
           <div key={tipo} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4">
@@ -114,7 +110,6 @@ export function Dashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Seção Clientes por Sócio */}
         <div className="lg:col-span-2 space-y-6">
           <div className="flex items-center gap-2">
             <LayoutGrid className="h-5 w-5 text-blue-600" />
@@ -165,7 +160,6 @@ export function Dashboard() {
           </div>
         </div>
 
-        {/* Lista de Últimos Cadastros */}
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col h-fit max-h-[600px]">
           <div className="flex items-center gap-2 mb-6">
             <Users className="h-5 w-5 text-blue-600" />
