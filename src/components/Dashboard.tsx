@@ -25,11 +25,10 @@ export function Dashboard() {
   });
   const [loading, setLoading] = useState(true);
 
-  // Mapeamento de cores baseado no tipo de brinde (Padrão Clientes)
   const getBrindeColor = (tipo: string) => {
-    if (tipo === 'Brinde VIP') return '#a855f7'; // Purple-500
-    if (tipo === 'Brinde Médio') return '#22c55e'; // Green-500
-    return '#94a3b8'; // Slate-400 (Outros)
+    if (tipo === 'Brinde VIP') return '#a855f7'; 
+    if (tipo === 'Brinde Médio') return '#22c55e'; 
+    return '#94a3b8'; 
   };
 
   const fetchDashboardData = async () => {
@@ -116,15 +115,16 @@ export function Dashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-4">
-          <div className="flex items-center gap-2">
-            <LayoutGrid className="h-4 w-4 text-blue-600" />
-            <h3 className="font-bold text-[#112240] text-base">Clientes por Sócio</h3>
+        {/* Bloco Clientes por Sócio com UX Unificada */}
+        <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+          <div className="flex items-center gap-2 mb-6">
+            <LayoutGrid className="h-5 w-5 text-blue-600" />
+            <h3 className="font-bold text-[#112240] text-lg">Clientes por Sócio</h3>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {stats.socioData.map((socio) => (
-              <div key={socio.name} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col">
+              <div key={socio.name} className="bg-gray-50/50 p-4 rounded-xl border border-gray-100 flex flex-col">
                 <div className="flex justify-between items-center mb-2">
                   <h4 className="font-bold text-[#112240] text-sm truncate">{socio.name}</h4>
                   <div className="text-right flex items-baseline gap-1">
@@ -164,12 +164,13 @@ export function Dashboard() {
           </div>
         </div>
 
-        <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col h-fit max-h-[500px]">
-          <div className="flex items-center gap-2 mb-4">
-            <Users className="h-4 w-4 text-blue-600" />
-            <h3 className="font-bold text-[#112240] text-base">Últimos Cadastros</h3>
+        {/* Bloco Últimos Cadastros */}
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col h-fit">
+          <div className="flex items-center gap-2 mb-6">
+            <Users className="h-5 w-5 text-blue-600" />
+            <h3 className="font-bold text-[#112240] text-lg">Últimos Cadastros</h3>
           </div>
-          <div className="space-y-3 overflow-y-auto custom-scrollbar pr-1">
+          <div className="space-y-3 overflow-y-auto custom-scrollbar pr-1 max-h-[500px]">
             {stats.lastClients.map((client) => (
               <div key={client.id} className="flex items-center justify-between p-2.5 bg-gray-50/50 rounded-lg border border-transparent hover:border-gray-200 transition-all">
                 <div className="min-w-0">
