@@ -52,11 +52,19 @@ export function NewClientModal({ isOpen, onClose, onSave, clientToEdit }: NewCli
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    // REGRA DE CADASTRO FLEXÍVEL: Permite salvar incompleto, apenas Nome, Brinde e Sócio são vitais
+    
+    // Validação básica
     if (!formData.nome || !formData.tipoBrinde || !formData.socio) {
       alert('Para cadastrar, apenas Nome, Tipo de Brinde e Sócio são obrigatórios. O restante pode ser preenchido depois.')
       return
     }
+
+    // Validação específica para "Outro"
+    if (formData.tipoBrinde === 'Outro' && !formData.outroBrinde) {
+      alert('Por favor, especifique qual é o brinde.')
+      return
+    }
+
     onSave(formData)
   }
 
@@ -75,19 +83,32 @@ export function NewClientModal({ isOpen, onClose, onSave, clientToEdit }: NewCli
 
         <div className="flex-1 overflow-y-auto p-8">
           <form id="client-form" onSubmit={handleSubmit} className="space-y-8">
-            {/* SEÇÃO 1: IDENTIFICAÇÃO (Mínimo Obrigatório) */}
+            {/* SEÇÃO 1: DADOS ESSENCIAIS E BRINDES */}
             <section>
               <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest border-b pb-2 mb-4 flex items-center gap-2">
                 <AlertCircle className="h-4 w-4" /> Dados Essenciais
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="md:col-span-1">
+              
+              {/* Grid ajustado para comportar os novos campos */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <div className="md:col-span-2">
                   <label className="block text-sm font-bold text-gray-700 mb-1">Nome Completo *</label>
-                  <input type="text" value={formData.nome} onChange={e => setFormData({...formData, nome: e.target.value})} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#112240] focus:border-transparent outline-none transition-all" placeholder="Ex: João Silva" />
+                  <input 
+                    type="text" 
+                    value={formData.nome} 
+                    onChange={e => setFormData({...formData, nome: e.target.value})} 
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#112240] focus:border-transparent outline-none transition-all" 
+                    placeholder="Ex: João Silva" 
+                  />
                 </div>
-                <div>
+                
+                <div className="md:col-span-1">
                   <label className="block text-sm font-bold text-gray-700 mb-1">Sócio Responsável *</label>
-                  <select value={formData.socio} onChange={e => setFormData({...formData, socio: e.target.value})} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#112240] outline-none">
+                  <select 
+                    value={formData.socio} 
+                    onChange={e => setFormData({...formData, socio: e.target.value})} 
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#112240] outline-none"
+                  >
                     <option value="">Selecione...</option>
                     <option value="Rodrigo Salomão">Rodrigo Salomão</option>
                     <option value="Livia Sancio">Livia Sancio</option>
@@ -97,19 +118,49 @@ export function NewClientModal({ isOpen, onClose, onSave, clientToEdit }: NewCli
                     <option value="Alice Studart">Alice Studart</option>
                   </select>
                 </div>
-                <div>
+
+                <div className="md:col-span-1">
                   <label className="block text-sm font-bold text-gray-700 mb-1">Categoria do Brinde *</label>
-                  <select value={formData.tipoBrinde} onChange={e => setFormData({...formData, tipoBrinde: e.target.value})} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#112240] outline-none">
+                  <select 
+                    value={formData.tipoBrinde} 
+                    onChange={e => setFormData({...formData, tipoBrinde: e.target.value})} 
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#112240] outline-none"
+                  >
                     <option value="">Selecione...</option>
                     <option value="Brinde VIP">Brinde VIP</option>
                     <option value="Brinde Médio">Brinde Médio</option>
                     <option value="Outro">Outro</option>
                   </select>
                 </div>
+
+                {/* Campo condicional para especificar 'Outro' */}
+                {formData.tipoBrinde === 'Outro' && (
+                  <div className="md:col-span-3 animate-fadeIn">
+                    <label className="block text-sm font-bold text-gray-700 mb-1">Qual Brinde? *</label>
+                    <input 
+                      type="text" 
+                      value={formData.outroBrinde} 
+                      onChange={e => setFormData({...formData, outroBrinde: e.target.value})} 
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#112240] outline-none bg-blue-50/50" 
+                      placeholder="Especifique o tipo de brinde..." 
+                    />
+                  </div>
+                )}
+
+                {/* Campo de Quantidade */}
+                <div className="md:col-span-1">
+                   <label className="block text-sm font-bold text-gray-700 mb-1">Quantidade</label>
+                   <input 
+                    type="number" 
+                    min="1" 
+                    value={formData.quantidade} 
+                    onChange={e => setFormData({...formData, quantidade: Number(e.target.value)})} 
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#112240] outline-none" 
+                   />
+                </div>
               </div>
             </section>
 
-            {/* RESTANTE DOS CAMPOS (Opcionais aqui, mas aparecerão nos Incompletos se vazios) */}
             <section>
               <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest border-b pb-2 mb-4">Informações Complementares</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
