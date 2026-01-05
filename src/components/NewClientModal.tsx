@@ -52,6 +52,20 @@ export function NewClientModal({ isOpen, onClose, onSave, clientToEdit }: NewCli
 
   if (!isOpen) return null
 
+  // Máscara de CEP e Atualização do State
+  const handleCepChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let value = e.target.value.replace(/\D/g, '') // Remove não números
+    
+    if (value.length > 8) value = value.slice(0, 8) // Limita a 8 dígitos
+    
+    // Aplica a máscara 00000-000
+    if (value.length > 5) {
+      value = value.replace(/^(\d{5})(\d)/, '$1-$2')
+    }
+    
+    setFormData({ ...formData, cep: value })
+  }
+
   // Função para buscar o CEP
   const handleSearchCep = async () => {
     const cep = formData.cep.replace(/\D/g, '')
@@ -220,16 +234,17 @@ export function NewClientModal({ isOpen, onClose, onSave, clientToEdit }: NewCli
               <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest border-b pb-2 mb-4">Endereço</h3>
               <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
                 
-                {/* CAMPO CEP COM LUPA */}
+                {/* CAMPO CEP COM LUPA E MÁSCARA */}
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">CEP</label>
                   <div className="relative">
                     <input 
                       type="text" 
                       value={formData.cep} 
-                      onChange={e => setFormData({...formData, cep: e.target.value})} 
+                      onChange={handleCepChange} 
                       className="w-full pl-4 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#112240] outline-none"
                       placeholder="00000-000"
+                      maxLength={9}
                     />
                     <button 
                       type="button" 
