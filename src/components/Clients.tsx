@@ -94,9 +94,7 @@ export function Clients() {
                 </div>
               </div>
             </div>
-
             <h4 className="font-bold text-[#112240] text-base mb-4 truncate">{client.nome}</h4>
-            
             <div className="space-y-3 pb-5 border-b border-gray-50">
               <div className="flex items-center gap-3 text-gray-500">
                 <div className="p-1.5 bg-blue-50 rounded-lg text-blue-600"><User className="h-3.5 w-3.5" /></div>
@@ -121,7 +119,9 @@ export function Clients() {
                 </div>
                 <h2 className="text-2xl font-black tracking-tight">{selectedClient.nome}</h2>
               </div>
-              <button onClick={() => setSelectedClient(null)} className="p-3 hover:bg-white/10 rounded-2xl transition-colors"><X className="h-6 w-6" /></button>
+              <button onClick={() => setSelectedClient(null)} className="p-3 hover:bg-white/10 rounded-2xl transition-colors">
+                <X className="h-6 w-6" />
+              </button>
             </div>
             <div className="p-10 grid grid-cols-2 gap-8">
               <div className="space-y-6">
