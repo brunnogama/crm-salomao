@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { LayoutList, LayoutGrid, Pencil, X, RefreshCw, ChevronDown, ArrowUpDown, FileSpreadsheet, EyeOff } from 'lucide-react'
+import { LayoutList, LayoutGrid, Pencil, X, RefreshCw, ChevronDown, ArrowUpDown, FileSpreadsheet, EyeOff, Briefcase, Mail, Gift, Info } from 'lucide-react'
 import { NewClientModal, ClientData } from './NewClientModal'
 import { utils, writeFile } from 'xlsx'
 import { supabase } from '../lib/supabase'
@@ -24,7 +24,6 @@ export function IncompleteClients() {
 
   const [incompleteClients, setIncompleteClients] = useState<Client[]>([])
 
-  // Lógica de identificação de pendências
   const getMissingFields = (client: Client) => {
     const ignored = client.ignored_fields || [];
     const missing: string[] = []
@@ -32,7 +31,7 @@ export function IncompleteClients() {
     if (!client.nome) missing.push('Nome')
     if (!client.empresa) missing.push('Empresa')
     if (!client.cargo) missing.push('Cargo')
-    if (!client.telefone) missing.push('Telefone')
+    // if (!client.telefone) missing.push('Telefone') // REMOVIDO
     if (!client.tipoBrinde) missing.push('Tipo Brinde')
     if (!client.cep) missing.push('CEP')
     if (!client.endereco) missing.push('Endereço')
@@ -136,26 +135,29 @@ export function IncompleteClients() {
               </div>
               <button onClick={() => setSelectedClient(null)} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X className="h-6 w-6" /></button>
             </div>
-            <div className="p-8">
-                <h3 className="text-xs font-bold text-red-400 uppercase border-b pb-2 mb-4">Gerenciar Pendências</h3>
-                <div className="space-y-3">
+            <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-8 overflow-y-auto max-h-[70vh]">
+              <div className="space-y-4">
+                <h3 className="text-xs font-bold text-red-400 uppercase border-b pb-2">Pendências</h3>
+                <div className="flex flex-col gap-2">
                   {getMissingFields(selectedClient).map(field => (
-                    <div key={field} className="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-100">
-                        <span className="font-bold text-red-800 text-sm">{field} ausente</span>
-                        <button 
-                            onClick={() => handleDismissField(selectedClient, field)}
-                            className="flex items-center gap-2 text-xs text-gray-500 hover:text-gray-800 underline decoration-dotted"
-                            title="Ignorar esta pendência para este cliente"
-                        >
-                            <EyeOff className="h-4 w-4" /> Dispensar
-                        </button>
+                    <div key={field} className="flex items-center justify-between p-2 bg-red-50 rounded border border-red-100">
+                        <span className="text-xs font-bold text-red-800">{field}</span>
+                        <button onClick={() => handleDismissField(selectedClient, field)} className="text-xs text-gray-500 hover:text-gray-800 flex items-center gap-1"><EyeOff className="h-3 w-3" /> Dispensar</button>
                     </div>
                   ))}
                 </div>
+                <p className="text-sm flex items-center gap-3"><Briefcase className="h-4 w-4 text-gray-400" /> {selectedClient.empresa || '-'}</p>
+                <p className="text-sm flex items-center gap-3"><Mail className="h-4 w-4 text-gray-400" /> {selectedClient.email || '-'}</p>
+              </div>
+              <div className="space-y-4">
+                <h3 className="text-xs font-bold text-gray-400 uppercase border-b pb-2">Outros Dados</h3>
+                <p className="text-sm flex items-center gap-3"><Gift className="h-4 w-4 text-gray-400" /> <strong>Brinde:</strong> {selectedClient.tipoBrinde || '-'}</p>
+                <p className="text-sm flex items-center gap-3"><Info className="h-4 w-4 text-gray-400" /> <strong>Sócio:</strong> {selectedClient.socio || '-'}</p>
+              </div>
             </div>
             <div className="p-6 bg-gray-50 border-t border-gray-100 flex justify-end">
               <button onClick={(e) => handleEdit(selectedClient, e)} className="px-5 py-2.5 bg-[#112240] text-white rounded-lg font-bold text-sm flex items-center gap-2 hover:bg-black transition-all shadow-md">
-                <Pencil className="h-4 w-4" /> Editar Dados
+                <Pencil className="h-4 w-4" /> Completar Cadastro
               </button>
             </div>
           </div>
@@ -165,7 +167,6 @@ export function IncompleteClients() {
       <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-6 gap-4">
         <div className="flex items-center gap-3 w-full xl:w-auto overflow-x-auto pb-2 px-1">
           <div className="relative group">
-            {/* Ícone de filtro removido da importação, removido daqui também se não for usado ou substituído por SVG direto se necessário */}
             <select value={socioFilter} onChange={(e) => setSocioFilter(e.target.value)} className="appearance-none px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium min-w-[160px] outline-none">
               <option value="">Sócio: Todos</option>
               {uniqueSocios.map(s => <option key={s} value={s}>{s}</option>)}
