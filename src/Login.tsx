@@ -35,14 +35,14 @@ export default function Login() {
       <div className="w-full lg:w-1/2 flex items-center justify-center p-8 lg:p-16 animate-fadeIn">
         <div className="w-full max-w-md space-y-8">
           
-          {/* Logo - Certifique-se de ter 'logo-azul.png' na pasta public */}
+          {/* Logo Corrigido */}
           <div className="flex flex-col items-center mb-10">
              <img 
-               src="/logo-azul.png" 
+               src="/logo-salomao.png" 
                alt="Salomão Advogados" 
                className="h-20 w-auto object-contain mb-4 block" 
                onError={(e) => {
-                 // Fallback visual caso a imagem não carregue
+                 // Fallback visual apenas se a imagem falhar mesmo com o nome certo
                  e.currentTarget.style.display = 'none';
                  const parent = e.currentTarget.parentElement;
                  if (parent) {
@@ -157,7 +157,6 @@ export default function Login() {
           
           <div className="w-16 h-1 bg-blue-500 rounded-full mb-8"></div>
           
-          {/* TEXTO ATUALIZADO (TRECHO REMOVIDO) */}
           <p className="text-lg text-gray-300 mb-8 leading-relaxed font-light">
             Acesse seus módulos em um único lugar:
           </p>
