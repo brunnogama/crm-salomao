@@ -25,7 +25,6 @@ export function IncompleteClients() {
 
   const [incompleteClients, setIncompleteClients] = useState<Client[]>([])
 
-  // Lógica rigorosa de pendências (exceto o que foi dispensado)
   const getMissingFields = (client: Client) => {
     const ignored = client.ignored_fields || [];
     const missing: string[] = []
@@ -33,7 +32,6 @@ export function IncompleteClients() {
     if (!client.nome) missing.push('Nome')
     if (!client.empresa) missing.push('Empresa')
     if (!client.cargo) missing.push('Cargo')
-    // Telefone não é obrigatório para lista de incompletos
     if (!client.tipoBrinde) missing.push('Tipo Brinde')
     if (!client.cep) missing.push('CEP')
     if (!client.endereco) missing.push('Endereço')
@@ -126,46 +124,6 @@ export function IncompleteClients() {
     }
   }
 
-  // --- IMPRESSÃO INDIVIDUAL ---
-  const handlePrint = (client: Client) => {
-    const printWindow = window.open('', '', 'width=900,height=800');
-    if (!printWindow) return;
-
-    const missing = getMissingFields(client).join(', ');
-
-    const htmlContent = `
-      <html>
-        <head>
-          <title>Ficha de Pendências - ${client.nome}</title>
-          <style>
-            body { font-family: 'Segoe UI', sans-serif; padding: 40px; color: #1f2937; }
-            .header { border-bottom: 3px solid #dc2626; padding-bottom: 20px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: end; }
-            .logo { font-size: 28px; font-weight: 800; color: #dc2626; text-transform: uppercase; }
-            .subtitle { font-size: 14px; color: #6b7280; font-weight: 500; }
-            .alert-box { background: #fef2f2; border: 1px solid #fee2e2; color: #991b1b; padding: 15px; border-radius: 6px; margin-bottom: 20px; font-weight: bold; }
-            .section { margin-bottom: 35px; }
-            .section-title { font-size: 13px; font-weight: 700; text-transform: uppercase; color: #111; background: #f3f4f6; padding: 8px 12px; border-radius: 4px; margin-bottom: 15px; }
-            .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-            .label { font-size: 10px; color: #6b7280; font-weight: 700; text-transform: uppercase; display: block; margin-bottom: 4px; }
-            .value { font-size: 15px; color: #111827; font-weight: 500; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; display: block; width: 100%; min-height: 24px; }
-            @media print { @page { margin: 0; size: A4; } body { margin: 1.6cm; } }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <div><div class="logo">Cadastro Incompleto</div><div class="subtitle">Relatório de Pendências</div></div>
-            <div><div class="date">${new Date().toLocaleDateString()}</div></div>
-          </div>
-          <div class="alert-box">CAMPOS FALTANTES: ${missing}</div>
-          <div class="section"><div class="section-title">Dados Atuais</div><div class="grid"><div class="field-box"><span class="label">Nome</span><span class="value">${client.nome}</span></div><div class="field-box"><span class="label">Sócio</span><span class="value">${client.socio || '-'}</span></div><div class="field-box"><span class="label">Empresa</span><span class="value">${client.empresa || '-'}</span></div><div class="field-box"><span class="label">Email</span><span class="value">${client.email || '-'}</span></div></div></div>
-          <script>window.onload = () => { setTimeout(() => { window.print(); window.close(); }, 500); };</script>
-        </body>
-      </html>`;
-    printWindow.document.write(htmlContent);
-    printWindow.document.close();
-  }
-
-  // --- IMPRESSÃO EM LISTA (NOVA) ---
   const handlePrintList = () => {
     if (filteredClients.length === 0) {
         alert("Nenhum cliente na lista para imprimir.");
@@ -199,7 +157,6 @@ export function IncompleteClients() {
             .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #dc2626; padding-bottom: 10px; }
             .title { font-size: 20px; font-weight: 800; color: #dc2626; text-transform: uppercase; }
             .meta { font-size: 12px; color: #666; margin-top: 5px; }
-            
             .grid-container { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
             .card { border: 1px solid #fee2e2; border-radius: 6px; padding: 10px; page-break-inside: avoid; background: #fff; }
             .card-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #fee2e2; padding-bottom: 5px; margin-bottom: 8px; }
@@ -208,7 +165,6 @@ export function IncompleteClients() {
             .card-body { font-size: 11px; color: #374151; }
             .row { margin-bottom: 3px; }
             .missing { color: #dc2626; font-weight: bold; margin-top: 5px; }
-            
             @media print { @page { margin: 1cm; size: A4; } body { padding: 0; } }
           </style>
         </head>
@@ -324,8 +280,8 @@ export function IncompleteClients() {
               </div>
             </div>
             <div className="p-6 bg-gray-50 border-t border-gray-100 flex justify-between items-center">
-              <button onClick={() => handlePrint(selectedClient)} className="px-4 py-2.5 bg-white border border-gray-300 text-gray-700 rounded-lg font-bold text-sm flex items-center gap-2 hover:bg-gray-50 transition-all shadow-sm">
-                <Printer className="h-4 w-4" /> Imprimir Ficha
+              <button onClick={() => window.print()} className="px-4 py-2.5 bg-white border border-gray-300 text-gray-700 rounded-lg font-bold text-sm flex items-center gap-2 hover:bg-gray-50 transition-all shadow-sm">
+                <Printer className="h-4 w-4" /> Imprimir
               </button>
               <div className="flex gap-3">
                 <button onClick={(e) => handleDiscardClient(selectedClient, e)} className="px-5 py-2.5 bg-gray-100 text-gray-600 rounded-lg font-bold text-sm flex items-center gap-2 hover:bg-gray-200 transition-all">
@@ -346,7 +302,6 @@ export function IncompleteClients() {
       {/* TOOLBAR */}
       <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-6 gap-4">
         <div className="flex items-center gap-3 w-full xl:w-auto overflow-x-auto pb-2 px-1">
-          {/* ... (Filtros e Botões de Visualização) ... */}
           <div className="relative group">
             <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"><Filter className="h-4 w-4" /></div>
             <select value={socioFilter} onChange={(e) => setSocioFilter(e.target.value)} className="appearance-none pl-9 pr-10 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium min-w-[160px] outline-none">
@@ -374,7 +329,6 @@ export function IncompleteClients() {
           <button onClick={fetchIncompleteClients} className="p-2.5 bg-white border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50 shadow-sm"><RefreshCw className={`h-5 w-5 ${loading ? 'animate-spin' : ''}`} /></button>
         </div>
         <div className="flex items-center gap-3 w-full xl:w-auto">
-          {/* BOTÃO DE IMPRIMIR LISTA (NOVO) */}
           <button onClick={handlePrintList} className="p-2.5 bg-white border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50" title="Imprimir Lista"><Printer className="h-5 w-5" /></button>
           <button onClick={handleExportExcel} className="flex-1 xl:flex-none flex items-center justify-center px-4 py-2.5 bg-green-600 text-white rounded-lg gap-2 font-medium text-sm transition-all hover:bg-green-700"><FileSpreadsheet className="h-5 w-5" /> Exportar</button>
         </div>
@@ -390,7 +344,8 @@ export function IncompleteClients() {
                   <th className="px-6 py-4 text-left">Empresa</th>
                   <th className="px-6 py-4 text-left">Sócio</th>
                   <th className="px-6 py-4 text-left">Pendências</th>
-                  <th className="px-6 py-4"></th>
+                  {/* TÍTULO ADICIONADO AQUI */}
+                  <th className="px-6 py-4 text-right">Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 text-sm">
