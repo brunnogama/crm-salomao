@@ -410,8 +410,8 @@ export function Clients() {
           <div className={viewMode === 'card' ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4" : "bg-white border border-gray-200 rounded-xl overflow-hidden"}>
             {viewMode === 'card' ? (
               processedClients.map(client => (
-                <div key={client.id} onClick={() => setSelectedClient(client)} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md transition-all relative group cursor-pointer animate-fadeIn flex flex-col justify-between">
-                  <div className="flex items-start justify-between mb-3">
+                <div key={client.id} onClick={() => setSelectedClient(client)} className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 hover:shadow-md transition-all relative group cursor-pointer animate-fadeIn flex flex-col justify-between">
+                  <div className="flex items-start justify-between mb-2">
                     <div className="flex gap-3 overflow-hidden">
                       <div className="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center text-[#112240] font-bold border border-gray-200 flex-shrink-0">{client.nome.charAt(0)}</div>
                       <div className="overflow-hidden"><h3 className="text-sm font-bold text-gray-900 truncate">{client.nome}</h3><p className="text-xs text-gray-500 truncate">{client.empresa}</p></div>
@@ -419,7 +419,7 @@ export function Clients() {
                     <span className={`px-2 py-0.5 text-[10px] font-semibold rounded-full flex-shrink-0 ${client.tipoBrinde === 'Brinde VIP' ? 'bg-purple-100 text-purple-800' : 'bg-green-100 text-green-800'}`}>{client.tipoBrinde}</span>
                   </div>
                   
-                  <div className="bg-gray-50/50 rounded-md p-2 border border-gray-100 mb-3 text-xs space-y-1">
+                  <div className="bg-gray-50 rounded-md p-2 mb-2 text-xs space-y-1">
                     <div className="flex justify-between items-center">
                         <span className="text-gray-400">Sócio:</span>
                         <span className="font-bold text-[#112240]">{client.socio || '-'}</span>
@@ -445,7 +445,7 @@ export function Clients() {
                     </div>
                   </div>
 
-                  <div className="border-t border-gray-100 pt-3 flex justify-between items-center transition-opacity">
+                  <div className="border-t border-gray-100 pt-2 flex justify-between items-center transition-opacity">
                     <div className="flex gap-2">
                       {client.telefone && (
                         <>
@@ -511,7 +511,7 @@ export function Clients() {
                         )}
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <div className="flex justify-end gap-2">
+                        <div className="flex justify-end gap-2"> {/* Removed opacity-0 classes */}
                           <button onClick={(e) => handleEdit(client, e)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md">
                             <Pencil className="h-4 w-4" />
                           </button>
