@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Filter, LayoutList, LayoutGrid, Pencil, Trash2, X, AlertTriangle, ChevronDown, FileSpreadsheet, RefreshCw, AlertCircle, ArrowUpDown } from 'lucide-react'
+import { Filter, LayoutList, LayoutGrid, Pencil, ChevronDown, FileSpreadsheet, RefreshCw, ArrowUpDown } from 'lucide-react'
 import { NewClientModal, ClientData } from './NewClientModal'
 import { utils, writeFile } from 'xlsx'
 import { supabase } from '../lib/supabase'
@@ -14,8 +14,6 @@ export function IncompleteClients() {
   const [loading, setLoading] = useState(true)
   
   const [clientToEdit, setClientToEdit] = useState<Client | null>(null)
-  const [clientToDelete, setClientToDelete] = useState<Client | null>(null)
-  const [selectedClient, setSelectedClient] = useState<Client | null>(null)
 
   const [socioFilter, setSocioFilter] = useState('')
   const [brindeFilter, setBrindeFilter] = useState('')
@@ -24,7 +22,7 @@ export function IncompleteClients() {
 
   const [incompleteClients, setIncompleteClients] = useState<Client[]>([])
 
-  // LÓGICA DE PENDÊNCIAS: Identifica todos os campos vazios
+  // LÓGICA DE PENDÊNCIAS: Identifica campos obrigatórios vazios
   const getMissingFields = (client: Client) => {
     const missing: string[] = []
     if (!client.nome) missing.push('Nome')
@@ -69,7 +67,6 @@ export function IncompleteClients() {
         socio: item.socio,
         observacoes: item.observacoes
       }))
-      // Filtra apenas os que possuem pelo menos uma pendência
       const incomplete = all.filter(c => getMissingFields(c).length > 0)
       setIncompleteClients(incomplete)
     }
@@ -89,8 +86,8 @@ export function IncompleteClients() {
     })
     if (sortBy) {
       result.sort((a, b) => {
-        let valA = (sortBy === 'nome' ? a.nome : a.socio) || ''
-        let valB = (sortBy === 'nome' ? b.nome : b.socio) || ''
+        const valA = (sortBy === 'nome' ? a.nome : a.socio) || ''
+        const valB = (sortBy === 'nome' ? b.nome : b.socio) || ''
         return sortDirection === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA)
       })
     }
@@ -106,14 +103,12 @@ export function IncompleteClients() {
     const ws = utils.json_to_sheet(dataToExport)
     const wb = utils.book_new()
     utils.book_append_sheet(wb, ws, "Pendências")
-    writeFile(wb, "Relatorio_Incompletos.xlsx")
+    writeFile(wb, "Relatorio_Incompletos_Salomao.xlsx")
   }
 
-  const handleEdit = (client: Client, e?: React.MouseEvent) => {
-    if(e) e.stopPropagation();
-    setSelectedClient(null);
+  const handleEdit = (client: Client) => {
     setClientToEdit(client);
-    setTimeout(() => setIsModalOpen(true), 10);
+    setIsModalOpen(true);
   }
 
   const toggleSort = (field: 'nome' | 'socio') => {
@@ -130,31 +125,36 @@ export function IncompleteClients() {
         <div className="flex items-center gap-3 w-full xl:w-auto overflow-x-auto pb-2 px-1">
           <div className="relative group">
             <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"><Filter className="h-4 w-4" /></div>
-            <select value={socioFilter} onChange={(e) => setSocioFilter(e.target.value)} className="appearance-none pl-9 pr-10 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium min-w-[160px]">
+            <select value={socioFilter} onChange={(e) => setSocioFilter(e.target.value)} className="appearance-none pl-9 pr-10 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium min-w-[160px] outline-none focus:ring-2 focus:ring-[#112240]/10 transition-all">
               <option value="">Sócio: Todos</option>
               {uniqueSocios.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
             <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400"><ChevronDown className="h-4 w-4" /></div>
           </div>
+          
           <div className="relative group">
             <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"><Filter className="h-4 w-4" /></div>
-            <select value={brindeFilter} onChange={(e) => setBrindeFilter(e.target.value)} className="appearance-none pl-9 pr-10 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium min-w-[160px]">
+            <select value={brindeFilter} onChange={(e) => setBrindeFilter(e.target.value)} className="appearance-none pl-9 pr-10 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium min-w-[160px] outline-none focus:ring-2 focus:ring-[#112240]/10 transition-all">
               <option value="">Brinde: Todos</option>
               {uniqueBrindes.map(b => <option key={b} value={b}>{b}</option>)}
             </select>
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400"><ChevronDown className="h-4 w-4" /></div>
           </div>
-          <div className="flex bg-white border border-gray-200 rounded-lg p-1 gap-1">
-            <button onClick={() => toggleSort('nome')} className={`flex items-center px-3 py-1.5 text-sm rounded-md ${sortBy === 'nome' ? 'bg-blue-50 text-blue-700' : 'text-gray-600'}`}><ArrowUpDown className="h-3 w-3 mr-1" /> Nome</button>
-            <button onClick={() => toggleSort('socio')} className={`flex items-center px-3 py-1.5 text-sm rounded-md ${sortBy === 'socio' ? 'bg-blue-50 text-blue-700' : 'text-gray-600'}`}><ArrowUpDown className="h-3 w-3 mr-1" /> Sócio</button>
+
+          <div className="flex bg-white border border-gray-200 rounded-lg p-1 gap-1 shadow-sm">
+            <button onClick={() => toggleSort('nome')} className={`flex items-center px-3 py-1.5 text-sm rounded-md transition-colors ${sortBy === 'nome' ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-50'}`}><ArrowUpDown className="h-3 w-3 mr-1" /> Nome</button>
+            <button onClick={() => toggleSort('socio')} className={`flex items-center px-3 py-1.5 text-sm rounded-md transition-colors ${sortBy === 'socio' ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-50'}`}><ArrowUpDown className="h-3 w-3 mr-1" /> Sócio</button>
           </div>
-          <div className="flex bg-white border border-gray-200 rounded-lg p-1">
-            <button onClick={() => setViewMode('list')} className={`p-1.5 rounded-md ${viewMode === 'list' ? 'bg-gray-100' : 'text-gray-400'}`}><LayoutList className="h-5 w-5" /></button>
-            <button onClick={() => setViewMode('card')} className={`p-1.5 rounded-md ${viewMode === 'card' ? 'bg-gray-100' : 'text-gray-400'}`}><LayoutGrid className="h-5 w-5" /></button>
+
+          <div className="flex bg-white border border-gray-200 rounded-lg p-1 shadow-sm">
+            <button onClick={() => setViewMode('list')} className={`p-1.5 rounded-md transition-colors ${viewMode === 'list' ? 'bg-gray-100 text-[#112240]' : 'text-gray-400'}`}><LayoutList className="h-5 w-5" /></button>
+            <button onClick={() => setViewMode('card')} className={`p-1.5 rounded-md transition-colors ${viewMode === 'card' ? 'bg-gray-100 text-[#112240]' : 'text-gray-400'}`}><LayoutGrid className="h-5 w-5" /></button>
           </div>
         </div>
+
         <div className="flex items-center gap-3 w-full xl:w-auto">
-          <button onClick={fetchIncompleteClients} className="p-2.5 bg-white border border-gray-200 text-gray-600 rounded-lg"><RefreshCw className={`h-5 w-5 ${loading ? 'animate-spin' : ''}`} /></button>
-          <button onClick={handleExportExcel} className="flex-1 xl:flex-none flex items-center justify-center px-4 py-2.5 bg-green-600 text-white rounded-lg gap-2"><FileSpreadsheet className="h-5 w-5" /> Exportar</button>
+          <button onClick={fetchIncompleteClients} className="p-2.5 bg-white border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50 shadow-sm transition-all" title="Atualizar Lista"><RefreshCw className={`h-5 w-5 ${loading ? 'animate-spin' : ''}`} /></button>
+          <button onClick={handleExportExcel} className="flex-1 xl:flex-none flex items-center justify-center px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all shadow-md gap-2 font-medium text-sm"><FileSpreadsheet className="h-5 w-5" /> Exportar</button>
         </div>
       </div>
 
@@ -170,27 +170,49 @@ export function IncompleteClients() {
                   <th className="px-6 py-4 text-right"></th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-gray-100 font-medium">
                 {filteredClients.map(client => (
                   <tr key={client.id} className="hover:bg-red-50/10 transition-colors group">
-                    <td className="px-6 py-4 whitespace-nowrap"><div className="text-sm font-bold text-gray-900">{client.nome || 'Sem Nome'}</div><div className="text-xs text-gray-500">{client.empresa || '-'}</div></td>
-                    <td className="px-6 py-4"><div className="flex flex-wrap gap-1">{getMissingFields(client).map(f => <span key={f} className="px-2 py-0.5 text-[9px] font-bold bg-red-100 text-red-700 rounded border border-red-200 uppercase">{f}</span>)}</div></td>
-                    <td className="px-6 py-4 text-right"><button onClick={(e) => handleEdit(client, e)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md"><Pencil className="h-4 w-4" /></button></td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-bold text-gray-900">{client.nome || 'Sem Nome'}</div>
+                      <div className="text-xs text-gray-500">{client.empresa || '-'}</div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex flex-wrap gap-1">
+                        {getMissingFields(client).map(f => (
+                          <span key={f} className="px-2 py-0.5 text-[9px] font-bold bg-red-100 text-red-700 rounded border border-red-200 uppercase">{f}</span>
+                        ))}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <button onClick={() => handleEdit(client)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors opacity-0 group-hover:opacity-100" title="Completar Cadastro">
+                        <Pencil className="h-4 w-4" />
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 font-medium">
             {filteredClients.map(client => (
               <div key={client.id} className="bg-white rounded-xl shadow-sm border border-red-200 p-6 hover:shadow-md transition-all relative">
                 <div className="flex items-center gap-4 mb-4">
                   <div className="h-10 w-10 rounded-full bg-red-50 flex items-center justify-center text-red-600 font-bold border border-red-100">!</div>
                   <h3 className="text-base font-bold text-gray-900 truncate">{client.nome || 'Sem Nome'}</h3>
                 </div>
-                <div className="flex flex-wrap gap-1.5">{getMissingFields(client).map(f => <span key={f} className="px-2 py-0.5 text-[10px] font-bold bg-red-50 text-red-700 rounded border border-red-100 uppercase">{f}</span>)}</div>
-                <div className="mt-4 pt-4 border-t border-gray-100 flex justify-end"><button onClick={(e) => handleEdit(client, e)} className="w-full py-2 text-sm text-white bg-[#112240] hover:bg-black rounded-lg font-bold transition-colors">Completar</button></div>
+                <div className="mb-4">
+                  <p className="text-[10px] text-gray-400 font-bold uppercase mb-2">Campos Faltantes:</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {getMissingFields(client).map(f => (
+                      <span key={f} className="px-2 py-0.5 text-[10px] font-bold bg-red-50 text-red-700 rounded border border-red-100 uppercase">{f}</span>
+                    ))}
+                  </div>
+                </div>
+                <div className="mt-4 pt-4 border-t border-gray-100 flex justify-end">
+                  <button onClick={() => handleEdit(client)} className="w-full py-2 text-sm text-white bg-[#112240] hover:bg-black rounded-lg font-bold transition-all transform active:scale-95">Completar</button>
+                </div>
               </div>
             ))}
           </div>
