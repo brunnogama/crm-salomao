@@ -1,9 +1,9 @@
 import { useState, useEffect, useMemo } from 'react'
-import { LayoutList, LayoutGrid, Pencil, X, RefreshCw, Briefcase, Mail, Gift, Info, ChevronDown, ArrowUpDown, FileSpreadsheet, Filter, EyeOff, Trash2, Ban } from 'lucide-react'
+import { LayoutList, LayoutGrid, Pencil, X, RefreshCw, Briefcase, Mail, Gift, Info, ChevronDown, ArrowUpDown, FileSpreadsheet, Filter, EyeOff, Trash2, Ban, Printer } from 'lucide-react'
 import { NewClientModal, ClientData } from './NewClientModal'
 import { utils, writeFile } from 'xlsx'
 import { supabase } from '../lib/supabase'
-import { logAction } from '../lib/logger' // Adicionado import do Logger
+import { logAction } from '../lib/logger'
 
 interface Client extends ClientData {
   id: number;
@@ -83,7 +83,6 @@ export function IncompleteClients() {
 
   useEffect(() => { fetchIncompleteClients() }, [])
 
-  // Função para dispensar uma pendência específica
   const handleDismissField = async (client: Client, field: string) => {
     if (!confirm(`Deseja dispensar a pendência de "${field}" para este cliente?`)) return;
 
@@ -98,13 +97,12 @@ export function IncompleteClients() {
     if (error) {
       alert('Erro ao atualizar. Tente novamente.');
     } else {
-      await logAction('EDITAR', 'INCOMPLETOS', `Dispensou campo '${field}' de: ${client.nome}`); // LOG ADICIONADO
+      await logAction('EDITAR', 'INCOMPLETOS', `Dispensou campo '${field}' de: ${client.nome}`);
       fetchIncompleteClients();
       if(selectedClient?.id === client.id) setSelectedClient(null);
     }
   }
 
-  // Função: Descartar Cliente da Lista (AGORA COM LOG)
   const handleDiscardClient = async (client: Client, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
 
@@ -112,7 +110,6 @@ export function IncompleteClients() {
 
     const missing = getMissingFields(client);
     const currentIgnored = client.ignored_fields || [];
-    // Adiciona todas as pendências atuais à lista de ignorados
     const newIgnored = Array.from(new Set([...currentIgnored, ...missing]));
 
     const { error } = await supabase
@@ -123,13 +120,115 @@ export function IncompleteClients() {
     if (error) {
       alert('Erro ao descartar cliente.');
     } else {
-      await logAction('EDITAR', 'INCOMPLETOS', `Descartou da lista de pendências: ${client.nome}`); // LOG ADICIONADO
+      await logAction('EDITAR', 'INCOMPLETOS', `Descartou da lista de pendências: ${client.nome}`);
       fetchIncompleteClients();
       if (selectedClient?.id === client.id) setSelectedClient(null);
     }
   }
 
-  const handleExportExcel = async () => {
+  // --- IMPRESSÃO INDIVIDUAL ---
+  const handlePrint = (client: Client) => {
+    const printWindow = window.open('', '', 'width=900,height=800');
+    if (!printWindow) return;
+
+    const missing = getMissingFields(client).join(', ');
+
+    const htmlContent = `
+      <html>
+        <head>
+          <title>Ficha de Pendências - ${client.nome}</title>
+          <style>
+            body { font-family: 'Segoe UI', sans-serif; padding: 40px; color: #1f2937; }
+            .header { border-bottom: 3px solid #dc2626; padding-bottom: 20px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: end; }
+            .logo { font-size: 28px; font-weight: 800; color: #dc2626; text-transform: uppercase; }
+            .subtitle { font-size: 14px; color: #6b7280; font-weight: 500; }
+            .alert-box { background: #fef2f2; border: 1px solid #fee2e2; color: #991b1b; padding: 15px; border-radius: 6px; margin-bottom: 20px; font-weight: bold; }
+            .section { margin-bottom: 35px; }
+            .section-title { font-size: 13px; font-weight: 700; text-transform: uppercase; color: #111; background: #f3f4f6; padding: 8px 12px; border-radius: 4px; margin-bottom: 15px; }
+            .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+            .label { font-size: 10px; color: #6b7280; font-weight: 700; text-transform: uppercase; display: block; margin-bottom: 4px; }
+            .value { font-size: 15px; color: #111827; font-weight: 500; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; display: block; width: 100%; min-height: 24px; }
+            @media print { @page { margin: 0; size: A4; } body { margin: 1.6cm; } }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div><div class="logo">Cadastro Incompleto</div><div class="subtitle">Relatório de Pendências</div></div>
+            <div><div class="date">${new Date().toLocaleDateString()}</div></div>
+          </div>
+          <div class="alert-box">CAMPOS FALTANTES: ${missing}</div>
+          <div class="section"><div class="section-title">Dados Atuais</div><div class="grid"><div class="field-box"><span class="label">Nome</span><span class="value">${client.nome}</span></div><div class="field-box"><span class="label">Sócio</span><span class="value">${client.socio || '-'}</span></div><div class="field-box"><span class="label">Empresa</span><span class="value">${client.empresa || '-'}</span></div><div class="field-box"><span class="label">Email</span><span class="value">${client.email || '-'}</span></div></div></div>
+          <script>window.onload = () => { setTimeout(() => { window.print(); window.close(); }, 500); };</script>
+        </body>
+      </html>`;
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+  }
+
+  // --- IMPRESSÃO EM LISTA (NOVA) ---
+  const handlePrintList = () => {
+    if (filteredClients.length === 0) {
+        alert("Nenhum cliente na lista para imprimir.");
+        return;
+    }
+
+    const printWindow = window.open('', '', 'width=900,height=800');
+    if (!printWindow) return;
+
+    const clientsHtml = filteredClients.map(client => {
+        const missing = getMissingFields(client).join(', ');
+        return `
+      <div class="card">
+        <div class="card-header">
+            <span class="name">${client.nome || 'Sem Nome'}</span>
+            <span class="socio">${client.socio || '-'}</span>
+        </div>
+        <div class="card-body">
+            <div class="row"><strong>Empresa:</strong> ${client.empresa || '-'}</div>
+            <div class="row missing"><strong>Falta:</strong> ${missing}</div>
+        </div>
+      </div>
+    `}).join('');
+
+    const htmlContent = `
+      <html>
+        <head>
+          <title>Lista de Incompletos</title>
+          <style>
+            body { font-family: 'Segoe UI', sans-serif; padding: 20px; background: #fff; }
+            .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #dc2626; padding-bottom: 10px; }
+            .title { font-size: 20px; font-weight: 800; color: #dc2626; text-transform: uppercase; }
+            .meta { font-size: 12px; color: #666; margin-top: 5px; }
+            
+            .grid-container { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+            .card { border: 1px solid #fee2e2; border-radius: 6px; padding: 10px; page-break-inside: avoid; background: #fff; }
+            .card-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #fee2e2; padding-bottom: 5px; margin-bottom: 8px; }
+            .name { font-weight: 800; font-size: 14px; color: #991b1b; }
+            .socio { font-size: 10px; background: #fee2e2; color: #991b1b; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
+            .card-body { font-size: 11px; color: #374151; }
+            .row { margin-bottom: 3px; }
+            .missing { color: #dc2626; font-weight: bold; margin-top: 5px; }
+            
+            @media print { @page { margin: 1cm; size: A4; } body { padding: 0; } }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div class="title">Relatório de Incompletos</div>
+            <div class="meta">Total: ${filteredClients.length} pendências | Gerado em: ${new Date().toLocaleDateString()}</div>
+          </div>
+          <div class="grid-container">${clientsHtml}</div>
+          <script>window.onload = () => { setTimeout(() => { window.print(); window.close(); }, 500); };</script>
+        </body>
+      </html>
+    `;
+
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+    logAction('EXPORTAR', 'INCOMPLETOS', `Imprimiu lista de ${filteredClients.length} incompletos`);
+  }
+
+  const handleExportExcel = () => {
     const dataToExport = filteredClients.map(client => ({
       "Nome": client.nome,
       "Empresa": client.empresa,
@@ -140,7 +239,7 @@ export function IncompleteClients() {
     const wb = utils.book_new()
     utils.book_append_sheet(wb, ws, "Pendências")
     writeFile(wb, "Relatorio_Incompletos_Salomao.xlsx")
-    await logAction('EXPORTAR', 'INCOMPLETOS', `Exportou ${dataToExport.length} cadastros incompletos`); // LOG ADICIONADO
+    logAction('EXPORTAR', 'INCOMPLETOS', `Exportou ${dataToExport.length} cadastros incompletos`);
   }
 
   const handleEdit = (client: Client, e?: React.MouseEvent) => {
@@ -157,7 +256,7 @@ export function IncompleteClients() {
         if (error) {
             alert('Erro ao excluir cliente.');
         } else {
-            await logAction('EXCLUIR', 'INCOMPLETOS', `Removeu cliente permanentemente: ${client.nome}`); // LOG ADICIONADO
+            await logAction('EXCLUIR', 'INCOMPLETOS', `Removeu cliente permanentemente: ${client.nome}`);
             fetchIncompleteClients();
             if(selectedClient?.id === client.id) setSelectedClient(null);
         }
@@ -205,16 +304,11 @@ export function IncompleteClients() {
             <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-8 overflow-y-auto max-h-[70vh]">
               <div className="space-y-4">
                 <h3 className="text-xs font-bold text-red-400 uppercase border-b pb-2">Pendências</h3>
-                
                 <div className="flex flex-col gap-2">
                   {getMissingFields(selectedClient).map(field => (
                     <div key={field} className="flex items-center justify-between p-2 bg-red-50 rounded border border-red-100">
                         <span className="text-xs font-bold text-red-800">{field}</span>
-                        <button 
-                            onClick={() => handleDismissField(selectedClient, field)} 
-                            className="text-xs text-gray-500 hover:text-gray-800 flex items-center gap-1 bg-white px-2 py-1 rounded border border-gray-200 hover:shadow-sm transition-all"
-                            title="Ignorar esta pendência"
-                        >
+                        <button onClick={() => handleDismissField(selectedClient, field)} className="text-xs text-gray-500 hover:text-gray-800 flex items-center gap-1 bg-white px-2 py-1 rounded border border-gray-200 hover:shadow-sm transition-all" title="Ignorar esta pendência">
                             <EyeOff className="h-3 w-3" /> Dispensar
                         </button>
                     </div>
@@ -229,16 +323,21 @@ export function IncompleteClients() {
                 <p className="text-sm flex items-center gap-3"><Info className="h-4 w-4 text-gray-400" /> <strong>Sócio:</strong> {selectedClient.socio || '-'}</p>
               </div>
             </div>
-            <div className="p-6 bg-gray-50 border-t border-gray-100 flex justify-end gap-3">
-              <button onClick={(e) => handleDiscardClient(selectedClient, e)} className="px-5 py-2.5 bg-gray-100 text-gray-600 rounded-lg font-bold text-sm flex items-center gap-2 hover:bg-gray-200 transition-all">
-                <Ban className="h-4 w-4" /> Descartar
+            <div className="p-6 bg-gray-50 border-t border-gray-100 flex justify-between items-center">
+              <button onClick={() => handlePrint(selectedClient)} className="px-4 py-2.5 bg-white border border-gray-300 text-gray-700 rounded-lg font-bold text-sm flex items-center gap-2 hover:bg-gray-50 transition-all shadow-sm">
+                <Printer className="h-4 w-4" /> Imprimir Ficha
               </button>
-              <button onClick={(e) => handleDelete(selectedClient, e)} className="px-5 py-2.5 bg-red-100 text-red-700 rounded-lg font-bold text-sm flex items-center gap-2 hover:bg-red-200 transition-all">
-                <Trash2 className="h-4 w-4" /> Excluir
-              </button>
-              <button onClick={(e) => handleEdit(selectedClient, e)} className="px-5 py-2.5 bg-[#112240] text-white rounded-lg font-bold text-sm flex items-center gap-2 hover:bg-black transition-all shadow-md">
-                <Pencil className="h-4 w-4" /> Completar
-              </button>
+              <div className="flex gap-3">
+                <button onClick={(e) => handleDiscardClient(selectedClient, e)} className="px-5 py-2.5 bg-gray-100 text-gray-600 rounded-lg font-bold text-sm flex items-center gap-2 hover:bg-gray-200 transition-all">
+                    <Ban className="h-4 w-4" /> Descartar
+                </button>
+                <button onClick={(e) => handleDelete(selectedClient, e)} className="px-5 py-2.5 bg-red-100 text-red-700 rounded-lg font-bold text-sm flex items-center gap-2 hover:bg-red-200 transition-all">
+                    <Trash2 className="h-4 w-4" /> Excluir
+                </button>
+                <button onClick={(e) => handleEdit(selectedClient, e)} className="px-5 py-2.5 bg-[#112240] text-white rounded-lg font-bold text-sm flex items-center gap-2 hover:bg-black transition-all shadow-md">
+                    <Pencil className="h-4 w-4" /> Completar
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -247,6 +346,7 @@ export function IncompleteClients() {
       {/* TOOLBAR */}
       <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-6 gap-4">
         <div className="flex items-center gap-3 w-full xl:w-auto overflow-x-auto pb-2 px-1">
+          {/* ... (Filtros e Botões de Visualização) ... */}
           <div className="relative group">
             <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"><Filter className="h-4 w-4" /></div>
             <select value={socioFilter} onChange={(e) => setSocioFilter(e.target.value)} className="appearance-none pl-9 pr-10 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium min-w-[160px] outline-none">
@@ -274,6 +374,8 @@ export function IncompleteClients() {
           <button onClick={fetchIncompleteClients} className="p-2.5 bg-white border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50 shadow-sm"><RefreshCw className={`h-5 w-5 ${loading ? 'animate-spin' : ''}`} /></button>
         </div>
         <div className="flex items-center gap-3 w-full xl:w-auto">
+          {/* BOTÃO DE IMPRIMIR LISTA (NOVO) */}
+          <button onClick={handlePrintList} className="p-2.5 bg-white border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50" title="Imprimir Lista"><Printer className="h-5 w-5" /></button>
           <button onClick={handleExportExcel} className="flex-1 xl:flex-none flex items-center justify-center px-4 py-2.5 bg-green-600 text-white rounded-lg gap-2 font-medium text-sm transition-all hover:bg-green-700"><FileSpreadsheet className="h-5 w-5" /> Exportar</button>
         </div>
       </div>
