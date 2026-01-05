@@ -1,10 +1,3 @@
-Para corrigir o desalinhamento dos cards e garantir que todos tenham a mesma altura, ajustei o bloco de informações (Endereço, Local e Telefone).
-
-Agora, **todos os campos são exibidos sempre**. Se a informação não existir, o sistema exibirá um traço (`-`) no lugar, mantendo a estrutura visual fixa e alinhando perfeitamente a barra de botões inferior.
-
-### Arquivo Atualizado: `src/components/Clients.tsx`
-
-```tsx
 import { useState, useEffect, useMemo } from 'react'
 import { Plus, Filter, LayoutList, LayoutGrid, Pencil, Trash2, X, AlertTriangle, ChevronDown, FileSpreadsheet, RefreshCw, ArrowUpDown, MessageCircle, Phone, MapPin, Mail, Briefcase, Gift, Info, User } from 'lucide-react'
 import { NewClientModal, ClientData } from './NewClientModal'
@@ -57,7 +50,8 @@ export function Clients() {
         estado: item.estado,
         email: item.email,
         socio: item.socio,
-        observacoes: item.observacoes
+        observacoes: item.observacoes,
+        ignored_fields: item.ignored_fields
       }))
       setClients(formattedClients)
     }
@@ -186,7 +180,8 @@ Agradecemos a atenção!`;
       estado: clientData.estado,
       email: clientData.email,
       socio: clientData.socio,
-      observacoes: clientData.observacoes
+      observacoes: clientData.observacoes,
+      ignored_fields: clientData.ignored_fields
     }
 
     try {
@@ -338,7 +333,6 @@ Agradecemos a atenção!`;
                     <span className={`px-2 py-0.5 text-[10px] font-semibold rounded-full flex-shrink-0 ${client.tipoBrinde === 'Brinde VIP' ? 'bg-purple-100 text-purple-800' : 'bg-green-100 text-green-800'}`}>{client.tipoBrinde}</span>
                   </div>
                   
-                  {/* MODIFICADO: Bloco de endereço e telefone sempre visível e completo */}
                   <div className="bg-gray-50/50 rounded-md p-2 border border-gray-100 mb-3 text-xs space-y-1">
                     <div className="flex justify-between items-center">
                         <span className="text-gray-400">Sócio:</span>
@@ -367,7 +361,7 @@ Agradecemos a atenção!`;
 
                   <div className="border-t border-gray-100 pt-3 flex justify-between items-center transition-opacity">
                     <div className="flex gap-2">
-                      {/* BOTÕES DE CONTATO (WhatsApp, Phone, Email) */}
+                      {/* BOTÕES DE CONTATO - SEMPRE VISÍVEIS SE HOUVER DADO */}
                       {client.telefone && (
                         <>
                             <button onClick={(e) => handleWhatsApp(client, e)} className="p-1.5 text-green-600 bg-green-50 hover:bg-green-100 rounded-md transition-colors"><MessageCircle className="h-4 w-4" /></button>
@@ -452,5 +446,3 @@ Agradecemos a atenção!`;
     </div>
   )
 }
-
-```
