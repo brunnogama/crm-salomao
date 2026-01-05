@@ -1,145 +1,169 @@
 import { useState } from 'react'
-import { User, Lock, ArrowRight } from 'lucide-react'
 import { supabase } from './lib/supabase'
+import { User, Lock, ArrowRight, Loader2 } from 'lucide-react'
 
 export default function Login() {
-  const [username, setUsername] = useState('')
+  const [emailPrefix, setEmailPrefix] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState('')
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
-    setError(null)
+    setError('')
 
-    const fullEmail = `${username}@salomaoadv.com.br`
+    try {
+      const email = `${emailPrefix}@salomaoadv.com.br`
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email: fullEmail,
-      password,
-    })
-
-    if (error) {
-      setError('Erro ao acessar: Verifique suas credenciais.')
+      if (error) throw error
+    } catch (err: any) {
+      setError('Credenciais inválidas. Verifique usuário e senha.')
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   return (
-    <div className="flex h-screen w-full font-sans">
-      {/* LADO ESQUERDO - Formulário (Fundo Branco) - SEM ALTERAÇÕES */}
-      <div className="w-full md:w-1/2 bg-white flex flex-col justify-center px-12 sm:px-24 relative">
-        
-        <div className="mb-10 text-center w-full">
-          <img 
-            src="/logo-salomao.png" 
-            alt="Salomão Advogados" 
-            className="h-20 md:h-24 object-contain mx-auto" 
-          />
-        </div>
+    <div className="min-h-screen flex w-full bg-white">
+      
+      {/* LADO ESQUERDO - FORMULÁRIO */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 lg:p-16 animate-fadeIn">
+        <div className="w-full max-w-md space-y-8">
+          
+          {/* Logo */}
+          <div className="flex flex-col items-center mb-10">
+             <img src="/logo-azul.png" alt="Salomão Advogados" className="h-16 w-auto object-contain mb-4" />
+          </div>
 
-        <form onSubmit={handleLogin} className="w-full max-w-md mx-auto">
-          <div className="space-y-6">
+          <form onSubmit={handleLogin} className="space-y-6">
             
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">
+            {/* Input Usuário */}
+            <div>
+              <label className="block text-xs font-bold text-gray-500 uppercase mb-2 tracking-wider">
                 Usuário Corporativo
               </label>
-              
-              <div className="flex items-stretch shadow-sm">
-                <div className="relative flex-grow focus-within:z-10">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <User className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    type="text"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    className="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-l-lg rounded-r-none bg-gray-50 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-salomao-blue/20 focus:border-salomao-blue transition-all"
-                    placeholder="nome.sobrenome"
-                    required
-                  />
+              <div className="flex rounded-lg shadow-sm ring-1 ring-inset ring-gray-300 focus-within:ring-2 focus-within:ring-[#112240] overflow-hidden">
+                <div className="flex items-center pl-3 text-gray-400">
+                  <User className="h-5 w-5" />
                 </div>
-                <div className="flex items-center px-4 bg-gray-200 border border-l-0 border-gray-200 rounded-r-lg text-gray-500 text-sm font-medium select-none">
+                <input
+                  type="text"
+                  required
+                  value={emailPrefix}
+                  onChange={(e) => setEmailPrefix(e.target.value.toLowerCase().replace(/\s/g, ''))}
+                  className="block flex-1 border-0 bg-transparent py-3 pl-2 text-gray-900 placeholder:text-gray-400 focus:ring-0 sm:text-sm sm:leading-6"
+                  placeholder="nome.sobrenome"
+                />
+                <span className="flex select-none items-center bg-gray-100 px-3 text-gray-500 sm:text-sm font-medium border-l border-gray-200">
                   @salomaoadv.com.br
-                </div>
+                </span>
               </div>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">
+            {/* Input Senha */}
+            <div>
+              <label className="block text-xs font-bold text-gray-500 uppercase mb-2 tracking-wider">
                 Senha
               </label>
-              <div className="relative group">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-gray-400 group-focus-within:text-salomao-blue" />
+              <div className="relative rounded-lg shadow-sm ring-1 ring-inset ring-gray-300 focus-within:ring-2 focus-within:ring-[#112240]">
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+                  <Lock className="h-5 w-5" />
                 </div>
                 <input
                   type="password"
+                  required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-lg bg-gray-50 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-salomao-blue/20 focus:border-salomao-blue transition-all"
+                  className="block w-full border-0 bg-transparent py-3 pl-10 text-gray-900 placeholder:text-gray-400 focus:ring-0 sm:text-sm sm:leading-6"
                   placeholder="••••••••"
-                  required
                 />
               </div>
             </div>
 
+            {/* Mensagem de Erro */}
             {error && (
-              <div className="text-red-600 text-sm bg-red-50 p-2 rounded border border-red-100 text-center">
+              <div className="p-3 rounded-lg bg-red-50 text-red-600 text-sm font-medium text-center border border-red-100">
                 {error}
               </div>
             )}
 
+            {/* Botão Acessar */}
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex items-center justify-center py-4 px-4 border border-transparent rounded-lg shadow-sm text-sm font-bold text-white bg-[#112240] hover:bg-[#1a3a6c] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-salomao-blue transition-colors uppercase tracking-wider"
+              className="w-full flex justify-center items-center py-3.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-bold text-white bg-[#112240] hover:bg-[#1a3a6c] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#112240] transition-all disabled:opacity-70 disabled:cursor-not-allowed group"
             >
-              {loading ? 'Validando...' : 'Acessar Sistema'}
-              {!loading && <ArrowRight className="ml-2 h-4 w-4" />}
+              {loading ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <>
+                  ACESSAR SISTEMA 
+                  <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                </>
+              )}
             </button>
-          </div>
-        </form>
+          </form>
 
-        <div className="absolute bottom-8 left-0 w-full text-center">
-           <p className="text-[10px] text-gray-400 tracking-widest uppercase">
-             © 2026 Salomão Advogados • v1.2.0
-           </p>
-        </div>
-      </div>
-
-      {/* LADO DIREITO - Banner (AJUSTADO CONFORME SOLICITAÇÃO) */}
-      <div className="hidden md:flex md:w-1/2 bg-[#112240] flex-col justify-center px-24 relative overflow-hidden">
-        
-        {/* Overlay de Gradiente */}
-        <div className="absolute top-0 right-0 w-full h-full bg-gradient-to-bl from-white/5 to-transparent pointer-events-none"></div>
-
-        {/* Conteúdo Centralizado Verticalmente */}
-        <div className="relative z-10 flex flex-col items-start">
-          
-          {/* Ícone da Seta - Agora ACIMA do texto e com fundo escuro */}
-          <div className="h-12 w-12 rounded-full bg-[#1a2c4e] flex items-center justify-center mb-8">
-            <ArrowRight className="text-salomao-gold h-6 w-6" />
-          </div>
-
-          <h2 className="text-4xl font-bold text-white mb-4 leading-tight">
-            Portal de Gestão<br/>
-            Estratégica
-          </h2>
-          
-          <div className="h-1 w-16 bg-yellow-600 mb-6"></div>
-
-          <p className="text-gray-300 text-lg font-light leading-relaxed max-w-md">
-            Centralização inteligente de CRM, Recursos Humanos e Contatos. 
-            Tecnologia impulsionando a eficiência organizacional do <strong className="text-white font-semibold">Salomão Advogados</strong>.
+          <p className="text-center text-xs text-gray-400 mt-8 pt-8 border-t border-gray-100">
+            © 2026 SALOMÃO ADVOGADOS • V1.4
           </p>
         </div>
-
-        {/* RODAPÉ DO LADO DIREITO FOI REMOVIDO */}
-        
       </div>
+
+      {/* LADO DIREITO - BANNER E IMAGEM */}
+      <div className="hidden lg:flex w-1/2 relative bg-[#112240] items-center justify-center overflow-hidden">
+        
+        {/* Imagem de Fundo (Escritório Moderno/Jurídico) */}
+        <div 
+            className="absolute inset-0 z-0 bg-cover bg-center opacity-40 mix-blend-overlay"
+            style={{ 
+                backgroundImage: "url('https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=2301&auto=format&fit=crop')" 
+            }}
+        ></div>
+        
+        {/* Gradiente de Sobreposição para garantir leitura */}
+        <div className="absolute inset-0 bg-gradient-to-br from-[#112240]/95 via-[#112240]/80 to-[#0a1525]/90 z-10"></div>
+
+        {/* Conteúdo de Texto */}
+        <div className="relative z-20 max-w-lg p-12 text-white animate-slideInRight">
+          <div className="w-12 h-12 bg-blue-500/20 rounded-2xl flex items-center justify-center mb-8 border border-blue-400/30 backdrop-blur-sm">
+            <ArrowRight className="h-6 w-6 text-blue-300" />
+          </div>
+          
+          <h2 className="text-4xl font-extrabold mb-6 leading-tight tracking-tight">
+            Ecossistema de<br/>
+            <span className="text-blue-400">Gestão Integrada</span>
+          </h2>
+          
+          <div className="w-16 h-1 bg-blue-500 rounded-full mb-8"></div>
+          
+          <p className="text-lg text-gray-300 mb-8 leading-relaxed font-light">
+            Plataforma unificada para o sucesso do escritório. 
+            Acesse seus módulos em um único lugar:
+          </p>
+
+          <ul className="space-y-4 text-gray-300">
+            <li className="flex items-center gap-3">
+                <span className="w-2 h-2 bg-blue-400 rounded-full"></span>
+                <strong>CRM Jurídico:</strong> Gestão de clientes e brindes.
+            </li>
+            <li className="flex items-center gap-3">
+                <span className="w-2 h-2 bg-purple-400 rounded-full"></span>
+                <strong>Gestão Familiar:</strong> Administração patrimonial.
+            </li>
+            <li className="flex items-center gap-3">
+                <span className="w-2 h-2 bg-green-400 rounded-full"></span>
+                <strong>Colaboradores:</strong> Portal do time e RH.
+            </li>
+          </ul>
+        </div>
+      </div>
+
     </div>
   )
 }
