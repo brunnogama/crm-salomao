@@ -159,6 +159,7 @@ export function Clients({ initialFilters }: ClientsProps) {
     printWindow.document.close();
   }
 
+  // --- SAVE ---
   const handleSaveClient = async (clientData: ClientData) => {
     const dbData = {
       nome: clientData.nome,
@@ -179,7 +180,7 @@ export function Clients({ initialFilters }: ClientsProps) {
       socio: clientData.socio,
       observacoes: clientData.observacoes,
       ignored_fields: clientData.ignored_fields,
-      historico_brindes: clientData.historico_brindes
+      historico_brindes: clientData.historico_brindes // Salva o JSON no banco
     }
 
     try {
@@ -235,6 +236,7 @@ export function Clients({ initialFilters }: ClientsProps) {
     <div className="h-full flex flex-col relative">
       <NewClientModal isOpen={isModalOpen} onClose={() => { setIsModalOpen(false); setClientToEdit(null); }} onSave={handleSaveClient} clientToEdit={clientToEdit} />
 
+      {/* MODAL DELETAR */}
       {clientToDelete && (
         <div className="fixed inset-0 bg-black/50 z-[200] flex items-center justify-center p-4 backdrop-blur-sm">
           <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 animate-scaleIn">
@@ -251,6 +253,7 @@ export function Clients({ initialFilters }: ClientsProps) {
         </div>
       )}
 
+      {/* MODAL DETALHES (VISUALIZAÇÃO + HISTÓRICO) */}
       {selectedClient && (
         <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm animate-fadeIn">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden border border-gray-100 animate-scaleIn flex flex-col max-h-[85vh]">
@@ -280,6 +283,7 @@ export function Clients({ initialFilters }: ClientsProps) {
                 </div>
               </div>
 
+              {/* SEÇÃO DE HISTÓRICO NO DETALHE */}
               <div className="bg-gray-50 rounded-xl border border-gray-200 p-5">
                 <h3 className="text-sm font-bold text-[#112240] mb-4 flex items-center gap-2">
                     <Calendar className="h-4 w-4" /> Histórico de Brindes Anuais
@@ -318,8 +322,10 @@ export function Clients({ initialFilters }: ClientsProps) {
         </div>
       )}
 
+      {/* TOOLBAR */}
       <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-6 gap-4">
         <div className="flex items-center gap-3 w-full xl:w-auto overflow-x-auto pb-2 xl:pb-0 px-1">
+           {/* Filtros existentes... */}
            <div className="relative group">
              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"><Filter className="h-4 w-4" /></div>
              <select value={socioFilter} onChange={(e) => setSocioFilter(e.target.value)} className="appearance-none pl-9 pr-10 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:border-gray-300 outline-none focus:ring-2 focus:ring-[#112240]/20 min-w-[160px]">
@@ -353,6 +359,7 @@ export function Clients({ initialFilters }: ClientsProps) {
         </div>
       </div>
 
+      {/* LISTA DE CLIENTES */}
       <div className="flex-1 overflow-auto pb-4 font-medium">
         {loading && clients.length === 0 ? (
           <div className="flex h-full items-center justify-center"><RefreshCw className="h-8 w-8 animate-spin text-[#112240]" /></div>
