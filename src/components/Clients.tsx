@@ -101,47 +101,61 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
     if (filterSocio) result = result.filter(c => c.socio === filterSocio)
     if (filterBrinde) result = result.filter(c => c.tipo_brinde === filterBrinde)
 
-    result.sort((a: any, b: any) => {
-        const dateA = a.created_at ? new Date(a.created_at).getTime() : 0
-        const dateB = b.created_at ? new Date(b.created_at).getTime() : 0
-        if (sortOrder === 'newest') return dateB - dateA
-        if (sortOrder === 'oldest') return dateA - dateB
-        if (sortOrder === 'az') return (a.nome || '').localeCompare(b.nome || '')
-        if (sortOrder === 'za') return (b.nome || '').localeCompare(a.nome || '')
-        return 0
+    const collator = new Intl.Collator('pt-BR', { sensitivity: 'base' })
+    result.sort((a, b) => {
+        if (sortOrder === 'az') return collator.compare(a.nome || '', b.nome || '')
+        if (sortOrder === 'za') return collator.compare(b.nome || '', a.nome || '')
+        if (sortOrder === 'oldest') return new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime()
+        return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
     })
 
     return result
   }, [clients, searchTerm, filterSocio, filterBrinde, sortOrder])
 
-  // --- DELETE MANUAL ---
+  // ✅ FUNÇÃO DE EXCLUSÃO CORRIGIDA COM CASCATA MANUAL
   const handleDelete = async (client: ClientData) => {
-    if (!client.id) return alert("Erro: Registro sem ID.")
+    if (!confirm(`⚠️ Tem certeza que deseja excluir permanentemente: ${client.nome}?\n\nEsta ação não pode ser desfeita.`)) {
+        return;
+    }
 
-    if (confirm(`Tem certeza que deseja excluir permanentemente: ${client.nome}?`)) {
-        try {
-            console.log(`Iniciando exclusão manual para ID ${client.id}...`)
+    try {
+        console.log(`🗑️ Iniciando exclusão de cliente ID ${client.id} - ${client.nome}...`)
 
-            // 1. Tenta limpar tarefas vinculadas primeiro
-            try {
-               await supabase.from('tasks').delete().eq('client_id', client.id);
-            } catch (e) { console.warn("Aviso: Não foi possível limpar tarefas vinculadas.", e) }
-
-            // 2. Agora tenta excluir o cliente
-            const { error } = await supabase.from(tableName).delete().eq('id', client.id)
-            
-            if (error) {
-                console.error("Erro Supabase:", error)
-                throw new Error(error.message)
-            }
-
-            // 3. Sucesso na interface
-            setClients(current => current.filter(c => c.id !== client.id))
-            await logAction('EXCLUIR', tableName.toUpperCase(), `Excluiu: ${client.nome}`)
-            
-        } catch (error: any) {
-            alert(`Erro ao excluir: ${error.message}\nVerifique permissões.`)
+        // PASSO 1: Limpar tarefas vinculadas (se houver)
+        console.log('→ Verificando tarefas vinculadas...')
+        const { error: errTasks } = await supabase
+            .from('tasks')
+            .delete()
+            .eq('client_id', client.id)
+        
+        if (errTasks) {
+            console.warn('⚠️ Aviso ao limpar tarefas:', errTasks)
+            // Não bloqueia se não encontrar tasks ou se houver erro de permissão
+            // (pode ser que não existam tasks para esse cliente)
+        } else {
+            console.log('✅ Tarefas vinculadas removidas (se existiam)')
         }
+
+        // PASSO 2: Excluir o cliente
+        console.log(`→ Excluindo cliente da tabela ${tableName}...`)
+        const { error: errCliente } = await supabase
+            .from(tableName)
+            .delete()
+            .eq('id', client.id)
+        
+        if (errCliente) {
+            console.error('❌ Erro ao excluir cliente:', errCliente)
+            throw new Error(`Falha ao excluir: ${errCliente.message}`)
+        }
+
+        // PASSO 3: Atualizar UI e registrar log
+        console.log('✅ Cliente excluído com sucesso!')
+        setClients(current => current.filter(c => c.id !== client.id))
+        await logAction('EXCLUIR', tableName.toUpperCase(), `Excluiu: ${client.nome}`)
+        
+    } catch (error: any) {
+        console.error('❌ Erro na exclusão:', error)
+        alert(`Falha ao excluir cliente:\n\n${error.message}\n\nPossíveis causas:\n- Permissões RLS bloqueando DELETE\n- Foreign Keys ativas\n- Conexão com banco perdida`)
     }
   }
 
@@ -164,8 +178,8 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
 
       if (jsonData.length === 0) throw new Error('Arquivo vazio.')
 
-      // Correção de Tipo: Força any para evitar erro de build
-      const { data: { user } } = await (supabase.auth as any).getUser()
+      // ✅ CORREÇÃO: Usa getUser() do Supabase v2
+      const { data: { user } } = await supabase.auth.getUser()
       const userEmail = user?.email || 'Importação'
 
       const normalizeKeys = (obj: any) => {
@@ -198,263 +212,352 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
             created_by: userEmail,
             updated_by: userEmail
         }
-      }).filter(Boolean);
-      
-      const { error } = await supabase.from(tableName).insert(itemsToInsert)
-      if (error) throw error
-      
-      alert(`${itemsToInsert.length} importados com sucesso!`)
-      await logAction('IMPORTAR', tableName.toUpperCase(), `Importou ${itemsToInsert.length} itens`)
-      fetchClients()
+      }).filter(Boolean)
 
+      if (itemsToInsert.length === 0) throw new Error('Nenhum item válido.')
+
+      const { error } = await supabase.from(tableName).insert(itemsToInsert)
+
+      if (error) throw error
+
+      alert(`✅ ${itemsToInsert.length} registros importados!`)
+      await logAction('IMPORTAR', tableName.toUpperCase(), `Importou ${itemsToInsert.length} registros`)
+      fetchClients()
+      
     } catch (error: any) {
-      alert('Erro na importação: ' + error.message)
+      console.error('Erro na importação:', error)
+      alert(`Erro ao importar:\n${error.message}`)
     } finally {
       setImporting(false)
       if (fileInputRef.current) fileInputRef.current.value = ''
     }
   }
 
-  const triggerFileInput = () => {
-      if (fileInputRef.current) {
-          fileInputRef.current.value = '';
-          fileInputRef.current.click();
-      }
-  }
+  const handleExport = () => {
+    const dataToExport = processedClients.map(c => ({
+      Nome: c.nome,
+      Empresa: c.empresa,
+      Cargo: c.cargo,
+      Email: c.email,
+      Telefone: c.telefone,
+      Sócio: c.socio,
+      'Tipo de Brinde': c.tipo_brinde,
+      Quantidade: c.quantidade,
+      CEP: c.cep,
+      Endereço: c.endereco,
+      Número: c.numero,
+      Bairro: c.bairro,
+      Cidade: c.cidade,
+      UF: c.estado,
+      'Data Criação': c.created_at ? new Date(c.created_at).toLocaleDateString('pt-BR') : ''
+    }))
 
-  const handleSave = async (client: ClientData) => {
-    // Correção de Tipo: Força any
-    const { data: { user } } = await (supabase.auth as any).getUser()
-    const userEmail = user?.email || 'Sistema'
-    
-    const dbData: any = {
-        nome: client.nome,
-        empresa: client.empresa,
-        cargo: client.cargo,
-        telefone: client.telefone,
-        tipo_brinde: client.tipo_brinde,
-        outro_brinde: client.outro_brinde,
-        quantidade: client.quantidade,
-        cep: client.cep,
-        endereco: client.endereco,
-        numero: client.numero,
-        complemento: client.complemento,
-        bairro: client.bairro,
-        cidade: client.cidade,
-        estado: client.estado,
-        email: client.email,
-        socio: client.socio,
-        observacoes: client.observacoes,
-        ignored_fields: client.ignored_fields,
-        historico_brindes: client.historico_brindes,
-        updated_by: userEmail,
-        updated_at: new Date().toISOString()
-    }
-
-    try {
-        if (clientToEdit && clientToEdit.id) {
-            const { error } = await supabase.from(tableName).update(dbData).eq('id', clientToEdit.id)
-            if (error) throw error
-            await logAction('EDITAR', tableName.toUpperCase(), `Atualizou: ${client.nome}`)
-        } else {
-            dbData.created_by = userEmail
-            const { error } = await supabase.from(tableName).insert([dbData])
-            if (error) throw error
-            await logAction('CRIAR', tableName.toUpperCase(), `Criou: ${client.nome}`)
-        }
-        setIsModalOpen(false)
-        setClientToEdit(null)
-        fetchClients()
-    } catch (error: any) {
-        alert(`Erro ao salvar: ${error.message}`)
-    }
-  }
-
-  // Helpers
-  const handleWhatsApp = (client: ClientData, e?: React.MouseEvent) => {
-    if(e) { e.preventDefault(); e.stopPropagation(); }
-    const cleanPhone = (client.telefone || '').replace(/\D/g, '')
-    if(!cleanPhone) return alert("Telefone não cadastrado.")
-    const message = `Olá Sr(a). ${client.nome}.\n\nSomos do Salomão Advogados...`
-    window.open(`https://wa.me/55${cleanPhone}?text=${encodeURIComponent(message)}`, '_blank')
-  }
-
-  const handle3CX = (client: ClientData, e?: React.MouseEvent) => {
-    if(e) { e.preventDefault(); e.stopPropagation(); }
-    const cleanPhone = (client.telefone || '').replace(/\D/g, '')
-    if(!cleanPhone) return alert("Telefone não cadastrado.")
-    window.location.href = `tel:${cleanPhone}`
-  }
-
-  const handleEmail = (client: ClientData, e?: React.MouseEvent) => {
-    if(e) { e.preventDefault(); e.stopPropagation(); }
-    if(!client.email) return alert("E-mail não cadastrado.")
-    const subject = encodeURIComponent("Atualização Cadastral - Salomão Advogados")
-    const body = encodeURIComponent(`Olá Sr(a). ${client.nome}...`)
-    window.open(`mailto:${client.email}?subject=${subject}&body=${body}`, '_blank')
-  }
-
-  const handleExportExcel = async () => {
-    const ws = utils.json_to_sheet(processedClients)
+    const ws = utils.json_to_sheet(dataToExport)
     const wb = utils.book_new()
-    utils.book_append_sheet(wb, ws, "Lista")
-    writeFile(wb, `Relatorio_${tableName}.xlsx`)
+    utils.book_append_sheet(wb, ws, tableName === 'magistrados' ? 'Magistrados' : 'Clientes')
+    writeFile(wb, `${tableName}_${new Date().toISOString().split('T')[0]}.xlsx`)
   }
 
-  const handlePrintList = () => {
-    if (processedClients.length === 0) return alert("Lista vazia.")
-    const printWindow = window.open('', '', 'width=900,height=800')
-    if (!printWindow) return
-    const listHtml = processedClients.map(c => `<div><strong>${c.nome}</strong> (${c.empresa})</div>`).join('')
-    printWindow.document.write(`<html><body><h2>Lista: ${tableName.toUpperCase()}</h2>${listHtml}<script>window.print()</script></body></html>`)
-    printWindow.document.close()
+  const getBrindeColor = (tipo: string) => {
+    if (!tipo) return 'bg-gray-100 text-gray-600'
+    if (tipo === 'Brinde VIP') return 'bg-purple-50 text-purple-700 border-purple-100'
+    if (tipo === 'Brinde Médio') return 'bg-green-50 text-green-700 border-green-100'
+    return 'bg-slate-50 text-slate-600 border-slate-100'
   }
 
-  const openEditModal = (client: ClientData) => {
+  const handleAddClient = () => {
+    setClientToEdit(null)
+    setIsModalOpen(true)
+  }
+
+  const handleEditClient = (client: ClientData) => {
     setClientToEdit(client)
     setIsModalOpen(true)
   }
 
-  if (loading) return (
-    <div className="flex justify-center items-center h-full">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#112240]"></div>
-    </div>
-  )
+  const handleSaveClient = async () => {
+    setIsModalOpen(false)
+    setClientToEdit(null)
+    await fetchClients()
+  }
+
+  if (loading) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#112240]"></div>
+      </div>
+    )
+  }
 
   return (
-    <div className="h-full flex flex-col gap-4">
-      <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".xlsx, .xls" className="hidden" />
+    <div className="h-full flex flex-col overflow-hidden">
+      
+      {/* BARRA DE AÇÕES */}
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 gap-4 flex-shrink-0">
+        <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
+          {/* Busca */}
+          <div className="relative flex-1 min-w-[200px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <input 
+              type="text" 
+              placeholder="Buscar por nome, empresa, email..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm outline-none focus:border-[#112240]"
+            />
+            {searchTerm && (
+              <button 
+                onClick={() => setSearchTerm('')} 
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
 
-      <div className="flex-shrink-0 flex flex-col gap-4">
-        {/* HEADER */}
-        <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 bg-white p-2 rounded-xl border border-gray-100 shadow-sm">
-            <div className="pl-2">
-                <p className="text-sm font-medium text-gray-500">
-                    <span className="font-bold text-[#112240]">{processedClients.length}</span> registros
-                </p>
-            </div>
-            
-            <div className="flex flex-wrap items-center gap-2">
-                <div className="flex items-center gap-1 text-gray-400 mr-1 hidden sm:flex"><Filter className="h-4 w-4" /></div>
-
-                <div className="relative">
-                    <select value={filterSocio} onChange={(e) => setFilterSocio(e.target.value)} className={`appearance-none pl-3 pr-8 py-2 rounded-lg text-xs font-bold border focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors cursor-pointer ${filterSocio ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'}`}>
-                        <option value="">Todos os Sócios</option>
-                        {availableSocios.map(s => <option key={s} value={s}>{s}</option>)}
-                    </select>
+          {/* Filtros */}
+          <Menu as="div" className="relative">
+            <Menu.Button className="px-3 py-2 border border-gray-200 rounded-lg text-sm font-medium flex items-center gap-2 hover:bg-gray-50">
+              <Filter className="h-4 w-4" />
+              Filtros
+              {(filterSocio || filterBrinde) && (
+                <span className="bg-blue-600 text-white text-[10px] px-1.5 py-0.5 rounded-full">
+                  {(filterSocio ? 1 : 0) + (filterBrinde ? 1 : 0)}
+                </span>
+              )}
+            </Menu.Button>
+            <Transition
+              as={Fragment}
+              enter="transition ease-out duration-100"
+              enterFrom="transform opacity-0 scale-95"
+              enterTo="transform opacity-100 scale-100"
+              leave="transition ease-in duration-75"
+              leaveFrom="transform opacity-100 scale-100"
+              leaveTo="transform opacity-0 scale-95"
+            >
+              <Menu.Items className="absolute right-0 mt-2 w-64 origin-top-right bg-white rounded-xl shadow-xl border border-gray-100 p-4 z-20 space-y-3">
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Sócio</label>
+                  <select 
+                    value={filterSocio}
+                    onChange={(e) => setFilterSocio(e.target.value)}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none"
+                  >
+                    <option value="">Todos</option>
+                    {availableSocios.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
                 </div>
-
-                <div className="relative">
-                    <select value={filterBrinde} onChange={(e) => setFilterBrinde(e.target.value)} className={`appearance-none pl-3 pr-8 py-2 rounded-lg text-xs font-bold border focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors cursor-pointer ${filterBrinde ? 'bg-purple-50 text-purple-700 border-purple-200' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'}`}>
-                        <option value="">Todos os Brindes</option>
-                        {availableBrindes.map(b => <option key={b} value={b}>{b}</option>)}
-                    </select>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Brinde</label>
+                  <select 
+                    value={filterBrinde}
+                    onChange={(e) => setFilterBrinde(e.target.value)}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none"
+                  >
+                    <option value="">Todos</option>
+                    {availableBrindes.map(b => <option key={b} value={b}>{b}</option>)}
+                  </select>
                 </div>
+                {(filterSocio || filterBrinde) && (
+                  <button 
+                    onClick={() => { setFilterSocio(''); setFilterBrinde(''); }}
+                    className="w-full py-2 text-xs font-bold text-red-600 hover:bg-red-50 rounded-lg"
+                  >
+                    Limpar Filtros
+                  </button>
+                )}
+              </Menu.Items>
+            </Transition>
+          </Menu>
 
-                <Menu as="div" className="relative">
-                    <Menu.Button className="flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs font-bold text-gray-600 hover:text-[#112240] hover:bg-gray-100 transition-colors">
-                        <ArrowUpDown className="h-3.5 w-3.5" /><span className="hidden sm:inline">{sortOrder === 'newest' ? 'Recentes' : sortOrder === 'oldest' ? 'Antigos' : 'Nome'}</span>
-                    </Menu.Button>
-                    <Transition as={Fragment} enter="transition ease-out duration-100" enterFrom="transform opacity-0 scale-95" enterTo="transform opacity-100 scale-100" leave="transition ease-in duration-75" leaveFrom="transform opacity-100 scale-100" leaveTo="transform opacity-0 scale-95">
-                        <Menu.Items className="absolute right-0 mt-1 w-40 origin-top-right rounded-lg bg-white shadow-xl ring-1 ring-black ring-opacity-5 focus:outline-none z-20">
-                            <div className="p-1">
-                                {[{ id: 'newest', label: 'Mais Recentes' }, { id: 'oldest', label: 'Mais Antigos' }, { id: 'az', label: 'Nome (A-Z)' }, { id: 'za', label: 'Nome (Z-A)' }].map((opt) => (
-                                    <Menu.Item key={opt.id}>
-                                        {({ active }: { active: boolean }) => (
-                                            <button onClick={() => setSortOrder(opt.id as any)} className={`${active ? 'bg-gray-50' : ''} group flex w-full items-center justify-between px-3 py-2 text-xs text-gray-700 rounded-md`}>
-                                                {opt.label}{sortOrder === opt.id && <Check className="h-3 w-3 text-blue-600" />}
-                                            </button>
-                                        )}
-                                    </Menu.Item>
-                                ))}
-                            </div>
-                        </Menu.Items>
-                    </Transition>
-                </Menu>
-
-                <div className="h-6 w-px bg-gray-200 mx-1"></div>
-
-                <button onClick={() => { setIsSearchOpen(!isSearchOpen); if(isSearchOpen) setSearchTerm(''); }} className={`p-2 rounded-lg transition-colors ${isSearchOpen ? 'bg-blue-100 text-blue-600' : 'bg-gray-50 text-gray-400 hover:text-[#112240] hover:bg-gray-100 border border-gray-200'}`} title="Buscar">
-                    {isSearchOpen ? <X className="h-5 w-5" /> : <Search className="h-5 w-5" />}
-                </button>
-                
-                <div className="flex items-center gap-1">
-                    <button onClick={triggerFileInput} disabled={importing} className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200 transition-colors" title="Importar Excel">
-                        {importing ? <Loader2 className="h-5 w-5 animate-spin" /> : <Upload className="h-5 w-5" />}
-                    </button>
-                    <button onClick={handleExportExcel} className="p-2 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 border border-green-200 transition-colors" title="Exportar Excel"><FileSpreadsheet className="h-5 w-5" /></button>
-                    <button onClick={handlePrintList} className="p-2 rounded-lg bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200 transition-colors" title="Imprimir Lista"><Printer className="h-5 w-5" /></button>
-                </div>
-
-                <button onClick={() => { setClientToEdit(null); setIsModalOpen(true); }} className="flex items-center gap-2 bg-[#112240] hover:bg-[#1a3a6c] text-white px-4 py-2 rounded-lg font-bold text-xs sm:text-sm transition-colors shadow-sm whitespace-nowrap">
-                    <Plus className="h-4 w-4" /><span className="hidden sm:inline">Novo Registro</span>
-                </button>
-            </div>
+          {/* Ordenação */}
+          <Menu as="div" className="relative">
+            <Menu.Button className="px-3 py-2 border border-gray-200 rounded-lg text-sm font-medium flex items-center gap-2 hover:bg-gray-50">
+              <ArrowUpDown className="h-4 w-4" />
+              Ordenar
+            </Menu.Button>
+            <Transition
+              as={Fragment}
+              enter="transition ease-out duration-100"
+              enterFrom="transform opacity-0 scale-95"
+              enterTo="transform opacity-100 scale-100"
+              leave="transition ease-in duration-75"
+              leaveFrom="transform opacity-100 scale-100"
+              leaveTo="transform opacity-0 scale-95"
+            >
+              <Menu.Items className="absolute right-0 mt-2 w-48 origin-top-right bg-white rounded-xl shadow-xl border border-gray-100 p-2 z-20">
+                {[
+                  { value: 'newest', label: 'Mais Recentes' },
+                  { value: 'oldest', label: 'Mais Antigos' },
+                  { value: 'az', label: 'A → Z' },
+                  { value: 'za', label: 'Z → A' },
+                ].map(option => (
+                  <Menu.Item key={option.value}>
+                    {({ active }) => (
+                      <button
+                        onClick={() => setSortOrder(option.value as any)}
+                        className={`w-full text-left px-3 py-2 rounded-lg text-sm flex items-center justify-between ${
+                          active ? 'bg-gray-50' : ''
+                        }`}
+                      >
+                        {option.label}
+                        {sortOrder === option.value && <Check className="h-4 w-4 text-blue-600" />}
+                      </button>
+                    )}
+                  </Menu.Item>
+                ))}
+              </Menu.Items>
+            </Transition>
+          </Menu>
         </div>
 
-        <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isSearchOpen ? 'max-h-20 opacity-100' : 'max-h-0 opacity-0'}`}>
-            <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <input type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Busque por nome, empresa..." className="w-full pl-10 pr-4 py-3 bg-white border border-blue-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-[#112240] placeholder:text-gray-400 shadow-sm" autoFocus={isSearchOpen} />
-            </div>
+        {/* Ações Principais */}
+        <div className="flex gap-2 w-full lg:w-auto">
+          <div className="relative flex-1 lg:flex-none">
+            <input 
+              ref={fileInputRef}
+              type="file" 
+              accept=".xlsx, .xls"
+              onChange={handleFileUpload}
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+              disabled={importing}
+            />
+            <button 
+              disabled={importing}
+              className="w-full px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg text-sm font-bold hover:bg-gray-50 shadow-sm transition-all flex items-center justify-center gap-2 disabled:opacity-70"
+            >
+              {importing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+              {importing ? 'Importando...' : 'Importar'}
+            </button>
+          </div>
+          
+          <button 
+            onClick={handleExport}
+            className="px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg text-sm font-bold hover:bg-gray-50 shadow-sm transition-all flex items-center gap-2"
+          >
+            <FileSpreadsheet className="h-4 w-4" /> Exportar
+          </button>
+
+          <button 
+            onClick={handleAddClient}
+            className="flex-1 lg:flex-none px-4 py-2 bg-[#112240] hover:bg-[#1a3a6c] text-white rounded-lg text-sm font-bold shadow-sm transition-all flex items-center justify-center gap-2"
+          >
+            <Plus className="h-4 w-4" /> Novo Cliente
+          </button>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 pb-4">
-        {processedClients.length === 0 && !loading ? (
-            <div className="flex flex-col items-center justify-center py-12 text-gray-400">
-                <AlertTriangle className="h-12 w-12 mb-2 opacity-20" />
-                <p>Nenhum registro encontrado em {tableName}.</p>
-                {tableName === 'magistrados' && <p className="text-xs mt-2">Verifique se você importou a base corretamente.</p>}
-            </div>
-        ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {processedClients.map((client) => (
-                    <div key={client.id || client.email} onClick={() => openEditModal(client)} className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 hover:shadow-md transition-all relative group cursor-pointer animate-fadeIn flex flex-col justify-between h-full">
-                        <div className="flex items-start justify-between mb-2">
-                            <div className="flex gap-3 overflow-hidden">
-                                <div className="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center text-[#112240] font-bold border border-gray-200 flex-shrink-0">
-                                    {client.nome?.charAt(0) || '?'}
-                                </div>
-                                <div className="overflow-hidden">
-                                    <h3 className="text-sm font-bold text-gray-900 truncate" title={client.nome}>{client.nome}</h3>
-                                    <div className="flex items-center gap-1 text-xs text-gray-500 truncate">
-                                        <Briefcase className="h-3 w-3 inline" /><span>{client.empresa}</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <span className={`px-2 py-0.5 text-[10px] font-semibold rounded-full flex-shrink-0 ${client.tipo_brinde === 'Brinde VIP' ? 'bg-purple-100 text-purple-800' : 'bg-green-100 text-green-800'}`}>{client.tipo_brinde}</span>
-                        </div>
-                        
-                        <div className="bg-gray-50 rounded-md p-2.5 mb-3 text-xs space-y-2 border border-gray-100">
-                            <div className="flex justify-between items-center border-b border-gray-200 pb-1.5"><div className="flex items-center gap-1.5 text-gray-500"><Info className="h-3 w-3" /><span>Sócio:</span></div><span className="font-bold text-[#112240] truncate ml-2">{client.socio || '-'}</span></div>
-                            <div className="flex justify-between items-center"><div className="flex items-center gap-1.5 text-gray-500"><User className="h-3 w-3" /><span>Cargo:</span></div><span className="font-medium text-gray-700 truncate ml-2 max-w-[120px] text-right">{client.cargo || '-'}</span></div>
-                            <div className="flex justify-between items-center"><div className="flex items-center gap-1.5 text-gray-500"><Gift className="h-3 w-3" /><span>Brinde:</span></div><span className="font-medium text-gray-700 truncate ml-2 text-right">{client.tipo_brinde} ({client.quantidade}x)</span></div>
-                            <div className="flex justify-between items-start"><div className="flex items-center gap-1.5 text-gray-500 flex-shrink-0"><MapPin className="h-3 w-3" /><span>Local:</span></div><span className="font-medium text-gray-700 truncate text-right ml-2" title={`${client.cidade || ''}/${client.estado || ''}`}>{client.cidade || client.estado ? `${client.cidade || ''}/${client.estado || ''}` : '-'}</span></div>
-                        </div>
+      {/* CONTADOR */}
+      <div className="flex items-center justify-between mb-4 flex-shrink-0">
+        <p className="text-sm text-gray-500">
+          Exibindo <strong className="text-[#112240]">{processedClients.length}</strong> de <strong className="text-[#112240]">{clients.length}</strong> registros
+        </p>
+      </div>
 
-                        <div className="border-t border-gray-100 pt-3 flex justify-between items-center mt-auto">
-                            <div className="flex gap-2">
-                                {client.telefone && (
-                                    <>
-                                        <button onClick={(e) => handleWhatsApp(client, e)} className="p-1.5 text-green-600 bg-green-50 hover:bg-green-100 border border-green-200 rounded-md transition-colors" title="WhatsApp"><MessageCircle className="h-3.5 w-3.5" /></button>
-                                        <button onClick={(e) => handle3CX(client, e)} className="p-1.5 text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-md transition-colors" title="Ligar 3CX"><Phone className="h-3.5 w-3.5" /></button>
-                                    </>
-                                )}
-                                {client.email && <button onClick={(e) => handleEmail(client, e)} className="p-1.5 text-slate-600 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-md transition-colors" title="Email"><Mail className="h-3.5 w-3.5" /></button>}
-                            </div>
-                            <div className="flex gap-1">
-                                <button onClick={(e) => { e.stopPropagation(); openEditModal(client); }} className="p-1.5 text-gray-400 hover:text-[#112240] hover:bg-gray-100 rounded-md transition-colors" title="Editar"><Pencil className="h-3.5 w-3.5" /></button>
-                                <button onClick={(e) => { e.stopPropagation(); handleDelete(client); }} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors z-10" title="Excluir"><Trash2 className="h-3.5 w-3.5" /></button>
-                            </div>
-                        </div>
+      {/* GRID DE CLIENTES */}
+      <div className="flex-1 overflow-y-auto custom-scrollbar pr-2">
+        {processedClients.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full text-gray-400">
+            <AlertTriangle className="h-12 w-12 mb-4 opacity-20" />
+            <p className="text-sm">Nenhum cliente encontrado com os filtros atuais.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pb-4">
+            {processedClients.map((client) => (
+              <div 
+                key={client.id}
+                className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 hover:shadow-lg hover:border-blue-200 transition-all group flex flex-col"
+              >
+                {/* Header do Card */}
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex-1 min-w-0 pr-2">
+                    <h3 className="font-bold text-[#112240] text-base truncate mb-1">{client.nome}</h3>
+                    {client.empresa && (
+                      <p className="text-xs text-gray-500 font-medium truncate flex items-center gap-1">
+                        <Briefcase className="h-3 w-3 flex-shrink-0" /> {client.empresa}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                    <button 
+                      onClick={() => handleEditClient(client)}
+                      className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-md"
+                      title="Editar"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </button>
+                    <button 
+                      onClick={() => handleDelete(client)}
+                      className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md"
+                      title="Excluir"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Informações */}
+                <div className="space-y-2 flex-1">
+                  {client.cargo && (
+                    <div className="flex items-center gap-2 text-xs text-gray-600">
+                      <User className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
+                      <span className="truncate">{client.cargo}</span>
                     </div>
-                ))}
-            </div>
+                  )}
+                  {client.email && (
+                    <div className="flex items-center gap-2 text-xs text-gray-600">
+                      <Mail className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
+                      <span className="truncate">{client.email}</span>
+                    </div>
+                  )}
+                  {client.telefone && (
+                    <div className="flex items-center gap-2 text-xs text-gray-600">
+                      <Phone className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
+                      <span className="truncate">{client.telefone}</span>
+                    </div>
+                  )}
+                  {(client.cidade || client.estado) && (
+                    <div className="flex items-center gap-2 text-xs text-gray-600">
+                      <MapPin className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
+                      <span className="truncate">{[client.cidade, client.estado].filter(Boolean).join(' - ')}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Footer do Card */}
+                <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100">
+                  {client.tipo_brinde ? (
+                    <span className={`text-[10px] px-2 py-1 rounded-full font-bold uppercase border ${getBrindeColor(client.tipo_brinde)}`}>
+                      {client.tipo_brinde.replace('Brinde ', '')}
+                    </span>
+                  ) : (
+                    <span className="text-[10px] text-gray-400">Sem brinde</span>
+                  )}
+                  {client.socio && (
+                    <span className="text-[10px] text-gray-500 font-medium truncate max-w-[50%]" title={client.socio}>
+                      {client.socio}
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
         )}
       </div>
 
-      <NewClientModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSave={handleSave} clientToEdit={clientToEdit} />
+      {/* MODAL */}
+      {isModalOpen && (
+        <NewClientModal 
+          isOpen={isModalOpen}
+          onClose={() => {
+            setIsModalOpen(false)
+            setClientToEdit(null)
+          }}
+          onSave={handleSaveClient}
+          clientToEdit={clientToEdit}
+          tableName={tableName}
+        />
+      )}
     </div>
   )
 }
