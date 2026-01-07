@@ -409,159 +409,186 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
             </div>
         ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-                {processedClients.map((client) => (
-                    <div 
-                        key={client.id || client.email} 
-                        onClick={() => openEditModal(client)} 
-                        className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 hover:shadow-xl hover:border-blue-200 transition-all duration-300 relative group cursor-pointer animate-fadeIn flex flex-col justify-between h-full overflow-hidden"
-                    >
-                        {/* Barra lateral colorida de acordo com o brinde */}
-                        <div className={`absolute left-0 top-0 w-1 h-full ${
-                            client.tipo_brinde === 'Brinde VIP' ? 'bg-gradient-to-b from-purple-500 to-purple-600' :
-                            client.tipo_brinde === 'Brinde Médio' ? 'bg-gradient-to-b from-green-500 to-green-600' :
-                            'bg-gradient-to-b from-gray-400 to-gray-500'
-                        }`}></div>
+                {processedClients.map((client) => {
+                    // Definir cores baseado no tipo de brinde
+                    const getBrindeColors = (tipo: string) => {
+                        if (tipo === 'Brinde VIP') {
+                            return {
+                                bar: 'bg-gradient-to-b from-purple-500 to-purple-600',
+                                avatar: 'bg-gradient-to-br from-purple-500 to-purple-600',
+                                badge: 'bg-purple-100 text-purple-700 border-purple-200'
+                            }
+                        } else if (tipo === 'Brinde Médio') {
+                            return {
+                                bar: 'bg-gradient-to-b from-green-500 to-green-600',
+                                avatar: 'bg-gradient-to-br from-green-500 to-green-600',
+                                badge: 'bg-green-100 text-green-700 border-green-200'
+                            }
+                        } else if (tipo === 'Outro') {
+                            return {
+                                bar: 'bg-gradient-to-b from-blue-500 to-blue-600',
+                                avatar: 'bg-gradient-to-br from-blue-500 to-blue-600',
+                                badge: 'bg-blue-100 text-blue-700 border-blue-200'
+                            }
+                        } else {
+                            // Não Recebe
+                            return {
+                                bar: 'bg-gradient-to-b from-gray-400 to-gray-500',
+                                avatar: 'bg-gradient-to-br from-gray-400 to-gray-500',
+                                badge: 'bg-gray-100 text-gray-700 border-gray-200'
+                            }
+                        }
+                    }
 
-                        {/* Header do Card */}
-                        <div className="flex items-start justify-between mb-3">
-                            <div className="flex gap-3 overflow-hidden flex-1">
-                                {/* Avatar com gradiente */}
-                                <div className={`h-12 w-12 rounded-xl flex items-center justify-center text-white font-black text-lg flex-shrink-0 shadow-lg ${
-                                    client.tipo_brinde === 'Brinde VIP' ? 'bg-gradient-to-br from-purple-500 to-purple-600' :
-                                    client.tipo_brinde === 'Brinde Médio' ? 'bg-gradient-to-br from-green-500 to-green-600' :
-                                    'bg-gradient-to-br from-gray-500 to-gray-600'
-                                }`}>
-                                    {client.nome?.charAt(0)?.toUpperCase() || '?'}
+                    const colors = getBrindeColors(client.tipo_brinde)
+
+                    return (
+                        <div 
+                            key={client.id || client.email} 
+                            onClick={() => openEditModal(client)} 
+                            className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 hover:shadow-xl hover:border-blue-200 transition-all duration-300 relative group cursor-pointer animate-fadeIn flex flex-col justify-between h-full overflow-hidden"
+                        >
+                            {/* Barra lateral colorida de acordo com o brinde */}
+                            <div className={`absolute left-0 top-0 w-1 h-full ${colors.bar}`}></div>
+
+                            {/* Header do Card */}
+                            <div className="flex items-start justify-between mb-3">
+                                <div className="flex gap-3 overflow-hidden flex-1">
+                                    {/* Avatar com gradiente */}
+                                    <div className={`h-12 w-12 rounded-xl flex items-center justify-center text-white font-black text-lg flex-shrink-0 shadow-lg ${colors.avatar}`}>
+                                        {client.nome?.charAt(0)?.toUpperCase() || '?'}
+                                    </div>
+                                    
+                                    <div className="overflow-hidden flex-1">
+                                        <h3 className="text-base font-black text-gray-900 truncate leading-tight mb-0.5" title={client.nome}>
+                                            {client.nome}
+                                        </h3>
+                                        <div className="flex items-center gap-1.5 text-xs text-gray-500 truncate">
+                                            <Briefcase className="h-3.5 w-3.5 flex-shrink-0" />
+                                            <span className="truncate">{client.empresa || 'Sem empresa'}</span>
+                                        </div>
+                                    </div>
                                 </div>
                                 
-                                <div className="overflow-hidden flex-1">
-                                    <h3 className="text-base font-black text-gray-900 truncate leading-tight mb-0.5" title={client.nome}>
-                                        {client.nome}
-                                    </h3>
-                                    <div className="flex items-center gap-1.5 text-xs text-gray-500 truncate">
-                                        <Briefcase className="h-3.5 w-3.5 flex-shrink-0" />
-                                        <span className="truncate">{client.empresa || 'Sem empresa'}</span>
-                                    </div>
-                                </div>
+                                {/* Badge do tipo de brinde */}
+                                <span className={`px-2.5 py-1 text-[10px] font-bold rounded-lg flex-shrink-0 ml-2 shadow-sm ${colors.badge}`}>
+                                    {client.tipo_brinde === 'Brinde VIP' ? 'VIP' :
+                                     client.tipo_brinde === 'Brinde Médio' ? 'MÉDIO' :
+                                     client.tipo_brinde === 'Outro' ? 'OUTRO' :
+                                     'NÃO RECEBE'}
+                                </span>
                             </div>
                             
-                            {/* Badge do tipo de brinde */}
-                            <span className={`px-2.5 py-1 text-[10px] font-bold rounded-lg flex-shrink-0 ml-2 shadow-sm ${
-                                client.tipo_brinde === 'Brinde VIP' ? 'bg-purple-100 text-purple-700 border border-purple-200' : 
-                                client.tipo_brinde === 'Brinde Médio' ? 'bg-green-100 text-green-700 border border-green-200' :
-                                'bg-gray-100 text-gray-700 border border-gray-200'
-                            }`}>
-                                {client.tipo_brinde?.replace('Brinde ', '')}
-                            </span>
-                        </div>
-                        
-                        {/* Informações em cards menores */}
-                        <div className="space-y-2 mb-3">
-                            {/* Sócio */}
-                            <div className="bg-gradient-to-r from-blue-50 to-blue-50/50 rounded-lg p-2.5 border border-blue-100">
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2 text-xs text-blue-700">
-                                        <div className="bg-blue-100 p-1 rounded-md">
-                                            <Info className="h-3 w-3" />
+                            {/* Informações em cards menores */}
+                            <div className="space-y-2 mb-3">
+                                {/* Sócio */}
+                                <div className="bg-gradient-to-r from-blue-50 to-blue-50/50 rounded-lg p-2.5 border border-blue-100">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2 text-xs text-blue-700">
+                                            <div className="bg-blue-100 p-1 rounded-md">
+                                                <Info className="h-3 w-3" />
+                                            </div>
+                                            <span className="font-medium">Sócio</span>
                                         </div>
-                                        <span className="font-medium">Sócio</span>
+                                        <span className="font-bold text-blue-900 text-xs truncate ml-2 max-w-[140px]" title={client.socio}>
+                                            {client.socio || '-'}
+                                        </span>
                                     </div>
-                                    <span className="font-bold text-blue-900 text-xs truncate ml-2 max-w-[140px]" title={client.socio}>
-                                        {client.socio || '-'}
-                                    </span>
+                                </div>
+
+                                {/* Cargo e Local em grid */}
+                                <div className="grid grid-cols-2 gap-2">
+                                    <div className="bg-gray-50 rounded-lg p-2 border border-gray-100">
+                                        <div className="flex items-center gap-1.5 text-[10px] text-gray-500 mb-1">
+                                            <User className="h-3 w-3" />
+                                            <span>Cargo</span>
+                                        </div>
+                                        <p className="font-bold text-xs text-gray-900 truncate" title={client.cargo}>
+                                            {client.cargo || '-'}
+                                        </p>
+                                    </div>
+
+                                    <div className="bg-gray-50 rounded-lg p-2 border border-gray-100">
+                                        <div className="flex items-center gap-1.5 text-[10px] text-gray-500 mb-1">
+                                            <MapPin className="h-3 w-3" />
+                                            <span>Local</span>
+                                        </div>
+                                        <p className="font-bold text-xs text-gray-900 truncate" title={`${client.cidade || ''}/${client.estado || ''}`}>
+                                            {client.cidade || client.estado ? `${client.cidade || ''}/${client.estado || ''}` : '-'}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* Brinde info */}
+                                <div className="bg-gradient-to-r from-amber-50 to-amber-50/50 rounded-lg p-2 border border-amber-100">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-1.5 text-xs text-amber-700">
+                                            <Gift className="h-3.5 w-3.5" />
+                                            <span className="font-medium">{client.tipo_brinde}</span>
+                                        </div>
+                                        {client.tipo_brinde !== 'Não Recebe' && (
+                                            <span className="bg-amber-100 text-amber-800 text-xs font-black px-2 py-0.5 rounded-md">
+                                                {client.quantidade}x
+                                            </span>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
 
-                            {/* Cargo e Local em grid */}
-                            <div className="grid grid-cols-2 gap-2">
-                                <div className="bg-gray-50 rounded-lg p-2 border border-gray-100">
-                                    <div className="flex items-center gap-1.5 text-[10px] text-gray-500 mb-1">
-                                        <User className="h-3 w-3" />
-                                        <span>Cargo</span>
-                                    </div>
-                                    <p className="font-bold text-xs text-gray-900 truncate" title={client.cargo}>
-                                        {client.cargo || '-'}
-                                    </p>
-                                </div>
-
-                                <div className="bg-gray-50 rounded-lg p-2 border border-gray-100">
-                                    <div className="flex items-center gap-1.5 text-[10px] text-gray-500 mb-1">
-                                        <MapPin className="h-3 w-3" />
-                                        <span>Local</span>
-                                    </div>
-                                    <p className="font-bold text-xs text-gray-900 truncate" title={`${client.cidade || ''}/${client.estado || ''}`}>
-                                        {client.cidade || client.estado ? `${client.cidade || ''}/${client.estado || ''}` : '-'}
-                                    </p>
-                                </div>
-                            </div>
-
-                            {/* Brinde info */}
-                            <div className="bg-gradient-to-r from-amber-50 to-amber-50/50 rounded-lg p-2 border border-amber-100">
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-1.5 text-xs text-amber-700">
-                                        <Gift className="h-3.5 w-3.5" />
-                                        <span className="font-medium">{client.tipo_brinde}</span>
-                                    </div>
-                                    <span className="bg-amber-100 text-amber-800 text-xs font-black px-2 py-0.5 rounded-md">
-                                        {client.quantidade}x
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Footer com ações */}
-                        <div className="border-t border-gray-100 pt-3 flex justify-between items-center mt-auto">
-                            {/* Botões de comunicação */}
-                            <div className="flex gap-1.5">
-                                {client.telefone && (
-                                    <>
+                            {/* Footer com ações */}
+                            <div className="border-t border-gray-100 pt-3 flex justify-between items-center mt-auto">
+                                {/* Botões de comunicação */}
+                                <div className="flex gap-1.5">
+                                    {client.telefone && (
+                                        <>
+                                            <button 
+                                                onClick={(e) => handleWhatsApp(client, e)} 
+                                                className="p-2 text-green-600 bg-green-50 hover:bg-green-100 border border-green-200 rounded-lg transition-all hover:scale-110 active:scale-95 shadow-sm" 
+                                                title="WhatsApp"
+                                            >
+                                                <MessageCircle className="h-4 w-4" />
+                                            </button>
+                                            <button 
+                                                onClick={(e) => handle3CX(client, e)} 
+                                                className="p-2 text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-all hover:scale-110 active:scale-95 shadow-sm" 
+                                                title="Ligar 3CX"
+                                            >
+                                                <Phone className="h-4 w-4" />
+                                            </button>
+                                        </>
+                                    )}
+                                    {client.email && (
                                         <button 
-                                            onClick={(e) => handleWhatsApp(client, e)} 
-                                            className="p-2 text-green-600 bg-green-50 hover:bg-green-100 border border-green-200 rounded-lg transition-all hover:scale-110 active:scale-95 shadow-sm" 
-                                            title="WhatsApp"
+                                            onClick={(e) => handleEmail(client, e)} 
+                                            className="p-2 text-slate-600 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg transition-all hover:scale-110 active:scale-95 shadow-sm" 
+                                            title="Email"
                                         >
-                                            <MessageCircle className="h-4 w-4" />
+                                            <Mail className="h-4 w-4" />
                                         </button>
-                                        <button 
-                                            onClick={(e) => handle3CX(client, e)} 
-                                            className="p-2 text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-all hover:scale-110 active:scale-95 shadow-sm" 
-                                            title="Ligar 3CX"
-                                        >
-                                            <Phone className="h-4 w-4" />
-                                        </button>
-                                    </>
-                                )}
-                                {client.email && (
+                                    )}
+                                </div>
+                                
+                                {/* Botões de edição/exclusão */}
+                                <div className="flex gap-1">
                                     <button 
-                                        onClick={(e) => handleEmail(client, e)} 
-                                        className="p-2 text-slate-600 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg transition-all hover:scale-110 active:scale-95 shadow-sm" 
-                                        title="Email"
+                                        onClick={(e) => { e.stopPropagation(); openEditModal(client); }} 
+                                        className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all border border-transparent hover:border-blue-200" 
+                                        title="Editar"
                                     >
-                                        <Mail className="h-4 w-4" />
+                                        <Pencil className="h-4 w-4" />
                                     </button>
-                                )}
-                            </div>
-                            
-                            {/* Botões de edição/exclusão */}
-                            <div className="flex gap-1">
-                                <button 
-                                    onClick={(e) => { e.stopPropagation(); openEditModal(client); }} 
-                                    className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all border border-transparent hover:border-blue-200" 
-                                    title="Editar"
-                                >
-                                    <Pencil className="h-4 w-4" />
-                                </button>
-                                <button 
-                                    onClick={(e) => { e.stopPropagation(); handleDelete(client); }} 
-                                    className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all z-10 border border-transparent hover:border-red-200" 
-                                    title="Excluir"
-                                >
-                                    <Trash2 className="h-4 w-4" />
-                                </button>
+                                    <button 
+                                        onClick={(e) => { e.stopPropagation(); handleDelete(client); }} 
+                                        className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all z-10 border border-transparent hover:border-red-200" 
+                                        title="Excluir"
+                                    >
+                                        <Trash2 className="h-4 w-4" />
+                                    </button>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                ))}
+                    )
+                })}
             </div>
         )}
       </div>
