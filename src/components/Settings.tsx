@@ -247,23 +247,17 @@ export function Settings() {
     setStatus({ type: null, message: 'Limpando base de dados...' })
 
     try {
-        // 1. Tenta apagar TUDO da tabela de tarefas (sem .catch para evitar erro de TS, usando try/catch do bloco)
-        // Isso remove as dependências que travam a exclusão
         const { error: errTasks } = await supabase.from('tasks').delete().neq('id', 0);
         if (errTasks) console.warn("Aviso tarefas:", errTasks);
 
-        // 2. Apaga Magistrados
         const { error: err1 } = await supabase.from('magistrados').delete().neq('id', 0)
         if (err1) throw err1
 
-        // 3. Apaga Clientes
         const { error: err2 } = await supabase.from('clientes').delete().neq('id', 0)
         if (err2) throw err2
 
         setStatus({ type: 'success', message: 'Sistema resetado com sucesso!' })
         await logAction('RESET', 'SISTEMA', 'Resetou toda a base de dados')
-        
-        fetchSocios()
         
     } catch (error: any) {
         console.error("Erro no reset:", error)
@@ -321,8 +315,6 @@ export function Settings() {
       
       setStatus({ type: 'success', message: `${clientsToInsert.length} clientes importados com sucesso!` })
       await logAction('IMPORTAR', 'SISTEMA', `Importou ${clientsToInsert.length} clientes via Excel`)
-      
-      fetchSocios()
 
     } catch (error: any) {
       console.error('Erro na importação:', error)
@@ -471,26 +463,31 @@ export function Settings() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         
-        {/* --- GESTÃO DE SÓCIOS --- */}
-
         {/* --- IMPORTAÇÃO DE DADOS --- */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex flex-col">
+        <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl shadow-sm border border-green-200 p-6 flex flex-col">
             <div className="flex items-center gap-3 mb-6">
-                <div className="p-2 bg-green-50 rounded-lg text-green-700"><FileSpreadsheet className="h-6 w-6" /></div>
+                <div className="h-12 w-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
+                    <FileSpreadsheet className="h-6 w-6 text-white" />
+                </div>
                 <div>
-                    <h3 className="font-bold text-[#112240] text-lg">Importar Dados</h3>
-                    <p className="text-sm text-gray-500">Adicione clientes em massa via Excel.</p>
+                    <h3 className="font-bold text-gray-900 text-lg">Importar Dados</h3>
+                    <p className="text-sm text-gray-600">Adicione clientes em massa via Excel</p>
                 </div>
             </div>
 
             <div className="flex-1 flex flex-col justify-center space-y-4">
-                <button 
-                    onClick={handleDownloadTemplate}
-                    className="flex items-center justify-center gap-2 w-full py-3 border-2 border-dashed border-gray-300 rounded-xl text-gray-500 hover:border-green-500 hover:text-green-600 hover:bg-green-50 transition-all font-medium text-sm"
-                >
-                    <Download className="h-4 w-4" /> Baixar Planilha Modelo
-                </button>
+                {/* Botão Baixar Modelo */}
+                <div className="bg-white rounded-lg border-2 border-dashed border-gray-300 p-4 hover:border-green-400 hover:bg-green-50/50 transition-all group">
+                    <button 
+                        onClick={handleDownloadTemplate}
+                        className="flex items-center justify-center gap-2 w-full text-gray-600 group-hover:text-green-600 transition-colors font-medium text-sm"
+                    >
+                        <Download className="h-5 w-5" />
+                        <span>Baixar Planilha Modelo</span>
+                    </button>
+                </div>
 
+                {/* Botão Selecionar Arquivo */}
                 <div className="relative">
                     <input 
                         ref={fileInputRef}
@@ -500,16 +497,43 @@ export function Settings() {
                         disabled={loading}
                         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                     />
-                    <div className={`flex items-center justify-center gap-2 w-full py-3 bg-[#112240] text-white rounded-xl font-bold transition-all shadow-lg shadow-blue-900/20 ${loading ? 'opacity-70' : 'hover:bg-[#1a3a6c]'}`}>
-                        {loading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                        {loading ? 'Importando...' : 'Selecionar Arquivo Excel'}
+                    <div className={`flex items-center justify-center gap-3 w-full py-4 bg-gradient-to-r from-[#112240] to-[#1a3a6c] text-white rounded-xl font-bold transition-all shadow-lg shadow-blue-900/30 ${
+                        loading ? 'opacity-70 cursor-not-allowed' : 'hover:shadow-xl hover:scale-[1.02] cursor-pointer'
+                    }`}>
+                        {loading ? (
+                            <>
+                                <RefreshCw className="h-5 w-5 animate-spin" />
+                                <span>Importando...</span>
+                            </>
+                        ) : (
+                            <>
+                                <Upload className="h-5 w-5" />
+                                <span>Selecionar Arquivo Excel</span>
+                            </>
+                        )}
                     </div>
+                    {!loading && (
+                        <p className="text-center text-xs text-gray-500 mt-2">
+                            Nenhum arquivo selecionado
+                        </p>
+                    )}
                 </div>
 
+                {/* Status da Importação */}
                 {status.type && (
-                    <div className={`p-3 rounded-lg flex items-center gap-2 text-xs font-bold animate-fadeIn ${status.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                        {status.type === 'success' ? <CheckCircle className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
-                        {status.message}
+                    <div className={`p-4 rounded-lg flex items-start gap-3 text-sm font-medium animate-fadeIn shadow-sm ${
+                        status.type === 'success' 
+                            ? 'bg-green-50 text-green-700 border border-green-200' 
+                            : 'bg-red-50 text-red-700 border border-red-200'
+                    }`}>
+                        <div className="flex-shrink-0">
+                            {status.type === 'success' ? (
+                                <CheckCircle className="h-5 w-5" />
+                            ) : (
+                                <AlertCircle className="h-5 w-5" />
+                            )}
+                        </div>
+                        <span className="flex-1">{status.message}</span>
                     </div>
                 )}
             </div>
@@ -518,20 +542,27 @@ export function Settings() {
       </div>
 
       {/* --- ZONA DE PERIGO --- */}
-      <div className="bg-red-50 rounded-xl border border-red-100 p-6 flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-              <div className="p-2 bg-white rounded-lg text-red-600 shadow-sm"><AlertTriangle className="h-6 w-6" /></div>
-              <div>
-                  <h3 className="font-bold text-red-900">Zona de Perigo</h3>
-                  <p className="text-xs text-red-700/80">Ações irreversíveis que afetam todo o sistema.</p>
+      <div className="bg-gradient-to-r from-red-50 to-pink-50 rounded-xl border-2 border-red-200 p-6 shadow-sm">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div className="flex items-start gap-4">
+                  <div className="h-12 w-12 bg-gradient-to-br from-red-500 to-red-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg">
+                      <AlertTriangle className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                      <h3 className="font-bold text-red-900 text-lg mb-1">Zona de Perigo</h3>
+                      <p className="text-sm text-red-700/90 leading-relaxed">
+                          Ações irreversíveis que afetam todo o sistema.
+                      </p>
+                  </div>
               </div>
+              <button 
+                onClick={handleSystemReset}
+                className="px-5 py-3 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white text-sm font-bold rounded-xl shadow-lg shadow-red-900/30 transition-all hover:scale-105 flex items-center gap-2 whitespace-nowrap"
+              >
+                <Trash2 className="h-4 w-4" />
+                Resetar Sistema
+              </button>
           </div>
-          <button 
-            onClick={handleSystemReset}
-            className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-lg shadow-sm transition-colors flex items-center gap-2 whitespace-nowrap"
-          >
-            <Trash2 className="h-4 w-4" /> Resetar Sistema
-          </button>
       </div>
 
       {/* --- SEÇÃO DE CRÉDITOS --- */}
