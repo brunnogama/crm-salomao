@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react'
 import { supabase } from './lib/supabase'
 import Login from './Login'
-import { Sidebar } from './components/Sidebar'
+import { Sidebar, SidebarHeader } from './components/Sidebar' // Importando os dois componentes
 import { Dashboard } from './components/Dashboard'
 import { Kanban } from './components/Kanban'
 import { Clients } from './components/Clients'
 import { IncompleteClients } from './components/IncompleteClients'
 import { Settings } from './components/Settings'
 
+// Componente para seleção de módulo
 function ModuleSelector({ onSelect }: { onSelect: (module: string) => void }) {
     return (
         <div className="min-h-screen bg-[#112240] flex items-center justify-center p-4">
@@ -67,22 +68,29 @@ function App() {
   if (!selectedModule) return <ModuleSelector onSelect={setSelectedModule} />
 
   return (
-    <div className="flex h-screen bg-[#f0f2f5] overflow-hidden flex-col lg:flex-row">
-      <Sidebar 
-        activeTab={activeTab} 
-        setActiveTab={setActiveTab} 
-        userEmail={session.user.email} 
-      />
+    // ESTRUTURA CORRIGIDA: Flex Coluna (Header em cima, Resto embaixo)
+    <div className="flex h-screen bg-[#f0f2f5] overflow-hidden flex-col">
+      
+      {/* 1. Header Fixo no Topo */}
+      <SidebarHeader userEmail={session.user.email} />
 
-      <main className="flex-1 overflow-auto p-4 lg:p-8 w-full relative">
-        <div className="max-w-7xl mx-auto h-full">
-          {activeTab === 'dashboard' && <Dashboard onNavigate={handleNavigateToClients} />}
-          {activeTab === 'kanban' && <Kanban />}
-          {activeTab === 'clientes' && <Clients initialFilters={clientFilters} />}
-          {activeTab === 'incompletos' && <IncompleteClients />}
-          {activeTab === 'config' && <Settings />}
-        </div>
-      </main>
+      {/* 2. Área Principal (Sidebar Esquerda + Conteúdo) */}
+      <div className="flex flex-1 overflow-hidden">
+        
+        {/* Sidebar Esquerda */}
+        <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+
+        {/* Conteúdo Central */}
+        <main className="flex-1 overflow-auto p-4 lg:p-8 w-full relative">
+          <div className="max-w-7xl mx-auto h-full">
+            {activeTab === 'dashboard' && <Dashboard onNavigate={handleNavigateToClients} />}
+            {activeTab === 'kanban' && <Kanban />}
+            {activeTab === 'clientes' && <Clients initialFilters={clientFilters} />}
+            {activeTab === 'incompletos' && <IncompleteClients />}
+            {activeTab === 'config' && <Settings />}
+          </div>
+        </main>
+      </div>
     </div>
   )
 }
