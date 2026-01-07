@@ -46,6 +46,19 @@ export function Settings() {
   // --- CHANGELOG ATUALIZADO ---
   const changelog = [
     {
+      version: '1.6',
+      date: '07/01/2026',
+      type: 'major',
+      title: 'UX/UI Refactoring & Melhorias de Fluxo',
+      items: [
+        'Novo Layout: Separação entre Header (Topo) e Sidebar (Lateral) para melhor uso de espaço.',
+        'Modal de Clientes: Histórico de Brindes agora usa menu suspenso (padrão) em vez de texto livre.',
+        'Modal de Clientes: Adição de ano no histórico agora permite escolha manual.',
+        'Incompletos: Remoção de cabeçalhos duplicados e limpeza visual.',
+        'Navegação: Botão "Trocar Módulo" reposicionado para acesso rápido no topo.'
+      ]
+    },
+    {
       version: '1.5',
       date: '06/01/2026',
       type: 'feat',
@@ -70,17 +83,6 @@ export function Settings() {
       ]
     },
     {
-      version: '1.3.1',
-      date: '05/01/2026',
-      type: 'fix',
-      title: 'Estabilidade e UX Mobile',
-      items: [
-        'Correção crítica no Logout: Saída do sistema agora é instantânea.',
-        'Ajuste na Sidebar Mobile: Botão fechar reposicionado e altura corrigida.',
-        'Correção de sobreposição do rodapé do usuário em telas pequenas.'
-      ]
-    },
-    {
       version: '1.3',
       date: '05/01/2026',
       type: 'feat',
@@ -91,20 +93,6 @@ export function Settings() {
         'Interatividade no Dashboard (Drill-down).',
         'Filtros por Data no Histórico.'
       ]
-    },
-    {
-      version: '1.2.1',
-      date: '05/01/2026',
-      type: 'fix',
-      title: 'Polimento Visual',
-      items: ['Correção de tooltips no Dashboard', 'Ajuste de cards', 'Formatação de e-mail']
-    },
-    {
-      version: '1.2',
-      date: '05/01/2026',
-      type: 'feat',
-      title: 'Auditoria',
-      items: ['Sistema de Logs', 'Rastreabilidade de ações']
     },
     {
       version: '1.0',
