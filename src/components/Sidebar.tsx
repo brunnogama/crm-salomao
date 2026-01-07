@@ -1,139 +1,188 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { 
-  LayoutDashboard, Users, CheckSquare, Settings, LogOut, 
-  Menu, X, LayoutGrid, AlertTriangle 
+  LayoutDashboard, 
+  Users, 
+  KanbanSquare, 
+  BookOpen, 
+  History, 
+  Settings, 
+  LogOut,
+  UserCircle,
+  FileWarning,
+  X,
+  Grid // Ícone para "Módulos"
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
-interface CommonProps {
-  userEmail?: string;
-  activeTab?: string;
-  setActiveTab?: (tab: string) => void;
+interface SidebarProps {
+  activePage: string;
+  onNavigate: (page: string) => void;
+  userName: string;
+  isOpen: boolean;
+  onClose: () => void;
+  onSwitchModule: () => void;
 }
 
-// --- COMPONENTE 1: BARRA SUPERIOR (HEADER) ---
-export function SidebarHeader({ userEmail }: CommonProps) {
-  const handleLogout = async () => {
-    await supabase.auth.signOut()
-    window.location.reload()
+export function Sidebar({ activePage, onNavigate, userName, isOpen, onClose, onSwitchModule }: SidebarProps) {
+  const [incompleteCount, setIncompleteCount] = useState(0)
+
+  const fetchCount = async () => {
+    const { data } = await supabase.from('clientes').select('*')
+    if (data) {
+      const count = data.filter((c: any) => {
+        const ignored = c.ignored_fields || []
+        const missing = []
+        
+        if (!c.nome) missing.push('Nome')
+        if (!c.empresa) missing.push('Empresa')
+        if (!c.cargo) missing.push('Cargo')
+        if (!c.tipo_brinde) missing.push('Tipo Brinde')
+        if (!c.cep) missing.push('CEP')
+        if (!c.endereco) missing.push('Endereço')
+        if (!c.numero) missing.push('Número')
+        if (!c.bairro) missing.push('Bairro')
+        if (!c.cidade) missing.push('Cidade')
+        if (!c.estado) missing.push('UF')
+        if (!c.email) missing.push('Email')
+        if (!c.socio) missing.push('Sócio')
+        
+        return missing.filter(f => !ignored.includes(f)).length > 0
+      }).length
+      setIncompleteCount(count)
+    }
   }
 
-  const handleSwitchModule = () => {
-    window.location.reload()
+  useEffect(() => {
+    fetchCount()
+    const interval = setInterval(fetchCount, 5000)
+    return () => clearInterval(interval)
+  }, [])
+
+  const handleLogout = async (e: React.MouseEvent) => {
+    e.preventDefault()
+    try {
+      await supabase.auth.signOut()
+    } catch (error) {
+      console.error("Erro silencioso ao deslogar:", error)
+    } finally {
+      localStorage.clear()
+      window.location.href = '/'
+    }
   }
+  
+  const mainItems = [
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'clientes', label: 'Clientes', icon: Users },
+    { id: 'incompletos', label: 'Incompletos', icon: FileWarning, badge: incompleteCount },
+    { id: 'kanban', label: 'Kanban', icon: KanbanSquare },
+  ]
 
-  return (
-    <div className="h-16 bg-[#112240] text-white flex items-center justify-between px-4 lg:px-6 shadow-md z-20 shrink-0">
-        
-      {/* LADO ESQUERDO: Título + Botão Trocar */}
-      <div className="flex items-center gap-4">
-        {/* Logo/Título */}
-        <div className="flex flex-col">
-          <h1 className="text-lg font-bold leading-none tracking-tight">Salomão Manager</h1>
-          <span className="text-[10px] text-gray-400 font-medium tracking-widest uppercase">Módulo Jurídico</span>
-        </div>
-
-        <div className="h-6 w-px bg-white/20 mx-2 hidden sm:block"></div>
-        
-        {/* Botão Trocar Módulo (Ao lado do nome) */}
-        <button 
-          onClick={handleSwitchModule}
-          className="flex items-center gap-2 px-3 py-1.5 bg-white/10 hover:bg-white/20 border border-white/10 rounded-full text-xs font-bold transition-all"
-          title="Voltar para seleção de módulos"
-        >
-          <LayoutGrid className="h-3.5 w-3.5 text-blue-300" />
-          <span className="hidden sm:inline">Trocar Módulo</span>
-        </button>
-      </div>
-
-      {/* LADO DIREITO: Usuário + Sair */}
-      <div className="flex items-center gap-4">
-        {userEmail && (
-          <span className="hidden md:block text-xs text-gray-400 font-medium">
-            {userEmail}
-          </span>
-        )}
-        
-        <button 
-          onClick={handleLogout}
-          className="flex items-center gap-2 px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-200 rounded-lg text-xs font-bold transition-colors border border-red-500/20"
-        >
-          <LogOut className="h-4 w-4" />
-          <span>Sair</span>
-        </button>
-      </div>
-    </div>
-  )
-}
-
-// --- COMPONENTE 2: MENU LATERAL (SIDEBAR) ---
-export function Sidebar({ activeTab, setActiveTab }: CommonProps) {
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-
-  const menuItems = [
-    { id: 'dashboard', label: 'Visão Geral', icon: LayoutDashboard },
-    { id: 'kanban', label: 'Tarefas (Kanban)', icon: CheckSquare },
-    { id: 'clientes', label: 'Base de Clientes', icon: Users },
-    { id: 'incompletos', label: 'Cadastros Pendentes', icon: AlertTriangle },
-    { id: 'config', label: 'Configurações', icon: Settings },
+  const bottomItems = [
+    { id: 'manual', label: 'Manual do Sistema', icon: BookOpen },
+    { id: 'historico', label: 'Histórico', icon: History },
+    { id: 'configuracoes', label: 'Configurações', icon: Settings },
   ]
 
   return (
     <>
-      {/* Botão Mobile Flutuante (Só aparece em telas pequenas) */}
-      <button 
-        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        className="lg:hidden fixed bottom-4 right-4 z-50 p-3 bg-[#112240] text-white rounded-full shadow-lg"
-      >
-        {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-      </button>
-
-      {/* Sidebar Container */}
-      <div className={`
-        fixed inset-y-0 left-0 transform ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} 
-        lg:relative lg:translate-x-0 transition duration-200 ease-in-out
-        w-64 bg-white border-r border-gray-200 z-10 flex flex-col
-        h-full
-      `}>
-        <nav className="flex-1 p-4 space-y-2 overflow-y-auto mt-16 lg:mt-0">
-          {menuItems.map((item) => {
-             const Icon = item.icon
-             const isActive = activeTab === item.id
-             return (
-               <button
-                 key={item.id}
-                 onClick={() => { if(setActiveTab) setActiveTab(item.id); setIsMobileMenuOpen(false); }}
-                 className={`
-                   w-full flex items-center gap-3 px-4 py-3 text-sm font-bold rounded-xl transition-all
-                   ${isActive 
-                     ? 'bg-[#112240] text-white shadow-md shadow-blue-900/20' 
-                     : 'text-gray-500 hover:bg-gray-50 hover:text-[#112240]'}
-                 `}
-               >
-                 <Icon className={`h-5 w-5 ${isActive ? 'text-blue-400' : 'text-gray-400'}`} />
-                 {item.label}
-               </button>
-             )
-          })}
-        </nav>
-
-        <div className="p-4 border-t border-gray-100 bg-gray-50/50">
-           <div className="flex items-center gap-3 px-2">
-              <div className="h-8 w-8 rounded-full bg-[#112240] flex items-center justify-center text-white text-xs font-bold">SA</div>
-              <div className="overflow-hidden">
-                <p className="text-xs font-bold text-gray-900 truncate">Salomão Advogados</p>
-                <p className="text-[10px] text-gray-500 truncate">© 2026 Flow Metrics</p>
-              </div>
-           </div>
-        </div>
-      </div>
-
-      {isMobileMenuOpen && (
+      {/* OVERLAY MOBILE */}
+      {isOpen && (
         <div 
-          className="fixed inset-0 bg-black/50 z-0 lg:hidden"
-          onClick={() => setIsMobileMenuOpen(false)}
+          className="fixed inset-0 bg-black/60 z-40 md:hidden backdrop-blur-sm transition-opacity"
+          onClick={onClose}
         />
       )}
+
+      {/* SIDEBAR */}
+      <aside className={`
+        fixed md:static inset-y-0 left-0 z-50
+        h-[100dvh] w-64 bg-[#112240] text-gray-300 flex flex-col font-sans border-r border-gray-800 flex-shrink-0
+        transform transition-transform duration-300 ease-in-out
+        ${isOpen ? 'translate-x-0' : '-translate-x-full'} 
+        md:translate-x-0 shadow-2xl md:shadow-none
+      `}>
+      
+        {/* LOGO */}
+        <div className="h-24 flex items-center justify-between px-6 bg-[#112240] flex-shrink-0">
+          <img src="/logo-branca.png" alt="Salomão" className="h-12 w-auto object-contain" />
+          <button onClick={onClose} className="md:hidden p-1 hover:bg-white/10 rounded text-gray-400">
+            <X className="h-6 w-6" />
+          </button>
+        </div>
+
+        {/* MENU TOPO */}
+        <div className="flex-1 overflow-y-auto py-4 px-3 space-y-1 custom-scrollbar">
+          {mainItems.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => { onNavigate(item.id); onClose(); }}
+              className={`w-full flex items-center justify-between px-3 py-3 rounded-lg transition-all group ${
+                activePage === item.id 
+                  ? 'bg-[#1e3a8a] text-white font-medium shadow-md border-l-4 border-salomao-gold' 
+                  : 'hover:bg-white/5 hover:text-white border-l-4 border-transparent'
+              }`}
+            >
+              <div className="flex items-center">
+                <item.icon className={`h-5 w-5 mr-3 ${activePage === item.id ? 'text-white' : 'text-gray-400 group-hover:text-white'}`} />
+                <span className="text-sm">{item.label}</span>
+              </div>
+              {item.badge !== undefined && item.badge > 0 && (
+                <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full ml-2">
+                  {item.badge}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+
+        {/* MENU BASE */}
+        <div className="pt-4 pb-2 px-3 bg-[#112240] flex-shrink-0">
+          <div className="border-t border-gray-700/50 mb-4 mx-2"></div>
+          {bottomItems.map((item) => (
+             <button
+             key={item.id}
+             onClick={() => { onNavigate(item.id); onClose(); }}
+             className={`w-full flex items-center px-3 py-3 rounded-lg transition-colors group ${
+               activePage === item.id ? 'bg-[#1e3a8a] text-white' : 'hover:bg-white/5 hover:text-white'
+             }`}
+           >
+             <item.icon className="h-5 w-5 mr-3 text-gray-400 group-hover:text-white" />
+             <span className="text-sm">{item.label}</span>
+           </button>
+          ))}
+        </div>
+
+        {/* USUÁRIO & AÇÕES */}
+        <div className="p-4 bg-[#0d1b33] flex-shrink-0 pb-8 md:pb-4 space-y-2">
+          
+          <div className="flex items-center justify-between rounded-lg bg-[#112240] p-3 border border-gray-800/50">
+              <div className="flex items-center gap-3 overflow-hidden">
+                  <UserCircle className="h-8 w-8 text-gray-400 flex-shrink-0" />
+                  <span className="text-sm font-medium text-white truncate capitalize leading-none">
+                    {userName}
+                  </span>
+              </div>
+              
+              {/* BOTÕES: TROCAR MÓDULO E SAIR */}
+              <div className="flex items-center gap-1 flex-shrink-0">
+                <button 
+                  onClick={onSwitchModule} 
+                  className="text-blue-400 hover:text-blue-300 transition-colors p-1.5 hover:bg-white/5 rounded"
+                  title="Trocar Módulo"
+                >
+                    <Grid className="h-5 w-5" />
+                </button>
+                <button 
+                  onClick={handleLogout} 
+                  className="text-red-500 hover:text-red-400 transition-colors p-1.5 hover:bg-white/5 rounded"
+                  title="Sair do Sistema"
+                >
+                    <LogOut className="h-5 w-5" />
+                </button>
+              </div>
+          </div>
+        </div>
+      </aside>
     </>
   )
 }

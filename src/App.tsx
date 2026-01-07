@@ -1,98 +1,138 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { supabase } from './lib/supabase'
 import Login from './Login'
-import { Sidebar, SidebarHeader } from './components/Sidebar' // Importando os dois componentes
-import { Dashboard } from './components/Dashboard'
-import { Kanban } from './components/Kanban'
+import { Sidebar } from './components/Sidebar'
 import { Clients } from './components/Clients'
-import { IncompleteClients } from './components/IncompleteClients'
 import { Settings } from './components/Settings'
+import { IncompleteClients } from './components/IncompleteClients'
+import { Kanban } from './components/Kanban'
+import { Dashboard } from './components/Dashboard'
+import { History } from './components/History'
+import { Manual } from './components/Manual'
+import { Menu } from 'lucide-react'
+import { ModuleSelector } from './components/ModuleSelector'
+import { UnderConstruction } from './components/UnderConstruction'
 
-// Componente para seleção de módulo
-function ModuleSelector({ onSelect }: { onSelect: (module: string) => void }) {
-    return (
-        <div className="min-h-screen bg-[#112240] flex items-center justify-center p-4">
-            <div className="max-w-4xl w-full">
-                <h1 className="text-3xl font-bold text-white mb-8 text-center">Selecione o Módulo de Acesso</h1>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <button onClick={() => onSelect('CRM')} className="bg-white p-8 rounded-xl hover:scale-105 transition-transform group text-left">
-                        <div className="h-12 w-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4 text-blue-600 font-bold group-hover:bg-blue-600 group-hover:text-white transition-colors">CRM</div>
-                        <h3 className="text-xl font-bold text-gray-900 mb-2">Jurídico (CRM)</h3>
-                        <p className="text-sm text-gray-500">Gestão de clientes, brindes e tarefas do escritório.</p>
-                    </button>
-                    <button disabled className="bg-gray-100 p-8 rounded-xl opacity-60 cursor-not-allowed text-left">
-                        <div className="h-12 w-12 bg-gray-200 rounded-lg flex items-center justify-center mb-4 text-gray-400 font-bold">FAM</div>
-                        <h3 className="text-xl font-bold text-gray-500 mb-2">Família</h3>
-                        <p className="text-sm text-gray-400">Em desenvolvimento.</p>
-                    </button>
-                    <button disabled className="bg-gray-100 p-8 rounded-xl opacity-60 cursor-not-allowed text-left">
-                        <div className="h-12 w-12 bg-gray-200 rounded-lg flex items-center justify-center mb-4 text-gray-400 font-bold">RH</div>
-                        <h3 className="text-xl font-bold text-gray-500 mb-2">Colaboradores</h3>
-                        <p className="text-sm text-gray-400">Em desenvolvimento.</p>
-                    </button>
-                </div>
-            </div>
-        </div>
-    )
-}
-
-function App() {
+export default function App() {
   const [session, setSession] = useState<any>(null)
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState('dashboard')
-  const [selectedModule, setSelectedModule] = useState<string | null>(null)
-  const [clientFilters, setClientFilters] = useState<{socio?: string, brinde?: string} | undefined>(undefined)
+  
+  // 1. Controle de Navegação entre Sistemas
+  const [currentModule, setCurrentModule] = useState<'home' | 'crm' | 'family' | 'collaborators'>('home')
+  
+  // 2. Controle interno do CRM
+  const [activePage, setActivePage] = useState('dashboard')
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const [clientFilters, setClientFilters] = useState<{ socio?: string; brinde?: string }>({})
+
+  const moduleDescriptions: Record<string, string> = {
+    dashboard: 'Visão geral de performance e indicadores chave.',
+    clientes: 'Gerencie a base de prospects e clientes ativos.',
+    incompletos: 'Atenção: Cadastros que necessitam de preenchimento.',
+    kanban: 'Gerencie suas tarefas de forma visual.',
+    configuracoes: 'Preferências do sistema e gestão de acessos.',
+    historico: 'Audit Log: Rastreabilidade de ações no sistema.',
+    manual: 'Documentação completa e guias de uso.'
+  }
+
+  const pageTitles: Record<string, string> = {
+    dashboard: 'Dashboard',
+    clientes: 'Clientes',
+    incompletos: 'Cadastros Incompletos',
+    kanban: 'Kanban',
+    configuracoes: 'Configurações',
+    historico: 'Histórico de Atividades',
+    manual: 'Manual do Sistema'
+  }
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
       setLoading(false)
     })
-
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session)
     })
-
     return () => subscription.unsubscribe()
   }, [])
 
-  const handleNavigateToClients = (filters?: {socio?: string, brinde?: string}) => {
-      setClientFilters(filters);
-      setActiveTab('clientes');
+  const getUserDisplayName = () => {
+    if (!session?.user?.email) return 'Usuário'
+    return session.user.email.split('@')[0].split('.').map((p:any) => p.charAt(0).toUpperCase() + p.slice(1)).join(' ')
   }
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center bg-[#f0f2f5] text-[#112240] font-bold">Carregando Salomão Manager...</div>
+  const navigateWithFilter = (page: string, filters: { socio?: string; brinde?: string }) => {
+    setClientFilters(filters)
+    setActivePage(page)
+  }
 
+  if (loading) return <div className="h-screen w-full flex items-center justify-center bg-[#112240]"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div></div>
+  
   if (!session) return <Login />
 
-  if (!selectedModule) return <ModuleSelector onSelect={setSelectedModule} />
+  if (currentModule === 'home') {
+    return <ModuleSelector onSelect={setCurrentModule} userName={getUserDisplayName()} />
+  }
+
+  if (currentModule === 'family') {
+    return <UnderConstruction moduleName="Gestão da Família" onBack={() => setCurrentModule('home')} />
+  }
+  if (currentModule === 'collaborators') {
+    return <UnderConstruction moduleName="Colaboradores" onBack={() => setCurrentModule('home')} />
+  }
 
   return (
-    // ESTRUTURA CORRIGIDA: Flex Coluna (Header em cima, Resto embaixo)
-    <div className="flex h-screen bg-[#f0f2f5] overflow-hidden flex-col">
+    <div className="flex h-screen bg-gray-100 overflow-hidden w-full">
+      <Sidebar 
+        activePage={activePage} 
+        onNavigate={setActivePage} 
+        userName={getUserDisplayName()} 
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+        onSwitchModule={() => setCurrentModule('home')}
+      />
       
-      {/* 1. Header Fixo no Topo */}
-      <SidebarHeader userEmail={session.user.email} />
+      <main className="flex-1 flex flex-col h-screen overflow-hidden min-w-0 relative">
+        <header className="bg-white border-b border-gray-200 h-20 flex items-center px-4 md:px-8 justify-between flex-shrink-0 z-10 gap-3">
+            
+            <div className="flex items-center gap-3 overflow-hidden">
+                <button 
+                  onClick={() => setIsSidebarOpen(true)}
+                  className="md:hidden p-2 text-gray-500 hover:bg-gray-100 rounded-lg shrink-0"
+                >
+                  <Menu className="h-6 w-6" />
+                </button>
 
-      {/* 2. Área Principal (Sidebar Esquerda + Conteúdo) */}
-      <div className="flex flex-1 overflow-hidden">
+                <div className="flex flex-col justify-center min-w-0">
+                    <h1 className="text-xl md:text-2xl font-bold text-[#112240] capitalize leading-tight truncate">
+                        {pageTitles[activePage] || activePage}
+                    </h1>
+                    <span className="text-xs md:text-sm text-gray-500 font-normal truncate hidden sm:block">
+                        {moduleDescriptions[activePage]}
+                    </span>
+                </div>
+            </div>
+
+            <div className="flex-shrink-0">
+                <span className="text-2xl font-extrabold text-[#112240] tracking-tighter opacity-90 select-none">
+                    CRM
+                </span>
+            </div>
+
+        </header>
         
-        {/* Sidebar Esquerda */}
-        <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
-
-        {/* Conteúdo Central */}
-        <main className="flex-1 overflow-auto p-4 lg:p-8 w-full relative">
-          <div className="max-w-7xl mx-auto h-full">
-            {activeTab === 'dashboard' && <Dashboard onNavigate={handleNavigateToClients} />}
-            {activeTab === 'kanban' && <Kanban />}
-            {activeTab === 'clientes' && <Clients initialFilters={clientFilters} />}
-            {activeTab === 'incompletos' && <IncompleteClients />}
-            {activeTab === 'config' && <Settings />}
-          </div>
-        </main>
-      </div>
+        <div className="p-4 md:p-8 flex-1 overflow-hidden h-full">
+            {activePage === 'dashboard' && <Dashboard onNavigateWithFilter={navigateWithFilter} />}
+            {activePage === 'clientes' && <Clients initialFilters={clientFilters} />}
+            {activePage === 'incompletos' && <IncompleteClients />}
+            {activePage === 'kanban' && <Kanban />}
+            {activePage === 'historico' && <History />} 
+            {activePage === 'manual' && <Manual />} 
+            {activePage === 'configuracoes' && (
+                <div className="h-full overflow-y-auto pr-2 custom-scrollbar"><Settings /></div>
+            )}
+        </div>
+      </main>
     </div>
   )
 }
-
-export default App
