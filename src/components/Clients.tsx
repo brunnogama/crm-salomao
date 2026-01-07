@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
 import { 
   MoreHorizontal, Plus, Search, X, 
-  MapPin, Mail, Phone 
+  MapPin, Mail, Phone, Filter, ArrowUpDown, Check
 } from 'lucide-react'
 import { Menu, Transition } from '@headlessui/react'
 import { Fragment } from 'react'
@@ -18,35 +18,85 @@ export function Clients({ initialFilters }: ClientsProps) {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [clientToEdit, setClientToEdit] = useState<ClientData | null>(null)
   
-  // --- ESTADOS DE BUSCA ---
+  // --- ESTADOS DE BUSCA E FILTRO ---
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
+  
+  // Filtros Locais
+  const [filterSocio, setFilterSocio] = useState<string>('')
+  const [filterBrinde, setFilterBrinde] = useState<string>('')
+  const [sortOrder, setSortOrder] = useState<'newest' | 'oldest' | 'az' | 'za'>('newest')
+
+  // Listas únicas para os dropdowns (calculadas dinamicamente)
+  const [availableSocios, setAvailableSocios] = useState<string[]>([])
+  const [availableBrindes, setAvailableBrindes] = useState<string[]>([])
 
   const fetchClients = async () => {
     setLoading(true)
-    let query = supabase.from('clientes').select('*').order('created_at', { ascending: false })
+    // Buscamos tudo para permitir filtragem client-side rápida
+    let query = supabase.from('clientes').select('*')
     
-    if (initialFilters?.socio) query = query.eq('socio', initialFilters.socio)
-    if (initialFilters?.brinde) query = query.eq('tipo_brinde', initialFilters.brinde)
-
     const { data, error } = await query
     if (!error && data) {
         setClients(data)
+        
+        // Extrair listas únicas para os filtros
+        const socios = Array.from(new Set(data.map(c => c.socio).filter(Boolean))) as string[]
+        const brindes = Array.from(new Set(data.map(c => c.tipo_brinde).filter(Boolean))) as string[]
+        setAvailableSocios(socios.sort())
+        setAvailableBrindes(brindes.sort())
     }
     setLoading(false)
   }
 
+  // Sincronizar filtros iniciais vindos do Dashboard
   useEffect(() => {
+    if (initialFilters?.socio) setFilterSocio(initialFilters.socio)
+    if (initialFilters?.brinde) setFilterBrinde(initialFilters.brinde)
     fetchClients()
   }, [initialFilters])
 
+  // --- LÓGICA CENTRAL DE FILTRAGEM E ORDENAÇÃO ---
+  const processedClients = useMemo(() => {
+    let result = [...clients]
+
+    // 1. Busca por Texto (Search Anything)
+    if (searchTerm) {
+        const lowerTerm = searchTerm.toLowerCase()
+        result = result.filter(c => 
+            (c.nome?.toLowerCase() || '').includes(lowerTerm) ||
+            (c.empresa?.toLowerCase() || '').includes(lowerTerm) ||
+            (c.email?.toLowerCase() || '').includes(lowerTerm) ||
+            (c.cargo?.toLowerCase() || '').includes(lowerTerm) ||
+            (c.cidade?.toLowerCase() || '').includes(lowerTerm)
+        )
+    }
+
+    // 2. Filtros Específicos
+    if (filterSocio) {
+        result = result.filter(c => c.socio === filterSocio)
+    }
+    if (filterBrinde) {
+        result = result.filter(c => c.tipo_brinde === filterBrinde)
+    }
+
+    // 3. Ordenação
+    result.sort((a: any, b: any) => {
+        if (sortOrder === 'newest') return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        if (sortOrder === 'oldest') return new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        if (sortOrder === 'az') return (a.nome || '').localeCompare(b.nome || '')
+        if (sortOrder === 'za') return (b.nome || '').localeCompare(a.nome || '')
+        return 0
+    })
+
+    return result
+  }, [clients, searchTerm, filterSocio, filterBrinde, sortOrder])
+
+  // --- AÇÕES DO CRUD ---
   const handleSave = async (client: ClientData) => {
     try {
         if (clientToEdit) {
-            const { error } = await supabase
-                .from('clientes')
-                .update(client)
-                .eq('email', clientToEdit.email)
+            const { error } = await supabase.from('clientes').update(client).eq('email', clientToEdit.email)
             if (error) throw error
         } else {
             const { error } = await supabase.from('clientes').insert([client])
@@ -78,21 +128,6 @@ export function Clients({ initialFilters }: ClientsProps) {
     setIsModalOpen(true)
   }
 
-  // --- LÓGICA DE FILTRAGEM ---
-  const filteredClients = clients.filter(client => {
-    if (!searchTerm) return true;
-    const searchLower = searchTerm.toLowerCase();
-    
-    return (
-        (client.nome?.toLowerCase() || '').includes(searchLower) ||
-        (client.empresa?.toLowerCase() || '').includes(searchLower) ||
-        (client.email?.toLowerCase() || '').includes(searchLower) ||
-        (client.cargo?.toLowerCase() || '').includes(searchLower) ||
-        (client.cidade?.toLowerCase() || '').includes(searchLower) ||
-        (client.socio?.toLowerCase() || '').includes(searchLower)
-    );
-  });
-
   if (loading) return (
     <div className="flex justify-center items-center h-64">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#112240]"></div>
@@ -102,26 +137,26 @@ export function Clients({ initialFilters }: ClientsProps) {
   return (
     <div className="space-y-6">
       
-      {/* HEADER DA PÁGINA COM BUSCA */}
+      {/* HEADER + FERRAMENTAS */}
       <div className="flex flex-col gap-4">
-        <div className="flex items-center justify-between">
+        
+        {/* Linha 1: Título e Ações Principais */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
                 <h2 className="text-2xl font-bold text-[#112240]">Base de Clientes</h2>
                 <p className="text-sm text-gray-500">
-                    {filteredClients.length} registros encontrados
-                    {initialFilters?.socio && <span className="ml-2 px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs">Filtro: {initialFilters.socio}</span>}
-                    {initialFilters?.brinde && <span className="ml-2 px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs">Filtro: {initialFilters.brinde}</span>}
+                    Exibindo {processedClients.length} de {clients.length} registros
                 </p>
             </div>
             
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 self-end md:self-auto">
                 <button 
                     onClick={() => {
                         setIsSearchOpen(!isSearchOpen);
                         if(isSearchOpen) setSearchTerm(''); 
                     }}
                     className={`p-2 rounded-lg transition-colors ${isSearchOpen ? 'bg-blue-100 text-blue-600' : 'bg-white text-gray-400 hover:text-[#112240] hover:bg-gray-50 border border-gray-200'}`}
-                    title="Buscar na lista"
+                    title="Buscar"
                 >
                     {isSearchOpen ? <X className="h-5 w-5" /> : <Search className="h-5 w-5" />}
                 </button>
@@ -136,7 +171,7 @@ export function Clients({ initialFilters }: ClientsProps) {
             </div>
         </div>
 
-        {/* INPUT DESLIZANTE DE BUSCA */}
+        {/* Linha 2: Busca Deslizante */}
         <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isSearchOpen ? 'max-h-20 opacity-100' : 'max-h-0 opacity-0'}`}>
             <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -150,13 +185,94 @@ export function Clients({ initialFilters }: ClientsProps) {
                 />
             </div>
         </div>
+
+        {/* Linha 3: Barra de Filtros e Ordenação (RESTAURADA) */}
+        <div className="flex flex-wrap items-center gap-3 pb-2 border-b border-gray-100">
+            <div className="flex items-center gap-2 text-sm text-gray-500 mr-2">
+                <Filter className="h-4 w-4" />
+                <span className="font-bold">Filtrar por:</span>
+            </div>
+
+            {/* Dropdown Sócio */}
+            <div className="relative">
+                <select 
+                    value={filterSocio}
+                    onChange={(e) => setFilterSocio(e.target.value)}
+                    className={`appearance-none pl-3 pr-8 py-1.5 rounded-lg text-xs font-medium border focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors cursor-pointer
+                        ${filterSocio ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
+                >
+                    <option value="">Todos os Sócios</option>
+                    {availableSocios.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+            </div>
+
+            {/* Dropdown Brinde */}
+            <div className="relative">
+                <select 
+                    value={filterBrinde}
+                    onChange={(e) => setFilterBrinde(e.target.value)}
+                    className={`appearance-none pl-3 pr-8 py-1.5 rounded-lg text-xs font-medium border focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors cursor-pointer
+                        ${filterBrinde ? 'bg-purple-50 text-purple-700 border-purple-200' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
+                >
+                    <option value="">Todos os Brindes</option>
+                    {availableBrindes.map(b => <option key={b} value={b}>{b}</option>)}
+                </select>
+            </div>
+
+            {/* Botão Limpar Filtros */}
+            {(filterSocio || filterBrinde) && (
+                <button 
+                    onClick={() => { setFilterSocio(''); setFilterBrinde(''); }}
+                    className="text-xs text-red-500 hover:text-red-700 font-bold hover:underline ml-auto md:ml-0"
+                >
+                    Limpar
+                </button>
+            )}
+
+            {/* Ordenação (Direita) */}
+            <div className="ml-auto flex items-center gap-2">
+                <span className="text-xs text-gray-400 font-medium hidden sm:inline">Ordem:</span>
+                <Menu as="div" className="relative">
+                    <Menu.Button className="flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-bold text-gray-600 hover:text-[#112240] hover:bg-gray-50 transition-colors">
+                        <ArrowUpDown className="h-3.5 w-3.5" />
+                        {sortOrder === 'newest' ? 'Mais Recentes' : 
+                         sortOrder === 'oldest' ? 'Mais Antigos' : 
+                         sortOrder === 'az' ? 'Nome (A-Z)' : 'Nome (Z-A)'}
+                    </Menu.Button>
+                    <Transition as={Fragment} enter="transition ease-out duration-100" enterFrom="transform opacity-0 scale-95" enterTo="transform opacity-100 scale-100" leave="transition ease-in duration-75" leaveFrom="transform opacity-100 scale-100" leaveTo="transform opacity-0 scale-95">
+                        <Menu.Items className="absolute right-0 mt-1 w-40 origin-top-right rounded-lg bg-white shadow-xl ring-1 ring-black ring-opacity-5 focus:outline-none z-20">
+                            <div className="p-1">
+                                {[
+                                    { id: 'newest', label: 'Mais Recentes' },
+                                    { id: 'oldest', label: 'Mais Antigos' },
+                                    { id: 'az', label: 'Nome (A-Z)' },
+                                    { id: 'za', label: 'Nome (Z-A)' }
+                                ].map((opt) => (
+                                    <Menu.Item key={opt.id}>
+                                        {({ active }) => (
+                                            <button 
+                                                onClick={() => setSortOrder(opt.id as any)}
+                                                className={`${active ? 'bg-gray-50' : ''} group flex w-full items-center justify-between px-3 py-2 text-xs text-gray-700 rounded-md`}
+                                            >
+                                                {opt.label}
+                                                {sortOrder === opt.id && <Check className="h-3 w-3 text-blue-600" />}
+                                            </button>
+                                        )}
+                                    </Menu.Item>
+                                ))}
+                            </div>
+                        </Menu.Items>
+                    </Transition>
+                </Menu>
+            </div>
+        </div>
+
       </div>
 
       {/* LISTA DE CARDS */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-        {filteredClients.map((client) => (
-            // AQUI ESTAVA O ERRO: key={client.id} - agora é seguro pois definimos id opcional
-            <div key={client.id || client.email} className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md transition-shadow group relative">
+        {processedClients.map((client) => (
+            <div key={client.id || client.email} className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md transition-shadow group relative animate-fadeIn">
                 
                 <div className="flex justify-between items-start mb-3">
                     <div className="flex items-center gap-3 overflow-hidden">
@@ -224,10 +340,16 @@ export function Clients({ initialFilters }: ClientsProps) {
         ))}
       </div>
 
-      {filteredClients.length === 0 && (
+      {processedClients.length === 0 && (
           <div className="text-center py-12 text-gray-400">
               <Search className="h-12 w-12 mx-auto mb-3 opacity-20" />
-              <p>Nenhum cliente encontrado com os termos atuais.</p>
+              <p>Nenhum cliente encontrado com os filtros atuais.</p>
+              <button 
+                onClick={() => {setSearchTerm(''); setFilterBrinde(''); setFilterSocio('');}}
+                className="mt-2 text-blue-600 text-sm font-bold hover:underline"
+              >
+                Limpar tudo
+              </button>
           </div>
       )}
 
