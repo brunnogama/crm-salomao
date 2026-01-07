@@ -10,7 +10,7 @@ import {
   UserCircle,
   FileWarning,
   X,
-  Grid // Ícone para "Módulos"
+  Grid
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
@@ -102,7 +102,7 @@ export function Sidebar({ activePage, onNavigate, userName, isOpen, onClose, onS
         md:translate-x-0 shadow-2xl md:shadow-none
       `}>
       
-        {/* LOGO */}
+        {/* 1. LOGO (Topo) */}
         <div className="h-24 flex items-center justify-between px-6 bg-[#112240] flex-shrink-0">
           <img src="/logo-branca.png" alt="Salomão" className="h-12 w-auto object-contain" />
           <button onClick={onClose} className="md:hidden p-1 hover:bg-white/10 rounded text-gray-400">
@@ -110,8 +110,43 @@ export function Sidebar({ activePage, onNavigate, userName, isOpen, onClose, onS
           </button>
         </div>
 
-        {/* MENU TOPO */}
-        <div className="flex-1 overflow-y-auto py-4 px-3 space-y-1 custom-scrollbar">
+        {/* 2. CARD DO USUÁRIO (Nova Posição - Abaixo da Logo) */}
+        <div className="px-4 mb-6 flex-shrink-0">
+          <div className="rounded-xl bg-[#1a2c4e] border border-white/10 p-4 shadow-sm">
+              
+              {/* Identificação */}
+              <div className="flex items-center gap-3 mb-4 pb-3 border-b border-white/10">
+                  <div className="h-10 w-10 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-300 border border-blue-400/20 shrink-0">
+                    <UserCircle className="h-6 w-6" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-bold text-white truncate leading-tight" title={userName}>{userName}</p>
+                    <p className="text-[11px] text-gray-400 font-medium truncate">Usuário Conectado</p>
+                  </div>
+              </div>
+
+              {/* Botões de Ação */}
+              <div className="grid grid-cols-2 gap-2">
+                <button 
+                  onClick={onSwitchModule} 
+                  className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-[#112240] hover:bg-blue-600/20 text-gray-300 hover:text-blue-300 transition-all border border-white/5 hover:border-blue-500/30 text-xs font-bold group"
+                >
+                    <Grid className="h-4 w-4 group-hover:scale-110 transition-transform" />
+                    <span>Módulos</span>
+                </button>
+                <button 
+                  onClick={handleLogout} 
+                  className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-[#112240] hover:bg-red-500/10 text-gray-300 hover:text-red-400 transition-all border border-white/5 hover:border-red-500/30 text-xs font-bold group"
+                >
+                    <LogOut className="h-4 w-4 group-hover:scale-110 transition-transform" />
+                    <span>Sair</span>
+                </button>
+              </div>
+          </div>
+        </div>
+
+        {/* 3. MENU PRINCIPAL (Meio - Flex-1 para ocupar espaço) */}
+        <div className="flex-1 overflow-y-auto py-2 px-3 space-y-1 custom-scrollbar">
           {mainItems.map((item) => (
             <button
               key={item.id}
@@ -135,8 +170,8 @@ export function Sidebar({ activePage, onNavigate, userName, isOpen, onClose, onS
           ))}
         </div>
 
-        {/* MENU BASE */}
-        <div className="pt-4 pb-2 px-3 bg-[#112240] flex-shrink-0">
+        {/* 4. MENU BASE (Rodapé - mt-auto para forçar para baixo) */}
+        <div className="pt-4 pb-6 px-3 bg-[#112240] flex-shrink-0 mt-auto">
           <div className="border-t border-gray-700/50 mb-4 mx-2"></div>
           {bottomItems.map((item) => (
              <button
@@ -152,42 +187,6 @@ export function Sidebar({ activePage, onNavigate, userName, isOpen, onClose, onS
           ))}
         </div>
 
-        {/* USUÁRIO & AÇÕES (REDESENHADO) */}
-        <div className="p-4 bg-[#0d1b33] flex-shrink-0 pb-8 md:pb-4">
-          <div className="rounded-xl bg-[#112240] border border-gray-800/50 p-3 shadow-sm">
-              
-              {/* Linha 1: Identificação (Avatar + Nome) */}
-              <div className="flex items-center gap-3 mb-3 pb-3 border-b border-gray-700/50">
-                  <div className="h-10 w-10 rounded-full bg-blue-900/30 flex items-center justify-center text-blue-200 border border-blue-800/30 shrink-0">
-                    <UserCircle className="h-6 w-6" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-bold text-white truncate leading-tight" title={userName}>{userName}</p>
-                    <p className="text-[10px] text-gray-500 font-medium truncate">Usuário Conectado</p>
-                  </div>
-              </div>
-
-              {/* Linha 2: Botões de Ação (Módulos | Sair) */}
-              <div className="grid grid-cols-2 gap-2">
-                <button 
-                  onClick={onSwitchModule} 
-                  className="flex items-center justify-center gap-2 px-2 py-1.5 rounded-lg bg-gray-800/50 hover:bg-blue-600/20 text-gray-400 hover:text-blue-300 transition-all border border-transparent hover:border-blue-500/30 text-xs font-medium group"
-                  title="Trocar Módulo"
-                >
-                    <Grid className="h-3.5 w-3.5 group-hover:scale-110 transition-transform" />
-                    <span>Módulos</span>
-                </button>
-                <button 
-                  onClick={handleLogout} 
-                  className="flex items-center justify-center gap-2 px-2 py-1.5 rounded-lg bg-gray-800/50 hover:bg-red-500/10 text-gray-400 hover:text-red-400 transition-all border border-transparent hover:border-red-500/30 text-xs font-medium group"
-                  title="Sair"
-                >
-                    <LogOut className="h-3.5 w-3.5 group-hover:scale-110 transition-transform" />
-                    <span>Sair</span>
-                </button>
-              </div>
-          </div>
-        </div>
       </aside>
     </>
   )
