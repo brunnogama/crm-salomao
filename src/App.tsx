@@ -9,7 +9,7 @@ import { Kanban } from './components/Kanban'
 import { Dashboard } from './components/Dashboard'
 import { History } from './components/History'
 import { Manual } from './components/Manual'
-import { Menu } from 'lucide-react'
+import { Menu, LogOut, Grid, UserCircle } from 'lucide-react' // Ícones adicionados
 import { ModuleSelector } from './components/ModuleSelector'
 import { UnderConstruction } from './components/UnderConstruction'
 
@@ -61,6 +61,18 @@ export default function App() {
     return session.user.email.split('@')[0].split('.').map((p:any) => p.charAt(0).toUpperCase() + p.slice(1)).join(' ')
   }
 
+  // Lógica de Logout movida para cá
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut()
+    } catch (error) {
+      console.error("Erro silencioso ao deslogar:", error)
+    } finally {
+      localStorage.clear()
+      window.location.href = '/'
+    }
+  }
+
   const navigateWithFilter = (page: string, filters: { socio?: string; brinde?: string }) => {
     setClientFilters(filters)
     setActivePage(page)
@@ -86,15 +98,14 @@ export default function App() {
       <Sidebar 
         activePage={activePage} 
         onNavigate={setActivePage} 
-        userName={getUserDisplayName()} 
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
-        onSwitchModule={() => setCurrentModule('home')}
       />
       
       <main className="flex-1 flex flex-col h-screen overflow-hidden min-w-0 relative">
         <header className="bg-white border-b border-gray-200 h-20 flex items-center px-4 md:px-8 justify-between flex-shrink-0 z-10 gap-3">
             
+            {/* LADO ESQUERDO: Título e Menu */}
             <div className="flex items-center gap-3 overflow-hidden">
                 <button 
                   onClick={() => setIsSidebarOpen(true)}
@@ -113,10 +124,40 @@ export default function App() {
                 </div>
             </div>
 
-            <div className="flex-shrink-0">
-                <span className="text-2xl font-extrabold text-[#112240] tracking-tighter opacity-90 select-none">
-                    CRM
-                </span>
+            {/* LADO DIREITO: Usuário e Ações (Movido da Sidebar) */}
+            <div className="flex items-center gap-3 md:gap-4 flex-shrink-0">
+                
+                {/* Info Usuário (Visível apenas em telas maiores) */}
+                <div className="hidden md:flex flex-col items-end">
+                    <span className="text-sm font-bold text-[#112240] leading-none">{getUserDisplayName()}</span>
+                    <span className="text-[10px] text-gray-500 mt-0.5">Conectado</span>
+                </div>
+
+                {/* Avatar */}
+                <div className="h-9 w-9 rounded-full bg-blue-50 flex items-center justify-center text-[#112240] border border-blue-100">
+                    <UserCircle className="h-5 w-5" />
+                </div>
+
+                {/* Divisor Vertical */}
+                <div className="h-8 w-px bg-gray-200 mx-1"></div>
+
+                {/* Botões de Ação */}
+                <div className="flex items-center gap-2">
+                    <button 
+                        onClick={() => setCurrentModule('home')} 
+                        className="p-2 text-gray-500 hover:text-[#112240] hover:bg-gray-100 rounded-lg transition-colors"
+                        title="Trocar Módulo"
+                    >
+                        <Grid className="h-5 w-5" />
+                    </button>
+                    <button 
+                        onClick={handleLogout} 
+                        className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        title="Sair do Sistema"
+                    >
+                        <LogOut className="h-5 w-5" />
+                    </button>
+                </div>
             </div>
 
         </header>
