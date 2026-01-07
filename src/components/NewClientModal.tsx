@@ -1,6 +1,6 @@
 import { Fragment, useState, useEffect } from 'react'
 import { Dialog, Transition } from '@headlessui/react'
-import { X, Save, Gift, Calendar, Clock, UserCircle } from 'lucide-react'
+import { X, Save, Gift, Calendar, Clock, UserCircle, Eye, Pencil } from 'lucide-react'
 import { IMaskInput } from 'react-imask'
 
 export interface GiftHistoryItem {
@@ -48,6 +48,7 @@ const BRINDE_OPTIONS = ['Brinde VIP', 'Brinde Médio', 'Brinde Pequeno', 'Não R
 
 export function NewClientModal({ isOpen, onClose, onSave, clientToEdit }: NewClientModalProps) {
   const [activeTab, setActiveTab] = useState<'geral' | 'endereco' | 'historico'>('geral')
+  const [isViewMode, setIsViewMode] = useState(!!clientToEdit) // Inicia em modo visualização se estiver editando
   
   const [formData, setFormData] = useState<ClientData>({
     nome: '', empresa: '', cargo: '', telefone: '',
@@ -172,9 +173,36 @@ export function NewClientModal({ isOpen, onClose, onSave, clientToEdit }: NewCli
                 
                 <div className="bg-[#112240] px-6 py-4 flex justify-between items-center shrink-0">
                   <Dialog.Title as="h3" className="text-lg font-bold leading-6 text-white">
-                    {clientToEdit ? 'Editar Cliente' : 'Novo Cliente'}
+                    {clientToEdit ? (isViewMode ? 'Visualizar Cliente' : 'Editar Cliente') : 'Novo Cliente'}
                   </Dialog.Title>
-                  <button onClick={onClose} className="text-gray-300 hover:text-white transition-colors"><X className="h-5 w-5" /></button>
+                  <div className="flex items-center gap-2">
+                    {clientToEdit && (
+                      <button
+                        onClick={() => setIsViewMode(!isViewMode)}
+                        className={`flex items-center gap-2 px-3 py-1.5 rounded-lg font-bold text-sm transition-all ${
+                          isViewMode 
+                            ? 'bg-white/10 text-white hover:bg-white/20' 
+                            : 'bg-green-500 text-white hover:bg-green-600'
+                        }`}
+                        title={isViewMode ? 'Habilitar edição' : 'Modo visualização'}
+                      >
+                        {isViewMode ? (
+                          <>
+                            <Pencil className="h-4 w-4" />
+                            <span>Editar</span>
+                          </>
+                        ) : (
+                          <>
+                            <Eye className="h-4 w-4" />
+                            <span>Visualizar</span>
+                          </>
+                        )}
+                      </button>
+                    )}
+                    <button onClick={onClose} className="text-gray-300 hover:text-white transition-colors">
+                      <X className="h-5 w-5" />
+                    </button>
+                  </div>
                 </div>
 
                 <div className="flex border-b border-gray-200 px-6 pt-4 gap-6 shrink-0 bg-gray-50">
@@ -190,31 +218,73 @@ export function NewClientModal({ isOpen, onClose, onSave, clientToEdit }: NewCli
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="md:col-span-2">
                                 <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Nome Completo</label>
-                                <input type="text" value={formData.nome} onChange={e => setFormData({...formData, nome: e.target.value})} className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-[#112240] outline-none" placeholder="Nome do cliente" />
+                                <input 
+                                  type="text" 
+                                  value={formData.nome} 
+                                  onChange={e => setFormData({...formData, nome: e.target.value})} 
+                                  disabled={isViewMode}
+                                  className={`w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-[#112240] outline-none ${isViewMode ? 'bg-gray-50 text-gray-700 cursor-not-allowed' : ''}`}
+                                  placeholder="Nome do cliente" 
+                                />
                             </div>
                             <div>
                                 <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Empresa</label>
-                                <input type="text" value={formData.empresa} onChange={e => setFormData({...formData, empresa: e.target.value})} className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-[#112240] outline-none" />
+                                <input 
+                                  type="text" 
+                                  value={formData.empresa} 
+                                  onChange={e => setFormData({...formData, empresa: e.target.value})} 
+                                  disabled={isViewMode}
+                                  className={`w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-[#112240] outline-none ${isViewMode ? 'bg-gray-50 text-gray-700 cursor-not-allowed' : ''}`}
+                                />
                             </div>
                             <div>
                                 <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Cargo</label>
-                                <input type="text" value={formData.cargo} onChange={e => setFormData({...formData, cargo: e.target.value})} className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-[#112240] outline-none" />
+                                <input 
+                                  type="text" 
+                                  value={formData.cargo} 
+                                  onChange={e => setFormData({...formData, cargo: e.target.value})} 
+                                  disabled={isViewMode}
+                                  className={`w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-[#112240] outline-none ${isViewMode ? 'bg-gray-50 text-gray-700 cursor-not-allowed' : ''}`}
+                                />
                             </div>
                             <div>
                                 <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Telefone</label>
-                                <IMaskInput mask="(00) 00000-0000" value={formData.telefone} onAccept={(value: any) => setFormData({...formData, telefone: value})} className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-[#112240] outline-none" placeholder="(99) 99999-9999" />
+                                <IMaskInput 
+                                  mask="(00) 00000-0000" 
+                                  value={formData.telefone} 
+                                  onAccept={(value: any) => setFormData({...formData, telefone: value})} 
+                                  disabled={isViewMode}
+                                  className={`w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-[#112240] outline-none ${isViewMode ? 'bg-gray-50 text-gray-700 cursor-not-allowed' : ''}`}
+                                  placeholder="(99) 99999-9999" 
+                                />
                             </div>
                             <div>
                                 <label className="block text-xs font-bold text-gray-500 uppercase mb-1">E-mail</label>
-                                <input type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-[#112240] outline-none" />
+                                <input 
+                                  type="email" 
+                                  value={formData.email} 
+                                  onChange={e => setFormData({...formData, email: e.target.value})} 
+                                  disabled={isViewMode}
+                                  className={`w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-[#112240] outline-none ${isViewMode ? 'bg-gray-50 text-gray-700 cursor-not-allowed' : ''}`}
+                                />
                             </div>
                             <div>
                                 <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Sócio Responsável</label>
-                                <input type="text" value={formData.socio} onChange={e => setFormData({...formData, socio: e.target.value})} className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-[#112240] outline-none" />
+                                <input 
+                                  type="text" 
+                                  value={formData.socio} 
+                                  onChange={e => setFormData({...formData, socio: e.target.value})} 
+                                  disabled={isViewMode}
+                                  className={`w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-[#112240] outline-none ${isViewMode ? 'bg-gray-50 text-gray-700 cursor-not-allowed' : ''}`}
+                                />
                             </div>
                             <div>
                                 <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Tipo de Brinde (Atual)</label>
-                                <select value={formData.tipo_brinde} onChange={e => setFormData({...formData, tipo_brinde: e.target.value})} className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-[#112240] outline-none">
+                                <select 
+                                  value={formData.tipo_brinde} 
+                                  onChange={e => setFormData({...formData, tipo_brinde: e.target.value})} 
+                                  disabled={isViewMode}
+                                  className={`w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-[#112240] outline-none ${isViewMode ? 'bg-gray-50 text-gray-700 cursor-not-allowed' : ''}`}>
                                     {BRINDE_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                                 </select>
                             </div>
@@ -352,10 +422,14 @@ export function NewClientModal({ isOpen, onClose, onSave, clientToEdit }: NewCli
                   )}
 
                   <div className="px-6 py-4 flex justify-end gap-3">
-                    <button onClick={onClose} className="px-4 py-2 text-gray-700 font-bold hover:bg-gray-200 rounded-lg transition-colors">Cancelar</button>
-                    <button onClick={handleSave} className="px-6 py-2 bg-[#112240] text-white font-bold rounded-lg hover:bg-[#1a3a6c] transition-colors flex items-center gap-2 shadow-lg shadow-blue-900/20">
-                      <Save className="h-4 w-4" /> Salvar Cliente
+                    <button onClick={onClose} className="px-4 py-2 text-gray-700 font-bold hover:bg-gray-200 rounded-lg transition-colors">
+                      {isViewMode ? 'Fechar' : 'Cancelar'}
                     </button>
+                    {!isViewMode && (
+                      <button onClick={handleSave} className="px-6 py-2 bg-[#112240] text-white font-bold rounded-lg hover:bg-[#1a3a6c] transition-colors flex items-center gap-2 shadow-lg shadow-blue-900/20">
+                        <Save className="h-4 w-4" /> Salvar Cliente
+                      </button>
+                    )}
                   </div>
                 </div>
 
