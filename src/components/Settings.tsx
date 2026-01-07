@@ -3,7 +3,7 @@ import {
   Download, Upload, FileSpreadsheet, CheckCircle, AlertCircle, 
   Users, Pencil, Trash2, Save, RefreshCw, 
   AlertTriangle, History, Copyright, Code,
-  Shield, UserPlus, Ban, Check, Lock, Building
+  Shield, UserPlus, Ban, Check, Lock, Building, X
 } from 'lucide-react'
 import { utils, read, writeFile } from 'xlsx'
 import { supabase } from '../lib/supabase'
@@ -333,7 +333,7 @@ export function Settings() {
 
       if (itemsToInsert.length === 0) throw new Error('Nenhum item válido.')
 
-      const { data: inserted, error } = await supabase.from('clientes').insert(itemsToInsert)
+      const { error } = await supabase.from('clientes').insert(itemsToInsert)
 
       if (error) throw error
 

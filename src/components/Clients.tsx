@@ -2,8 +2,8 @@ import { useEffect, useState, useMemo, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { 
   Plus, Search, X, Filter, ArrowUpDown, Check, 
-  MessageCircle, Trash2, Pencil, Mail, Phone, 
-  Briefcase, User, Gift, Info, MapPin, Printer, FileSpreadsheet,
+  Trash2, Pencil, Mail, Phone, 
+  Briefcase, User, MapPin, FileSpreadsheet,
   Upload, Loader2, AlertTriangle
 } from 'lucide-react'
 import { Menu, Transition } from '@headlessui/react'
@@ -26,7 +26,6 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
   
   const fileInputRef = useRef<HTMLInputElement>(null)
   
-  const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [filterSocio, setFilterSocio] = useState<string>('')
   const [filterBrinde, setFilterBrinde] = useState<string>('')
@@ -555,7 +554,6 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
           }}
           onSave={handleSaveClient}
           clientToEdit={clientToEdit}
-          tableName={tableName}
         />
       )}
     </div>
