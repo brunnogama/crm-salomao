@@ -122,10 +122,10 @@ export function BrindeSelector({ value, onChange }: BrindeSelectorProps) {
   return (
     <>
       <Menu as="div" className="relative">
-        <Menu.Button className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center justify-between hover:bg-gray-50 transition-colors">
+        <Menu.Button className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-[#112240] outline-none text-left flex items-center justify-between bg-white hover:bg-gray-50 transition-colors">
           <div className="flex items-center gap-2">
             <Gift className="h-4 w-4 text-gray-400" />
-            <span className="text-gray-900">{value || 'Selecione o tipo de brinde'}</span>
+            <span className={value ? 'text-gray-900' : 'text-gray-400'}>{value || 'Selecione o tipo de brinde'}</span>
           </div>
           <ChevronDown className="h-4 w-4 text-gray-400" />
         </Menu.Button>
@@ -145,12 +145,12 @@ export function BrindeSelector({ value, onChange }: BrindeSelectorProps) {
               {({ active }) => (
                 <button
                   onClick={handleAdd}
-                  className={`w-full px-4 py-2.5 text-left flex items-center gap-2 border-b border-gray-200 ${
+                  className={`w-full px-3 py-2 text-left flex items-center gap-2 border-b border-gray-200 text-sm font-bold rounded-md ${
                     active ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
                   }`}
                 >
                   <Plus className="h-4 w-4" />
-                  <span className="font-medium">Adicionar Novo Tipo</span>
+                  <span>Adicionar Novo Tipo</span>
                 </button>
               )}
             </Menu.Item>
@@ -160,7 +160,7 @@ export function BrindeSelector({ value, onChange }: BrindeSelectorProps) {
               <Menu.Item key={brinde.id}>
                 {({ active }) => (
                   <div
-                    className={`px-4 py-2 flex items-center justify-between group ${
+                    className={`px-3 py-2 flex items-center justify-between group text-sm rounded-md cursor-pointer ${
                       active ? 'bg-gray-50' : ''
                     }`}
                   >
@@ -171,7 +171,7 @@ export function BrindeSelector({ value, onChange }: BrindeSelectorProps) {
                       {value === brinde.nome && (
                         <Check className="h-4 w-4 text-blue-600" />
                       )}
-                      <span className={value === brinde.nome ? 'font-medium text-blue-600' : 'text-gray-700'}>
+                      <span className="text-gray-700">
                         {brinde.nome}
                       </span>
                     </button>
@@ -180,14 +180,14 @@ export function BrindeSelector({ value, onChange }: BrindeSelectorProps) {
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button
                         onClick={() => handleEdit(brinde)}
-                        className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                        className="p-1 hover:bg-blue-100 rounded text-blue-600"
                         title="Editar"
                       >
                         <Pencil className="h-3.5 w-3.5" />
                       </button>
                       <button
                         onClick={() => handleDelete(brinde)}
-                        className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                        className="p-1 hover:bg-red-100 rounded text-red-600"
                         title="Excluir"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
@@ -211,12 +211,12 @@ export function BrindeSelector({ value, onChange }: BrindeSelectorProps) {
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 animate-fadeIn">
-            <h3 className="text-xl font-bold text-gray-900 mb-4">
+            <h3 className="text-lg font-bold text-[#112240] mb-4">
               {modalMode === 'add' ? 'Adicionar Tipo de Brinde' : 'Editar Tipo de Brinde'}
             </h3>
 
             <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-xs font-bold text-gray-500 uppercase mb-2">
                 Nome do Tipo
               </label>
               <input
@@ -225,7 +225,7 @@ export function BrindeSelector({ value, onChange }: BrindeSelectorProps) {
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSave()}
                 placeholder="Ex: Brinde VIP, Brinde Premium..."
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-[#112240] outline-none"
                 autoFocus
               />
             </div>
@@ -237,13 +237,13 @@ export function BrindeSelector({ value, onChange }: BrindeSelectorProps) {
                   setInputValue('')
                   setEditingBrinde(null)
                 }}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                className="px-4 py-2 text-sm font-bold text-gray-600 hover:bg-gray-200 rounded-lg transition-colors"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleSave}
-                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                className="flex-1 px-4 py-2 text-sm font-bold text-white bg-[#112240] hover:bg-[#1a3a6c] rounded-lg transition-colors"
               >
                 {modalMode === 'add' ? 'Adicionar' : 'Salvar'}
               </button>
