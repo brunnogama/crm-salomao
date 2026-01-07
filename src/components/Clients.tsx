@@ -1,3 +1,12 @@
+Parece que houve um problema na compilação porque algumas importações e variáveis (como os filtros, ordenação e ícones) estavam declaradas no código, mas não estavam sendo usadas no JSX (a parte visual), ou foram removidas acidentalmente.
+
+Para corrigir o erro de *build* e manter o botão de excluir funcionando, aqui está o arquivo **`src/components/Clients.tsx` COMPLETO**.
+
+Este código restaura a interface de filtros, ordenação e ícones para que o TypeScript não reclame de variáveis não utilizadas, além de manter a lógica de exclusão corrigida.
+
+Substitua todo o conteúdo de `src/components/Clients.tsx` por:
+
+```tsx
 import { useEffect, useState, useMemo, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { 
@@ -117,11 +126,9 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
 
   // --- DELETE FUNCTION ---
   const handleDelete = async (client: ClientData) => {
-    console.log("Clicou em excluir:", client.id); // DEBUG
-
     if (!client.id) return alert("Erro: Registro sem ID.");
 
-    if (confirm(`Tem certeza que deseja excluir ${client.nome}? Esta ação não pode ser desfeita.`)) {
+    if (confirm(`Tem certeza que deseja excluir permanentemente: ${client.nome}?`)) {
         try {
             const { error } = await supabase.from(tableName).delete().eq('id', client.id)
             
@@ -130,12 +137,12 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
                 throw new Error(error.message)
             }
 
-            // Sucesso visual imediato
             setClients(current => current.filter(c => c.id !== client.id))
             await logAction('EXCLUIR', tableName.toUpperCase(), `Excluiu: ${client.nome}`)
+            fetchClients() // Garante sincronia
             
         } catch (error: any) {
-            alert(`Erro ao excluir: ${error.message}\nVerifique as permissões no Supabase.`)
+            alert(`Erro ao excluir: ${error.message}`)
         }
     }
   }
@@ -303,7 +310,49 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
         {/* HEADER DE FILTROS */}
         <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 bg-white p-2 rounded-xl border border-gray-100 shadow-sm">
             <div className="pl-2"><p className="text-sm font-medium text-gray-500"><span className="font-bold text-[#112240]">{processedClients.length}</span> registros</p></div>
+            
             <div className="flex flex-wrap items-center gap-2">
+                <div className="flex items-center gap-1 text-gray-400 mr-1 hidden sm:flex"><Filter className="h-4 w-4" /></div>
+
+                {/* FILTROS (Agora usados, resolvendo o erro TS) */}
+                <div className="relative">
+                    <select value={filterSocio} onChange={(e) => setFilterSocio(e.target.value)} className={`appearance-none pl-3 pr-8 py-2 rounded-lg text-xs font-bold border focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors cursor-pointer ${filterSocio ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'}`}>
+                        <option value="">Todos os Sócios</option>
+                        {availableSocios.map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                </div>
+
+                <div className="relative">
+                    <select value={filterBrinde} onChange={(e) => setFilterBrinde(e.target.value)} className={`appearance-none pl-3 pr-8 py-2 rounded-lg text-xs font-bold border focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors cursor-pointer ${filterBrinde ? 'bg-purple-50 text-purple-700 border-purple-200' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'}`}>
+                        <option value="">Todos os Brindes</option>
+                        {availableBrindes.map(b => <option key={b} value={b}>{b}</option>)}
+                    </select>
+                </div>
+
+                {/* MENU DE ORDENAÇÃO */}
+                <Menu as="div" className="relative">
+                    <Menu.Button className="flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs font-bold text-gray-600 hover:text-[#112240] hover:bg-gray-100 transition-colors">
+                        <ArrowUpDown className="h-3.5 w-3.5" /><span className="hidden sm:inline">{sortOrder === 'newest' ? 'Recentes' : sortOrder === 'oldest' ? 'Antigos' : 'Nome'}</span>
+                    </Menu.Button>
+                    <Transition as={Fragment} enter="transition ease-out duration-100" enterFrom="transform opacity-0 scale-95" enterTo="transform opacity-100 scale-100" leave="transition ease-in duration-75" leaveFrom="transform opacity-100 scale-100" leaveTo="transform opacity-0 scale-95">
+                        <Menu.Items className="absolute right-0 mt-1 w-40 origin-top-right rounded-lg bg-white shadow-xl ring-1 ring-black ring-opacity-5 focus:outline-none z-20">
+                            <div className="p-1">
+                                {[{ id: 'newest', label: 'Mais Recentes' }, { id: 'oldest', label: 'Mais Antigos' }, { id: 'az', label: 'Nome (A-Z)' }, { id: 'za', label: 'Nome (Z-A)' }].map((opt) => (
+                                    <Menu.Item key={opt.id}>
+                                        {({ active }) => (
+                                            <button onClick={() => setSortOrder(opt.id as any)} className={`${active ? 'bg-gray-50' : ''} group flex w-full items-center justify-between px-3 py-2 text-xs text-gray-700 rounded-md`}>
+                                                {opt.label}{sortOrder === opt.id && <Check className="h-3 w-3 text-blue-600" />}
+                                            </button>
+                                        )}
+                                    </Menu.Item>
+                                ))}
+                            </div>
+                        </Menu.Items>
+                    </Transition>
+                </Menu>
+
+                <div className="h-6 w-px bg-gray-200 mx-1"></div>
+
                 <button onClick={() => { setIsSearchOpen(!isSearchOpen); if(isSearchOpen) setSearchTerm(''); }} className={`p-2 rounded-lg transition-colors ${isSearchOpen ? 'bg-blue-100 text-blue-600' : 'bg-gray-50 text-gray-400 hover:text-[#112240] hover:bg-gray-100 border border-gray-200'}`} title="Buscar">
                     {isSearchOpen ? <X className="h-5 w-5" /> : <Search className="h-5 w-5" />}
                 </button>
@@ -337,7 +386,6 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {processedClients.map((client) => (
                 <div key={client.id || client.email} onClick={() => openEditModal(client)} className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 hover:shadow-md transition-all relative group cursor-pointer animate-fadeIn flex flex-col justify-between h-full">
-                    {/* Header do Card */}
                     <div className="flex items-start justify-between mb-2">
                         <div className="flex gap-3 overflow-hidden">
                             <div className="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center text-[#112240] font-bold border border-gray-200 flex-shrink-0">
@@ -353,14 +401,13 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
                         <span className={`px-2 py-0.5 text-[10px] font-semibold rounded-full flex-shrink-0 ${client.tipo_brinde === 'Brinde VIP' ? 'bg-purple-100 text-purple-800' : 'bg-green-100 text-green-800'}`}>{client.tipo_brinde}</span>
                     </div>
                     
-                    {/* Corpo do Card */}
                     <div className="bg-gray-50 rounded-md p-2.5 mb-3 text-xs space-y-2 border border-gray-100">
                         <div className="flex justify-between items-center border-b border-gray-200 pb-1.5"><div className="flex items-center gap-1.5 text-gray-500"><Info className="h-3 w-3" /><span>Sócio:</span></div><span className="font-bold text-[#112240] truncate ml-2">{client.socio || '-'}</span></div>
                         <div className="flex justify-between items-center"><div className="flex items-center gap-1.5 text-gray-500"><User className="h-3 w-3" /><span>Cargo:</span></div><span className="font-medium text-gray-700 truncate ml-2 max-w-[120px] text-right">{client.cargo || '-'}</span></div>
                         <div className="flex justify-between items-center"><div className="flex items-center gap-1.5 text-gray-500"><Gift className="h-3 w-3" /><span>Brinde:</span></div><span className="font-medium text-gray-700 truncate ml-2 text-right">{client.tipo_brinde} ({client.quantidade}x)</span></div>
+                        <div className="flex justify-between items-start"><div className="flex items-center gap-1.5 text-gray-500 flex-shrink-0"><MapPin className="h-3 w-3" /><span>Local:</span></div><span className="font-medium text-gray-700 truncate text-right ml-2" title={`${client.cidade || ''}/${client.estado || ''}`}>{client.cidade || client.estado ? `${client.cidade || ''}/${client.estado || ''}` : '-'}</span></div>
                     </div>
 
-                    {/* Footer / Ações */}
                     <div className="border-t border-gray-100 pt-3 flex justify-between items-center mt-auto">
                         <div className="flex gap-2">
                             {client.telefone && (
@@ -373,6 +420,7 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
                         </div>
                         <div className="flex gap-1">
                             <button onClick={(e) => { e.stopPropagation(); openEditModal(client); }} className="p-1.5 text-gray-400 hover:text-[#112240] hover:bg-gray-100 rounded-md transition-colors" title="Editar"><Pencil className="h-3.5 w-3.5" /></button>
+                            {/* BOTÃO EXCLUIR CORRIGIDO */}
                             <button onClick={(e) => { e.stopPropagation(); handleDelete(client); }} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors z-10" title="Excluir"><Trash2 className="h-3.5 w-3.5" /></button>
                         </div>
                     </div>
@@ -385,3 +433,5 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
     </div>
   )
 }
+
+```
