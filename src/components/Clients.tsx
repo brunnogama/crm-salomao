@@ -1,12 +1,3 @@
-Parece que houve um problema na compilação porque algumas importações e variáveis (como os filtros, ordenação e ícones) estavam declaradas no código, mas não estavam sendo usadas no JSX (a parte visual), ou foram removidas acidentalmente.
-
-Para corrigir o erro de *build* e manter o botão de excluir funcionando, aqui está o arquivo **`src/components/Clients.tsx` COMPLETO**.
-
-Este código restaura a interface de filtros, ordenação e ícones para que o TypeScript não reclame de variáveis não utilizadas, além de manter a lógica de exclusão corrigida.
-
-Substitua todo o conteúdo de `src/components/Clients.tsx` por:
-
-```tsx
 import { useEffect, useState, useMemo, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { 
@@ -46,9 +37,8 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
 
   const fetchClients = async () => {
     setLoading(true)
-    let query = supabase.from(tableName).select('*')
+    const { data, error } = await supabase.from(tableName).select('*')
     
-    const { data, error } = await query
     if (!error && data) {
         const formattedClients: ClientData[] = data.map((item: any) => ({
             id: item.id,
@@ -83,7 +73,7 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
         setAvailableSocios(socios.sort())
         setAvailableBrindes(brindes.sort())
     } else if (error) {
-        console.error("Erro ao buscar clientes:", error);
+        console.error("Erro ao buscar dados:", error)
     }
     setLoading(false)
   }
@@ -126,23 +116,26 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
 
   // --- DELETE FUNCTION ---
   const handleDelete = async (client: ClientData) => {
-    if (!client.id) return alert("Erro: Registro sem ID.");
+    if (!client.id) return alert("Erro: Registro sem ID.")
 
     if (confirm(`Tem certeza que deseja excluir permanentemente: ${client.nome}?`)) {
         try {
             const { error } = await supabase.from(tableName).delete().eq('id', client.id)
             
             if (error) {
-                console.error("Erro Supabase:", error)
-                throw new Error(error.message)
+                // Se for erro de permissão (RLS)
+                if (error.code === '42501') {
+                    throw new Error("Permissão negada. Verifique as configurações de segurança (RLS) no Supabase.")
+                }
+                throw error
             }
 
             setClients(current => current.filter(c => c.id !== client.id))
             await logAction('EXCLUIR', tableName.toUpperCase(), `Excluiu: ${client.nome}`)
-            fetchClients() // Garante sincronia
             
         } catch (error: any) {
-            alert(`Erro ao excluir: ${error.message}`)
+            console.error('Erro ao excluir:', error)
+            alert(`Falha ao excluir: ${error.message}`)
         }
     }
   }
@@ -154,7 +147,7 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
 
     if(!confirm(`Importar para: ${tableName.toUpperCase()}?`)) {
         if (fileInputRef.current) fileInputRef.current.value = ''
-        return;
+        return
     }
 
     setImporting(true)
@@ -167,8 +160,8 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
 
       if (jsonData.length === 0) throw new Error('Arquivo vazio')
 
-      const { data: { user } } = await supabase.auth.getUser();
-      const userEmail = user?.email || 'Importação';
+      const { data: { user } } = await supabase.auth.getUser()
+      const userEmail = user?.email || 'Importação'
 
       const itemsToInsert = jsonData.map((row: any) => ({
         nome: row.nome || row.Nome,
@@ -205,8 +198,8 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
   }
 
   const handleSave = async (client: ClientData) => {
-    const { data: { user } } = await supabase.auth.getUser();
-    const userEmail = user?.email || 'Sistema';
+    const { data: { user } } = await supabase.auth.getUser()
+    const userEmail = user?.email || 'Sistema'
     
     const dbData: any = {
         nome: client.nome,
@@ -238,7 +231,7 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
             if (error) throw error
             await logAction('EDITAR', tableName.toUpperCase(), `Atualizou: ${client.nome}`)
         } else {
-            dbData.created_by = userEmail;
+            dbData.created_by = userEmail
             const { error } = await supabase.from(tableName).insert([dbData])
             if (error) throw error
             await logAction('CRIAR', tableName.toUpperCase(), `Criou: ${client.nome}`)
@@ -251,28 +244,27 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
     }
   }
 
-  // Ações de Contato
   const handleWhatsApp = (client: ClientData, e?: React.MouseEvent) => {
     if(e) { e.preventDefault(); e.stopPropagation(); }
-    const cleanPhone = (client.telefone || '').replace(/\D/g, '');
-    if(!cleanPhone) return alert("Telefone não cadastrado.");
-    const message = `Olá Sr(a). ${client.nome}.\n\nSomos do Salomão Advogados...`; 
-    window.open(`https://wa.me/55${cleanPhone}?text=${encodeURIComponent(message)}`, '_blank');
+    const cleanPhone = (client.telefone || '').replace(/\D/g, '')
+    if(!cleanPhone) return alert("Telefone não cadastrado.")
+    const message = `Olá Sr(a). ${client.nome}.\n\nSomos do Salomão Advogados...`
+    window.open(`https://wa.me/55${cleanPhone}?text=${encodeURIComponent(message)}`, '_blank')
   }
 
   const handle3CX = (client: ClientData, e?: React.MouseEvent) => {
     if(e) { e.preventDefault(); e.stopPropagation(); }
-    const cleanPhone = (client.telefone || '').replace(/\D/g, '');
-    if(!cleanPhone) return alert("Telefone não cadastrado.");
-    window.location.href = `tel:${cleanPhone}`;
+    const cleanPhone = (client.telefone || '').replace(/\D/g, '')
+    if(!cleanPhone) return alert("Telefone não cadastrado.")
+    window.location.href = `tel:${cleanPhone}`
   }
 
   const handleEmail = (client: ClientData, e?: React.MouseEvent) => {
     if(e) { e.preventDefault(); e.stopPropagation(); }
-    if(!client.email) return alert("E-mail não cadastrado.");
-    const subject = encodeURIComponent("Atualização Cadastral - Salomão Advogados");
-    const body = encodeURIComponent(`Olá Sr(a). ${client.nome}...`);
-    window.open(`mailto:${client.email}?subject=${subject}&body=${body}`, '_blank');
+    if(!client.email) return alert("E-mail não cadastrado.")
+    const subject = encodeURIComponent("Atualização Cadastral - Salomão Advogados")
+    const body = encodeURIComponent(`Olá Sr(a). ${client.nome}...`)
+    window.open(`mailto:${client.email}?subject=${subject}&body=${body}`, '_blank')
   }
 
   const handleExportExcel = async () => {
@@ -284,11 +276,11 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
 
   const handlePrintList = () => {
     if (processedClients.length === 0) return alert("Lista vazia.")
-    const printWindow = window.open('', '', 'width=900,height=800');
-    if (!printWindow) return;
-    const listHtml = processedClients.map(c => `<div><strong>${c.nome}</strong> (${c.empresa})</div>`).join('');
-    printWindow.document.write(`<html><body><h2>Lista: ${tableName.toUpperCase()}</h2>${listHtml}<script>window.print()</script></body></html>`);
-    printWindow.document.close();
+    const printWindow = window.open('', '', 'width=900,height=800')
+    if (!printWindow) return
+    const listHtml = processedClients.map(c => `<div><strong>${c.nome}</strong> (${c.empresa})</div>`).join('')
+    printWindow.document.write(`<html><body><h2>Lista: ${tableName.toUpperCase()}</h2>${listHtml}<script>window.print()</script></body></html>`)
+    printWindow.document.close()
   }
 
   const openEditModal = (client: ClientData) => {
@@ -307,14 +299,20 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
       <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".xlsx, .xls" className="hidden" />
 
       <div className="flex-shrink-0 flex flex-col gap-4">
-        {/* HEADER DE FILTROS */}
+        {/* HEADER */}
         <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 bg-white p-2 rounded-xl border border-gray-100 shadow-sm">
-            <div className="pl-2"><p className="text-sm font-medium text-gray-500"><span className="font-bold text-[#112240]">{processedClients.length}</span> registros</p></div>
+            <div className="pl-2">
+                <p className="text-sm font-medium text-gray-500">
+                    <span className="font-bold text-[#112240]">{processedClients.length}</span> registros
+                </p>
+            </div>
             
             <div className="flex flex-wrap items-center gap-2">
-                <div className="flex items-center gap-1 text-gray-400 mr-1 hidden sm:flex"><Filter className="h-4 w-4" /></div>
+                {/* ÍCONE DE FILTRO (Agora utilizado para não dar erro de build) */}
+                <div className="flex items-center gap-1 text-gray-400 mr-1 hidden sm:flex">
+                    <Filter className="h-4 w-4" />
+                </div>
 
-                {/* FILTROS (Agora usados, resolvendo o erro TS) */}
                 <div className="relative">
                     <select value={filterSocio} onChange={(e) => setFilterSocio(e.target.value)} className={`appearance-none pl-3 pr-8 py-2 rounded-lg text-xs font-bold border focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors cursor-pointer ${filterSocio ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'}`}>
                         <option value="">Todos os Sócios</option>
@@ -329,10 +327,12 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
                     </select>
                 </div>
 
-                {/* MENU DE ORDENAÇÃO */}
                 <Menu as="div" className="relative">
                     <Menu.Button className="flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs font-bold text-gray-600 hover:text-[#112240] hover:bg-gray-100 transition-colors">
-                        <ArrowUpDown className="h-3.5 w-3.5" /><span className="hidden sm:inline">{sortOrder === 'newest' ? 'Recentes' : sortOrder === 'oldest' ? 'Antigos' : 'Nome'}</span>
+                        <ArrowUpDown className="h-3.5 w-3.5" />
+                        <span className="hidden sm:inline">
+                            {sortOrder === 'newest' ? 'Recentes' : sortOrder === 'oldest' ? 'Antigos' : 'Nome'}
+                        </span>
                     </Menu.Button>
                     <Transition as={Fragment} enter="transition ease-out duration-100" enterFrom="transform opacity-0 scale-95" enterTo="transform opacity-100 scale-100" leave="transition ease-in duration-75" leaveFrom="transform opacity-100 scale-100" leaveTo="transform opacity-0 scale-95">
                         <Menu.Items className="absolute right-0 mt-1 w-40 origin-top-right rounded-lg bg-white shadow-xl ring-1 ring-black ring-opacity-5 focus:outline-none z-20">
@@ -341,7 +341,8 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
                                     <Menu.Item key={opt.id}>
                                         {({ active }) => (
                                             <button onClick={() => setSortOrder(opt.id as any)} className={`${active ? 'bg-gray-50' : ''} group flex w-full items-center justify-between px-3 py-2 text-xs text-gray-700 rounded-md`}>
-                                                {opt.label}{sortOrder === opt.id && <Check className="h-3 w-3 text-blue-600" />}
+                                                {opt.label}
+                                                {sortOrder === opt.id && <Check className="h-3 w-3 text-blue-600" />}
                                             </button>
                                         )}
                                     </Menu.Item>
@@ -357,7 +358,6 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
                     {isSearchOpen ? <X className="h-5 w-5" /> : <Search className="h-5 w-5" />}
                 </button>
                 
-                {/* Botões de Ação em Lote */}
                 <div className="flex items-center gap-1">
                     <button onClick={() => fileInputRef.current?.click()} disabled={importing} className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200 transition-colors" title="Importar Excel">
                         {importing ? <Loader2 className="h-5 w-5 animate-spin" /> : <Upload className="h-5 w-5" />}
@@ -372,7 +372,6 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
             </div>
         </div>
 
-        {/* BARRA DE BUSCA EXPANSÍVEL */}
         <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isSearchOpen ? 'max-h-20 opacity-100' : 'max-h-0 opacity-0'}`}>
             <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -381,7 +380,6 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
         </div>
       </div>
 
-      {/* GRID DE CARDS */}
       <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 pb-4">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {processedClients.map((client) => (
@@ -402,10 +400,22 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
                     </div>
                     
                     <div className="bg-gray-50 rounded-md p-2.5 mb-3 text-xs space-y-2 border border-gray-100">
-                        <div className="flex justify-between items-center border-b border-gray-200 pb-1.5"><div className="flex items-center gap-1.5 text-gray-500"><Info className="h-3 w-3" /><span>Sócio:</span></div><span className="font-bold text-[#112240] truncate ml-2">{client.socio || '-'}</span></div>
-                        <div className="flex justify-between items-center"><div className="flex items-center gap-1.5 text-gray-500"><User className="h-3 w-3" /><span>Cargo:</span></div><span className="font-medium text-gray-700 truncate ml-2 max-w-[120px] text-right">{client.cargo || '-'}</span></div>
-                        <div className="flex justify-between items-center"><div className="flex items-center gap-1.5 text-gray-500"><Gift className="h-3 w-3" /><span>Brinde:</span></div><span className="font-medium text-gray-700 truncate ml-2 text-right">{client.tipo_brinde} ({client.quantidade}x)</span></div>
-                        <div className="flex justify-between items-start"><div className="flex items-center gap-1.5 text-gray-500 flex-shrink-0"><MapPin className="h-3 w-3" /><span>Local:</span></div><span className="font-medium text-gray-700 truncate text-right ml-2" title={`${client.cidade || ''}/${client.estado || ''}`}>{client.cidade || client.estado ? `${client.cidade || ''}/${client.estado || ''}` : '-'}</span></div>
+                        <div className="flex justify-between items-center border-b border-gray-200 pb-1.5">
+                            <div className="flex items-center gap-1.5 text-gray-500"><Info className="h-3 w-3" /><span>Sócio:</span></div>
+                            <span className="font-bold text-[#112240] truncate ml-2">{client.socio || '-'}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                            <div className="flex items-center gap-1.5 text-gray-500"><User className="h-3 w-3" /><span>Cargo:</span></div>
+                            <span className="font-medium text-gray-700 truncate ml-2 max-w-[120px] text-right">{client.cargo || '-'}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                            <div className="flex items-center gap-1.5 text-gray-500"><Gift className="h-3 w-3" /><span>Brinde:</span></div>
+                            <span className="font-medium text-gray-700 truncate ml-2 text-right">{client.tipo_brinde} ({client.quantidade}x)</span>
+                        </div>
+                        <div className="flex justify-between items-start">
+                            <div className="flex items-center gap-1.5 text-gray-500 flex-shrink-0"><MapPin className="h-3 w-3" /><span>Local:</span></div>
+                            <span className="font-medium text-gray-700 truncate text-right ml-2" title={`${client.cidade || ''}/${client.estado || ''}`}>{client.cidade || client.estado ? `${client.cidade || ''}/${client.estado || ''}` : '-'}</span>
+                        </div>
                     </div>
 
                     <div className="border-t border-gray-100 pt-3 flex justify-between items-center mt-auto">
@@ -420,7 +430,6 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
                         </div>
                         <div className="flex gap-1">
                             <button onClick={(e) => { e.stopPropagation(); openEditModal(client); }} className="p-1.5 text-gray-400 hover:text-[#112240] hover:bg-gray-100 rounded-md transition-colors" title="Editar"><Pencil className="h-3.5 w-3.5" /></button>
-                            {/* BOTÃO EXCLUIR CORRIGIDO */}
                             <button onClick={(e) => { e.stopPropagation(); handleDelete(client); }} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors z-10" title="Excluir"><Trash2 className="h-3.5 w-3.5" /></button>
                         </div>
                     </div>
@@ -433,5 +442,3 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
     </div>
   )
 }
-
-```
