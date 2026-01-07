@@ -4,7 +4,7 @@ import {
   Plus, Search, X, Filter, ArrowUpDown, Check, 
   MessageCircle, Trash2, Pencil, Mail, Phone, 
   Briefcase, User, Gift, Info, MapPin, Printer, FileSpreadsheet,
-  Upload, Loader2
+  Upload, Loader2, AlertTriangle
 } from 'lucide-react'
 import { Menu, Transition } from '@headlessui/react'
 import { Fragment } from 'react'
@@ -14,7 +14,7 @@ import { logAction } from '../lib/logger'
 
 interface ClientsProps {
   initialFilters?: { socio?: string; brinde?: string };
-  tableName?: string;
+  tableName?: string; // Aceita 'clientes' ou 'magistrados'
 }
 
 export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps) {
@@ -35,8 +35,10 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
   const [availableSocios, setAvailableSocios] = useState<string[]>([])
   const [availableBrindes, setAvailableBrindes] = useState<string[]>([])
 
+  // --- BUSCAR DADOS ---
   const fetchClients = async () => {
     setLoading(true)
+    // Busca dinâmica baseada na prop tableName
     const { data, error } = await supabase.from(tableName).select('*')
     
     if (!error && data) {
@@ -73,7 +75,7 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
         setAvailableSocios(socios.sort())
         setAvailableBrindes(brindes.sort())
     } else if (error) {
-        console.error("Erro ao buscar dados:", error)
+        console.error(`Erro ao buscar ${tableName}:`, error)
     }
     setLoading(false)
   }
@@ -114,44 +116,40 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
     return result
   }, [clients, searchTerm, filterSocio, filterBrinde, sortOrder])
 
-  // --- DELETE FUNCTION (Melhorada) ---
+  // --- FUNÇÃO EXCLUIR ROBUSTA ---
   const handleDelete = async (client: ClientData) => {
-    if (!client.id) return window.alert("Erro: Registro sem ID. Atualize a página.")
+    if (!client.id) return window.alert("Erro: ID do registro não encontrado.")
 
-    if (window.confirm(`Tem a certeza que deseja excluir permanentemente: ${client.nome}?`)) {
+    const modulo = tableName.toUpperCase() // CLIENTES ou MAGISTRADOS
+
+    if (window.confirm(`ATENÇÃO: Deseja excluir "${client.nome}" do módulo ${modulo}?\n\nEsta ação é irreversível.`)) {
         try {
-            console.log(`Tentando excluir ID: ${client.id} da tabela ${tableName}`);
+            console.log(`Excluindo ID ${client.id} de ${tableName}...`)
             
             const { error } = await supabase.from(tableName).delete().eq('id', client.id)
             
             if (error) {
-                console.error("Erro Supabase Detalhado:", error);
-                // Tratamento específico para erro de Foreign Key (Vínculos)
-                if (error.code === '23503') {
-                    throw new Error("Não é possível excluir este cliente pois ele possui Tarefas ou Logs vinculados. Peça ao administrador para limpar os vínculos.");
-                }
-                // Tratamento para permissão (RLS)
-                if (error.code === '42501') {
-                    throw new Error("Permissão negada. Verifique as configurações de segurança (RLS) no Supabase.");
-                }
-                throw error
+                console.error("Erro Supabase:", error)
+                throw new Error(error.message)
             }
 
+            // Sucesso: remove da lista localmente
             setClients(current => current.filter(c => c.id !== client.id))
-            await logAction('EXCLUIR', tableName.toUpperCase(), `Excluiu: ${client.nome}`)
+            
+            await logAction('EXCLUIR', modulo, `Excluiu: ${client.nome}`)
             
         } catch (error: any) {
-            window.alert(`FALHA AO EXCLUIR:\n${error.message || error}`)
+            window.alert(`ERRO AO EXCLUIR:\n${error.message}\n\nVerifique se o usuário tem permissão.`)
         }
     }
   }
 
-  // --- IMPORT FUNCTION (Melhorada) ---
+  // --- FUNÇÃO IMPORTAR ---
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
 
-    if(!window.confirm(`Importar ficheiro para a tabela: ${tableName.toUpperCase()}?`)) {
+    if(!window.confirm(`Confirmar importação para o módulo: ${tableName.toUpperCase()}?`)) {
         if (fileInputRef.current) fileInputRef.current.value = ''
         return
     }
@@ -164,11 +162,12 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
       const worksheet = workbook.Sheets[workbook.SheetNames[0]]
       const jsonData = utils.sheet_to_json(worksheet)
 
-      if (jsonData.length === 0) throw new Error('Ficheiro vazio ou ilegível.')
+      if (jsonData.length === 0) throw new Error('Arquivo vazio.')
 
       const { data: { user } } = await supabase.auth.getUser()
       const userEmail = user?.email || 'Importação'
 
+      // Normalização de chaves
       const normalizeKeys = (obj: any) => {
           const newObj: any = {};
           Object.keys(obj).forEach(key => {
@@ -180,6 +179,7 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
       const itemsToInsert = jsonData.map((rawRow: any) => {
         const row = normalizeKeys(rawRow);
         
+        // Validação mínima: precisa ter nome
         if (!row.nome && !row['nome completo']) return null;
 
         return {
@@ -205,18 +205,19 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
       const { error } = await supabase.from(tableName).insert(itemsToInsert)
       if (error) throw error
       
-      window.alert(`${itemsToInsert.length} registos importados com sucesso!`)
+      window.alert(`Sucesso! ${itemsToInsert.length} registros importados em ${tableName.toUpperCase()}.`)
       await logAction('IMPORTAR', tableName.toUpperCase(), `Importou ${itemsToInsert.length} itens`)
       fetchClients()
 
     } catch (error: any) {
-      window.alert('Erro na importação: ' + error.message)
+      window.alert('Falha na importação: ' + error.message)
     } finally {
       setImporting(false)
       if (fileInputRef.current) fileInputRef.current.value = ''
     }
   }
 
+  // Gatilho para input file
   const triggerFileInput = () => {
       if (fileInputRef.current) {
           fileInputRef.current.value = '';
@@ -224,6 +225,7 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
       }
   }
 
+  // --- SALVAR (CRIAR/EDITAR) ---
   const handleSave = async (client: ClientData) => {
     const { data: { user } } = await supabase.auth.getUser()
     const userEmail = user?.email || 'Sistema'
@@ -271,6 +273,7 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
     }
   }
 
+  // Contatos
   const handleWhatsApp = (client: ClientData, e?: React.MouseEvent) => {
     if(e) { e.preventDefault(); e.stopPropagation(); }
     const cleanPhone = (client.telefone || '').replace(/\D/g, '')
@@ -323,6 +326,7 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
 
   return (
     <div className="h-full flex flex-col gap-4">
+      {/* Input de arquivo invisível */}
       <input 
         type="file" 
         ref={fileInputRef} 
@@ -404,6 +408,7 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
             </div>
         </div>
 
+        {/* BUSCA */}
         <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isSearchOpen ? 'max-h-20 opacity-100' : 'max-h-0 opacity-0'}`}>
             <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -412,62 +417,59 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
         </div>
       </div>
 
+      {/* GRID */}
       <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 pb-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {processedClients.map((client) => (
-                <div key={client.id || client.email} onClick={() => openEditModal(client)} className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 hover:shadow-md transition-all relative group cursor-pointer animate-fadeIn flex flex-col justify-between h-full">
-                    <div className="flex items-start justify-between mb-2">
-                        <div className="flex gap-3 overflow-hidden">
-                            <div className="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center text-[#112240] font-bold border border-gray-200 flex-shrink-0">
-                                {client.nome?.charAt(0) || '?'}
-                            </div>
-                            <div className="overflow-hidden">
-                                <h3 className="text-sm font-bold text-gray-900 truncate" title={client.nome}>{client.nome}</h3>
-                                <div className="flex items-center gap-1 text-xs text-gray-500 truncate">
-                                    <Briefcase className="h-3 w-3 inline" /><span>{client.empresa}</span>
+        {processedClients.length === 0 && !loading ? (
+            <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+                <AlertTriangle className="h-12 w-12 mb-2 opacity-20" />
+                <p>Nenhum registro encontrado em {tableName}.</p>
+                {tableName === 'magistrados' && <p className="text-xs mt-2">Verifique se você importou a base corretamente.</p>}
+            </div>
+        ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {processedClients.map((client) => (
+                    <div key={client.id || client.email} onClick={() => openEditModal(client)} className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 hover:shadow-md transition-all relative group cursor-pointer animate-fadeIn flex flex-col justify-between h-full">
+                        <div className="flex items-start justify-between mb-2">
+                            <div className="flex gap-3 overflow-hidden">
+                                <div className="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center text-[#112240] font-bold border border-gray-200 flex-shrink-0">
+                                    {client.nome?.charAt(0) || '?'}
+                                </div>
+                                <div className="overflow-hidden">
+                                    <h3 className="text-sm font-bold text-gray-900 truncate" title={client.nome}>{client.nome}</h3>
+                                    <div className="flex items-center gap-1 text-xs text-gray-500 truncate">
+                                        <Briefcase className="h-3 w-3 inline" /><span>{client.empresa}</span>
+                                    </div>
                                 </div>
                             </div>
+                            <span className={`px-2 py-0.5 text-[10px] font-semibold rounded-full flex-shrink-0 ${client.tipo_brinde === 'Brinde VIP' ? 'bg-purple-100 text-purple-800' : 'bg-green-100 text-green-800'}`}>{client.tipo_brinde}</span>
                         </div>
-                        <span className={`px-2 py-0.5 text-[10px] font-semibold rounded-full flex-shrink-0 ${client.tipo_brinde === 'Brinde VIP' ? 'bg-purple-100 text-purple-800' : 'bg-green-100 text-green-800'}`}>{client.tipo_brinde}</span>
-                    </div>
-                    
-                    <div className="bg-gray-50 rounded-md p-2.5 mb-3 text-xs space-y-2 border border-gray-100">
-                        <div className="flex justify-between items-center border-b border-gray-200 pb-1.5">
-                            <div className="flex items-center gap-1.5 text-gray-500"><Info className="h-3 w-3" /><span>Sócio:</span></div>
-                            <span className="font-bold text-[#112240] truncate ml-2">{client.socio || '-'}</span>
+                        
+                        <div className="bg-gray-50 rounded-md p-2.5 mb-3 text-xs space-y-2 border border-gray-100">
+                            <div className="flex justify-between items-center border-b border-gray-200 pb-1.5"><div className="flex items-center gap-1.5 text-gray-500"><Info className="h-3 w-3" /><span>Sócio:</span></div><span className="font-bold text-[#112240] truncate ml-2">{client.socio || '-'}</span></div>
+                            <div className="flex justify-between items-center"><div className="flex items-center gap-1.5 text-gray-500"><User className="h-3 w-3" /><span>Cargo:</span></div><span className="font-medium text-gray-700 truncate ml-2 max-w-[120px] text-right">{client.cargo || '-'}</span></div>
+                            <div className="flex justify-between items-center"><div className="flex items-center gap-1.5 text-gray-500"><Gift className="h-3 w-3" /><span>Brinde:</span></div><span className="font-medium text-gray-700 truncate ml-2 text-right">{client.tipo_brinde} ({client.quantidade}x)</span></div>
+                            <div className="flex justify-between items-start"><div className="flex items-center gap-1.5 text-gray-500 flex-shrink-0"><MapPin className="h-3 w-3" /><span>Local:</span></div><span className="font-medium text-gray-700 truncate text-right ml-2" title={`${client.cidade || ''}/${client.estado || ''}`}>{client.cidade || client.estado ? `${client.cidade || ''}/${client.estado || ''}` : '-'}</span></div>
                         </div>
-                        <div className="flex justify-between items-center">
-                            <div className="flex items-center gap-1.5 text-gray-500"><User className="h-3 w-3" /><span>Cargo:</span></div>
-                            <span className="font-medium text-gray-700 truncate ml-2 max-w-[120px] text-right">{client.cargo || '-'}</span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                            <div className="flex items-center gap-1.5 text-gray-500"><Gift className="h-3 w-3" /><span>Brinde:</span></div>
-                            <span className="font-medium text-gray-700 truncate ml-2 text-right">{client.tipo_brinde} ({client.quantidade}x)</span>
-                        </div>
-                        <div className="flex justify-between items-start">
-                            <div className="flex items-center gap-1.5 text-gray-500 flex-shrink-0"><MapPin className="h-3 w-3" /><span>Local:</span></div>
-                            <span className="font-medium text-gray-700 truncate text-right ml-2" title={`${client.cidade || ''}/${client.estado || ''}`}>{client.cidade || client.estado ? `${client.cidade || ''}/${client.estado || ''}` : '-'}</span>
-                        </div>
-                    </div>
 
-                    <div className="border-t border-gray-100 pt-3 flex justify-between items-center mt-auto">
-                        <div className="flex gap-2">
-                            {client.telefone && (
-                                <>
-                                    <button onClick={(e) => handleWhatsApp(client, e)} className="p-1.5 text-green-600 bg-green-50 hover:bg-green-100 border border-green-200 rounded-md transition-colors" title="WhatsApp"><MessageCircle className="h-3.5 w-3.5" /></button>
-                                    <button onClick={(e) => handle3CX(client, e)} className="p-1.5 text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-md transition-colors" title="Ligar 3CX"><Phone className="h-3.5 w-3.5" /></button>
-                                </>
-                            )}
-                            {client.email && <button onClick={(e) => handleEmail(client, e)} className="p-1.5 text-slate-600 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-md transition-colors" title="Email"><Mail className="h-3.5 w-3.5" /></button>}
-                        </div>
-                        <div className="flex gap-1">
-                            <button onClick={(e) => { e.stopPropagation(); openEditModal(client); }} className="p-1.5 text-gray-400 hover:text-[#112240] hover:bg-gray-100 rounded-md transition-colors" title="Editar"><Pencil className="h-3.5 w-3.5" /></button>
-                            <button onClick={(e) => { e.stopPropagation(); handleDelete(client); }} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors z-10" title="Excluir"><Trash2 className="h-3.5 w-3.5" /></button>
+                        <div className="border-t border-gray-100 pt-3 flex justify-between items-center mt-auto">
+                            <div className="flex gap-2">
+                                {client.telefone && (
+                                    <>
+                                        <button onClick={(e) => handleWhatsApp(client, e)} className="p-1.5 text-green-600 bg-green-50 hover:bg-green-100 border border-green-200 rounded-md transition-colors" title="WhatsApp"><MessageCircle className="h-3.5 w-3.5" /></button>
+                                        <button onClick={(e) => handle3CX(client, e)} className="p-1.5 text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-md transition-colors" title="Ligar 3CX"><Phone className="h-3.5 w-3.5" /></button>
+                                    </>
+                                )}
+                                {client.email && <button onClick={(e) => handleEmail(client, e)} className="p-1.5 text-slate-600 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-md transition-colors" title="Email"><Mail className="h-3.5 w-3.5" /></button>}
+                            </div>
+                            <div className="flex gap-1">
+                                <button onClick={(e) => { e.stopPropagation(); openEditModal(client); }} className="p-1.5 text-gray-400 hover:text-[#112240] hover:bg-gray-100 rounded-md transition-colors" title="Editar"><Pencil className="h-3.5 w-3.5" /></button>
+                                <button onClick={(e) => { e.stopPropagation(); handleDelete(client); }} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors z-10" title="Excluir"><Trash2 className="h-3.5 w-3.5" /></button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            ))}
-        </div>
+                ))}
+            </div>
+        )}
       </div>
 
       <NewClientModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSave={handleSave} clientToEdit={clientToEdit} />
