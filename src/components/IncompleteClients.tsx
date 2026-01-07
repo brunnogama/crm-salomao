@@ -156,10 +156,10 @@ export function IncompleteClients() {
   )
 
   return (
-    <div className="space-y-6">
+    <div className="h-full flex flex-col gap-4">
       
       {/* HEADER + FERRAMENTAS */}
-      <div className="flex flex-col gap-4">
+      <div className="flex-shrink-0 flex flex-col gap-4">
         
         <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 bg-white p-2 rounded-xl border border-gray-100 shadow-sm">
             
@@ -270,67 +270,69 @@ export function IncompleteClients() {
         </div>
       </div>
 
-      {/* LISTAGEM */}
-      {processedClients.length === 0 ? (
-        <div className="flex flex-col items-center justify-center h-64 text-gray-400 bg-white rounded-xl border border-dashed border-gray-300">
-            <CheckCircle className="h-10 w-10 mb-2 text-green-500" />
-            <p className="font-medium">
-                {searchTerm || filterSocio || filterBrinde ? 'Nenhuma pendência encontrada com estes filtros.' : 'Tudo certo! Nenhum cadastro pendente.'}
-            </p>
-            {(searchTerm || filterSocio || filterBrinde) && (
-                <button 
-                    onClick={() => {setSearchTerm(''); setFilterBrinde(''); setFilterSocio('');}}
-                    className="mt-2 text-blue-600 text-sm font-bold hover:underline"
-                >
-                    Limpar filtros
-                </button>
-            )}
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 gap-4">
-            {processedClients.map((client: any) => {
-                const missing = REQUIRED_FIELDS
-                    .filter(f => (!client[f.key] && !(client.ignored_fields || []).includes(f.label)))
-                    .map(f => f.label)
+      {/* LISTAGEM COM SCROLL */}
+      <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 pb-4">
+        {processedClients.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 text-gray-400 bg-white rounded-xl border border-dashed border-gray-300">
+              <CheckCircle className="h-10 w-10 mb-2 text-green-500" />
+              <p className="font-medium">
+                  {searchTerm || filterSocio || filterBrinde ? 'Nenhuma pendência encontrada com estes filtros.' : 'Tudo certo! Nenhum cadastro pendente.'}
+              </p>
+              {(searchTerm || filterSocio || filterBrinde) && (
+                  <button 
+                      onClick={() => {setSearchTerm(''); setFilterBrinde(''); setFilterSocio('');}}
+                      className="mt-2 text-blue-600 text-sm font-bold hover:underline"
+                  >
+                      Limpar filtros
+                  </button>
+              )}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-4">
+              {processedClients.map((client: any) => {
+                  const missing = REQUIRED_FIELDS
+                      .filter(f => (!client[f.key] && !(client.ignored_fields || []).includes(f.label)))
+                      .map(f => f.label)
 
-                return (
-                    <div key={client.id} className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow flex flex-col md:flex-row md:items-center justify-between gap-4 group border-l-4 border-l-red-400">
-                        <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                                <h3 className="font-bold text-[#112240] text-lg">{client.nome || 'Sem Nome'}</h3>
-                                {client.empresa && <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{client.empresa}</span>}
-                            </div>
-                            <div className="flex flex-wrap gap-2 mt-2">
-                                {missing.map(field => (
-                                    <span key={field} className="text-[10px] font-bold uppercase tracking-wider text-red-600 bg-red-50 px-2 py-1 rounded border border-red-100">
-                                        Falta: {field}
-                                    </span>
-                                ))}
-                            </div>
-                        </div>
+                  return (
+                      <div key={client.id} className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow flex flex-col md:flex-row md:items-center justify-between gap-4 group border-l-4 border-l-red-400">
+                          <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                  <h3 className="font-bold text-[#112240] text-lg">{client.nome || 'Sem Nome'}</h3>
+                                  {client.empresa && <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{client.empresa}</span>}
+                              </div>
+                              <div className="flex flex-wrap gap-2 mt-2">
+                                  {missing.map(field => (
+                                      <span key={field} className="text-[10px] font-bold uppercase tracking-wider text-red-600 bg-red-50 px-2 py-1 rounded border border-red-100">
+                                          Falta: {field}
+                                      </span>
+                                  ))}
+                              </div>
+                          </div>
 
-                        <div className="flex items-center gap-3 pt-4 md:pt-0 border-t md:border-t-0 border-gray-100">
-                            <button 
-                                onClick={() => handleIgnore(client)}
-                                className="px-3 py-2 text-xs font-bold text-gray-500 hover:bg-gray-50 rounded-lg flex items-center gap-2 transition-colors"
-                                title="Ignorar pendências deste cliente"
-                            >
-                                <XCircle className="h-4 w-4" />
-                                <span className="hidden md:inline">Ignorar</span>
-                            </button>
-                            <button 
-                                onClick={() => handleEdit(client)}
-                                className="px-4 py-2 bg-[#112240] text-white text-sm font-bold rounded-lg hover:bg-[#1a3a6c] flex items-center gap-2 shadow-sm transition-all"
-                            >
-                                <Pencil className="h-4 w-4" />
-                                Resolver
-                            </button>
-                        </div>
-                    </div>
-                )
-            })}
-        </div>
-      )}
+                          <div className="flex items-center gap-3 pt-4 md:pt-0 border-t md:border-t-0 border-gray-100">
+                              <button 
+                                  onClick={() => handleIgnore(client)}
+                                  className="px-3 py-2 text-xs font-bold text-gray-500 hover:bg-gray-50 rounded-lg flex items-center gap-2 transition-colors"
+                                  title="Ignorar pendências deste cliente"
+                              >
+                                  <XCircle className="h-4 w-4" />
+                                  <span className="hidden md:inline">Ignorar</span>
+                              </button>
+                              <button 
+                                  onClick={() => handleEdit(client)}
+                                  className="px-4 py-2 bg-[#112240] text-white text-sm font-bold rounded-lg hover:bg-[#1a3a6c] flex items-center gap-2 shadow-sm transition-all"
+                              >
+                                  <Pencil className="h-4 w-4" />
+                                  Resolver
+                              </button>
+                          </div>
+                      </div>
+                  )
+              })}
+          </div>
+        )}
+      </div>
 
       <NewClientModal
         isOpen={isModalOpen}
