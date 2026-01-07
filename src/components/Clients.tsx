@@ -14,7 +14,7 @@ import { logAction } from '../lib/logger'
 
 interface ClientsProps {
   initialFilters?: { socio?: string; brinde?: string };
-  tableName?: string; // Aceita 'clientes' ou 'magistrados'
+  tableName?: string; // 'clientes' ou 'magistrados'
 }
 
 export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps) {
@@ -26,6 +26,7 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
   
   const fileInputRef = useRef<HTMLInputElement>(null)
   
+  // Filtros e Busca
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [filterSocio, setFilterSocio] = useState<string>('')
@@ -114,31 +115,38 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
     return result
   }, [clients, searchTerm, filterSocio, filterBrinde, sortOrder])
 
-  // --- DELETE COM DEBUG ---
+  // --- NOVA ESTRATÉGIA DE DELETE ---
   const handleDelete = async (client: ClientData) => {
-    if (!client.id) return alert("Erro: Registro sem ID.")
+    if (!client.id) return alert("Erro: ID do registro não encontrado.")
 
-    if (confirm(`Excluir permanentemente: ${client.nome}?`)) {
+    if (confirm(`Tem certeza que deseja excluir permanentemente: ${client.nome}?`)) {
         try {
-            console.log(`Deletando ID ${client.id} de ${tableName}...`)
+            console.log(`Iniciando exclusão manual para ID ${client.id}...`)
+
+            // 1. Tenta limpar tarefas vinculadas primeiro (se houver coluna client_id)
+            // O try/catch interno evita que o erro pare o processo se a coluna não existir
+            try {
+               await supabase.from('tasks').delete().eq('client_id', client.id);
+            } catch (e) { console.warn("Aviso: Não foi possível limpar tarefas vinculadas.", e) }
+
+            // 2. Agora tenta excluir o cliente
             const { error } = await supabase.from(tableName).delete().eq('id', client.id)
             
             if (error) {
                 console.error("Erro Supabase:", error)
-                throw error
+                throw new Error(error.message) // Lança para o catch externo
             }
 
+            // 3. Sucesso na interface
             setClients(current => current.filter(c => c.id !== client.id))
             await logAction('EXCLUIR', tableName.toUpperCase(), `Excluiu: ${client.nome}`)
-            console.log("Sucesso!")
             
         } catch (error: any) {
-            alert(`Erro ao excluir: ${error.message}`)
+            alert(`Erro ao excluir: ${error.message}\nVerifique se o usuário tem permissão ou se existem outros vínculos.`)
         }
     }
   }
 
-  // --- IMPORT ---
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -262,6 +270,7 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
     }
   }
 
+  // Helpers
   const handleWhatsApp = (client: ClientData, e?: React.MouseEvent) => {
     if(e) { e.preventDefault(); e.stopPropagation(); }
     const cleanPhone = (client.telefone || '').replace(/\D/g, '')
@@ -324,20 +333,24 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
                     <span className="font-bold text-[#112240]">{processedClients.length}</span> registros
                 </p>
             </div>
+            
             <div className="flex flex-wrap items-center gap-2">
                 <div className="flex items-center gap-1 text-gray-400 mr-1 hidden sm:flex"><Filter className="h-4 w-4" /></div>
+
                 <div className="relative">
                     <select value={filterSocio} onChange={(e) => setFilterSocio(e.target.value)} className={`appearance-none pl-3 pr-8 py-2 rounded-lg text-xs font-bold border focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors cursor-pointer ${filterSocio ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'}`}>
                         <option value="">Todos os Sócios</option>
                         {availableSocios.map(s => <option key={s} value={s}>{s}</option>)}
                     </select>
                 </div>
+
                 <div className="relative">
                     <select value={filterBrinde} onChange={(e) => setFilterBrinde(e.target.value)} className={`appearance-none pl-3 pr-8 py-2 rounded-lg text-xs font-bold border focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors cursor-pointer ${filterBrinde ? 'bg-purple-50 text-purple-700 border-purple-200' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'}`}>
                         <option value="">Todos os Brindes</option>
                         {availableBrindes.map(b => <option key={b} value={b}>{b}</option>)}
                     </select>
                 </div>
+
                 <Menu as="div" className="relative">
                     <Menu.Button className="flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs font-bold text-gray-600 hover:text-[#112240] hover:bg-gray-100 transition-colors">
                         <ArrowUpDown className="h-3.5 w-3.5" /><span className="hidden sm:inline">{sortOrder === 'newest' ? 'Recentes' : sortOrder === 'oldest' ? 'Antigos' : 'Nome'}</span>
@@ -358,10 +371,13 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
                         </Menu.Items>
                     </Transition>
                 </Menu>
+
                 <div className="h-6 w-px bg-gray-200 mx-1"></div>
+
                 <button onClick={() => { setIsSearchOpen(!isSearchOpen); if(isSearchOpen) setSearchTerm(''); }} className={`p-2 rounded-lg transition-colors ${isSearchOpen ? 'bg-blue-100 text-blue-600' : 'bg-gray-50 text-gray-400 hover:text-[#112240] hover:bg-gray-100 border border-gray-200'}`} title="Buscar">
                     {isSearchOpen ? <X className="h-5 w-5" /> : <Search className="h-5 w-5" />}
                 </button>
+                
                 <div className="flex items-center gap-1">
                     <button onClick={triggerFileInput} disabled={importing} className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200 transition-colors" title="Importar Excel">
                         {importing ? <Loader2 className="h-5 w-5 animate-spin" /> : <Upload className="h-5 w-5" />}
@@ -369,6 +385,7 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
                     <button onClick={handleExportExcel} className="p-2 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 border border-green-200 transition-colors" title="Exportar Excel"><FileSpreadsheet className="h-5 w-5" /></button>
                     <button onClick={handlePrintList} className="p-2 rounded-lg bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200 transition-colors" title="Imprimir Lista"><Printer className="h-5 w-5" /></button>
                 </div>
+
                 <button onClick={() => { setClientToEdit(null); setIsModalOpen(true); }} className="flex items-center gap-2 bg-[#112240] hover:bg-[#1a3a6c] text-white px-4 py-2 rounded-lg font-bold text-xs sm:text-sm transition-colors shadow-sm whitespace-nowrap">
                     <Plus className="h-4 w-4" /><span className="hidden sm:inline">Novo Registro</span>
                 </button>
