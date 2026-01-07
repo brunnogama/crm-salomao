@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { AlertTriangle, CheckCircle, Pencil, XCircle } from 'lucide-react'
+import { CheckCircle, Pencil, XCircle } from 'lucide-react' // AlertTriangle removido
 import { NewClientModal, ClientData } from './NewClientModal'
 
 export function IncompleteClients() {
@@ -9,7 +9,7 @@ export function IncompleteClients() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [clientToEdit, setClientToEdit] = useState<ClientData | null>(null)
 
-  // Campos obrigatórios (Mesma lógica da Sidebar)
+  // Campos obrigatórios
   const REQUIRED_FIELDS = [
     { key: 'nome', label: 'Nome' },
     { key: 'empresa', label: 'Empresa' },
@@ -58,19 +58,17 @@ export function IncompleteClients() {
   }
 
   const handleSave = async (updatedClient: ClientData) => {
-    // A lógica de update real deve estar conectada ao Modal ou aqui
-    // Como o Modal geralmente chama uma prop onSave que faz o update no banco:
     try {
         const { error } = await supabase
             .from('clientes')
             .update(updatedClient)
-            .eq('email', clientToEdit?.email || updatedClient.email) // Fallback seguro
+            .eq('email', clientToEdit?.email || updatedClient.email)
         
         if (error) throw error
         
         setIsModalOpen(false)
         setClientToEdit(null)
-        fetchIncompleteClients() // Recarrega a lista
+        fetchIncompleteClients()
     } catch (err) {
         console.error("Erro ao atualizar:", err)
     }
@@ -79,7 +77,6 @@ export function IncompleteClients() {
   const handleIgnore = async (client: any) => {
     if(!confirm("Deseja marcar este cadastro como 'Completo' ignorando os campos vazios atuais?")) return;
 
-    // Identificar quais campos estão vazios atualmente para ignorá-los
     const missingFields = REQUIRED_FIELDS
         .filter(field => !client[field.key])
         .map(field => field.label);
@@ -103,8 +100,6 @@ export function IncompleteClients() {
 
   return (
     <>
-      {/* REMOVIDO: O Header duplicado (Bloco vermelho com título) foi retirado daqui */}
-      
       {clients.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-64 text-gray-400 bg-white rounded-xl border border-dashed border-gray-300">
             <CheckCircle className="h-10 w-10 mb-2 text-green-500" />
@@ -113,7 +108,6 @@ export function IncompleteClients() {
       ) : (
         <div className="grid grid-cols-1 gap-4">
             {clients.map((client: any) => {
-                // Calcular pendências para exibir no card
                 const missing = REQUIRED_FIELDS
                     .filter(f => (!client[f.key] && !(client.ignored_fields || []).includes(f.label)))
                     .map(f => f.label)
@@ -157,7 +151,6 @@ export function IncompleteClients() {
         </div>
       )}
 
-      {/* Modal para Edição Rápida */}
       <NewClientModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
