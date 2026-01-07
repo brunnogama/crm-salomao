@@ -88,16 +88,14 @@ export function Sidebar({ activePage, onNavigate, isOpen, onClose }: SidebarProp
       <aside className={`fixed md:static inset-y-0 left-0 z-50 h-[100dvh] w-64 bg-[#112240] text-gray-300 flex flex-col font-sans border-r border-gray-800 flex-shrink-0 transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 shadow-2xl md:shadow-none`}>
       
         {/* 1. HEADER LOGO */}
-        <div className="h-24 flex items-center justify-center px-6 bg-[#112240] flex-shrink-0 relative">
-          <div className="flex flex-col items-center w-full">
-            <img src="/logo-branca.png" alt="Salomão" className="h-10 w-auto object-contain block mb-2" />
-            <div className="flex items-center justify-center gap-2 w-full opacity-80">
-                <div className="h-[1px] w-6 bg-blue-500 rounded-full"></div>
-                <span className="text-[9px] text-gray-400 font-bold tracking-[0.2em] uppercase leading-none whitespace-nowrap">Módulo CRM</span>
-                <div className="h-[1px] w-6 bg-blue-500 rounded-full"></div>
+        <div className="flex flex-col flex-shrink-0 relative bg-[#112240] pt-6 pb-4 px-6">
+          <div className="flex flex-col items-center w-full gap-4">
+            <img src="/logo-branca.png" alt="Salomão" className="h-11 w-auto object-contain block" />
+            <div className="bg-blue-950/30 border border-blue-800/30 rounded-lg px-4 py-2 w-full">
+                <span className="text-[10px] text-blue-300 font-bold tracking-[0.25em] uppercase leading-none whitespace-nowrap block text-center">Módulo CRM</span>
             </div>
           </div>
-          <button onClick={onClose} className="md:hidden absolute right-4 top-1/2 -translate-y-1/2 p-1 hover:bg-white/10 rounded text-gray-400 transition-colors">
+          <button onClick={onClose} className="md:hidden absolute right-4 top-6 p-1 hover:bg-white/10 rounded text-gray-400 transition-colors">
             <X className="h-6 w-6" />
           </button>
         </div>
