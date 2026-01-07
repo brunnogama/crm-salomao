@@ -2,11 +2,13 @@ import { useEffect, useState, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
 import { 
   MoreHorizontal, Plus, Search, X, 
-  MapPin, Mail, Phone, Filter, ArrowUpDown, Check
+  MapPin, Mail, Phone, Filter, ArrowUpDown, Check, 
+  MessageCircle, Trash2, Pencil, Briefcase, User, Gift, Info
 } from 'lucide-react'
 import { Menu, Transition } from '@headlessui/react'
 import { Fragment } from 'react'
 import { NewClientModal, ClientData } from './NewClientModal'
+import { logAction } from '../lib/logger'
 
 interface ClientsProps {
   initialFilters?: { socio?: string; brinde?: string };
@@ -36,7 +38,6 @@ export function Clients({ initialFilters }: ClientsProps) {
     const { data, error } = await query
     if (!error && data) {
         setClients(data)
-        // Extrai listas únicas para os filtros
         const socios = Array.from(new Set(data.map(c => c.socio).filter(Boolean))) as string[]
         const brindes = Array.from(new Set(data.map(c => c.tipo_brinde).filter(Boolean))) as string[]
         setAvailableSocios(socios.sort())
@@ -82,7 +83,7 @@ export function Clients({ initialFilters }: ClientsProps) {
   const handleSave = async (client: ClientData) => {
     try {
         if (clientToEdit) {
-            const { error } = await supabase.from('clientes').update(client).eq('email', clientToEdit.email)
+            const { error } = await supabase.from('clientes').update(client).eq('id', clientToEdit.id) // Use ID se possível
             if (error) throw error
         } else {
             const { error } = await supabase.from('clientes').insert([client])
@@ -99,7 +100,7 @@ export function Clients({ initialFilters }: ClientsProps) {
 
   const handleDelete = async (client: ClientData) => {
     if (confirm(`Tem certeza que deseja excluir ${client.nome}?`)) {
-        const { error } = await supabase.from('clientes').delete().eq('email', client.email)
+        const { error } = await supabase.from('clientes').delete().eq('id', client.id) // Use ID
         if (!error) fetchClients()
     }
   }
@@ -114,6 +115,29 @@ export function Clients({ initialFilters }: ClientsProps) {
     setIsModalOpen(true)
   }
 
+  // --- AÇÕES DE CONTATO (RESTAURADAS) ---
+  const handleWhatsApp = (client: ClientData, e?: React.MouseEvent) => {
+    if(e) { e.preventDefault(); e.stopPropagation(); }
+    const cleanPhone = (client.telefone || '').replace(/\D/g, '');
+    if(!cleanPhone) { alert("Telefone não cadastrado."); return; }
+    const message = `Olá Sr(a). ${client.nome}.\n\nSomos do Salomão Advogados...`;
+    const url = `https://wa.me/55${cleanPhone}?text=${encodeURIComponent(message)}`;
+    window.open(url, '_blank');
+  }
+
+  const handle3CX = (client: ClientData, e?: React.MouseEvent) => {
+    if(e) { e.preventDefault(); e.stopPropagation(); }
+    const cleanPhone = (client.telefone || '').replace(/\D/g, '');
+    if(!cleanPhone) { alert("Telefone não cadastrado."); return; }
+    window.location.href = `tel:${cleanPhone}`;
+  }
+
+  const handleEmail = (client: ClientData, e?: React.MouseEvent) => {
+    if(e) { e.preventDefault(); e.stopPropagation(); }
+    if(!client.email) { alert("E-mail não cadastrado."); return; }
+    window.location.href = `mailto:${client.email}`;
+  }
+
   if (loading) return (
     <div className="flex justify-center items-center h-64">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#112240]"></div>
@@ -123,7 +147,7 @@ export function Clients({ initialFilters }: ClientsProps) {
   return (
     <div className="space-y-6">
       
-      {/* HEADER UNIFICADO */}
+      {/* HEADER UNIFICADO (NOVO) */}
       <div className="flex flex-col gap-4">
         
         <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 bg-white p-2 rounded-xl border border-gray-100 shadow-sm">
@@ -138,7 +162,7 @@ export function Clients({ initialFilters }: ClientsProps) {
             {/* Lado Direito: Filtros, Ordenação e Ações */}
             <div className="flex flex-wrap items-center gap-2">
                 
-                {/* Ícone de Filtro (CORRIGE O ERRO DE BUILD AO USAR O COMPONENTE IMPORTADO) */}
+                {/* Ícone Filtro */}
                 <div className="flex items-center gap-1 text-gray-400 mr-1 hidden sm:flex">
                     <Filter className="h-4 w-4" />
                 </div>
@@ -245,71 +269,72 @@ export function Clients({ initialFilters }: ClientsProps) {
 
       </div>
 
-      {/* LISTA DE CARDS */}
+      {/* LISTA DE CARDS (RESTAURADA - DESIGN ORIGINAL) */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {processedClients.map((client) => (
-            <div key={client.id || client.email} className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md transition-shadow group relative animate-fadeIn">
+            <div key={client.id || client.email} onClick={() => openEditModal(client)} className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 hover:shadow-md transition-all relative group cursor-pointer animate-fadeIn flex flex-col justify-between">
                 
-                <div className="flex justify-between items-start mb-3">
-                    <div className="flex items-center gap-3 overflow-hidden">
-                        <div className="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center text-[#112240] font-bold text-sm shrink-0 uppercase">
-                            {client.nome?.substring(0,2) || 'CL'}
+                {/* CABEÇALHO DO CARD */}
+                <div className="flex items-start justify-between mb-2">
+                    <div className="flex gap-3 overflow-hidden">
+                        <div className="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center text-[#112240] font-bold border border-gray-200 flex-shrink-0">
+                            {client.nome?.charAt(0) || '?'}
                         </div>
-                        <div className="min-w-0">
-                            <h3 className="font-bold text-[#112240] truncate" title={client.nome}>{client.nome}</h3>
-                            <p className="text-xs text-gray-500 truncate">{client.cargo} @ {client.empresa}</p>
+                        <div className="overflow-hidden">
+                            <h3 className="text-sm font-bold text-gray-900 truncate" title={client.nome}>{client.nome}</h3>
+                            <p className="text-xs text-gray-500 truncate">{client.empresa}</p>
                         </div>
+                    </div>
+                    <span className={`px-2 py-0.5 text-[10px] font-semibold rounded-full flex-shrink-0 
+                        ${client.tipo_brinde === 'Brinde VIP' ? 'bg-purple-100 text-purple-800' : 'bg-green-100 text-green-800'}`}>
+                        {client.tipo_brinde}
+                    </span>
+                </div>
+                
+                {/* CORPO DO CARD (INFORMAÇÕES) */}
+                <div className="bg-gray-50 rounded-md p-2 mb-2 text-xs space-y-1">
+                    <div className="flex justify-between items-center">
+                        <span className="text-gray-400">Sócio:</span>
+                        <span className="font-bold text-[#112240]">{client.socio || '-'}</span>
                     </div>
                     
-                    <Menu as="div" className="relative ml-2">
-                        <Menu.Button className="p-1 rounded-md text-gray-400 hover:text-[#112240] hover:bg-gray-50">
-                            <MoreHorizontal className="h-5 w-5" />
-                        </Menu.Button>
-                        <Transition as={Fragment} enter="transition ease-out duration-100" enterFrom="transform opacity-0 scale-95" enterTo="transform opacity-100 scale-100" leave="transition ease-in duration-75" leaveFrom="transform opacity-100 scale-100" leaveTo="transform opacity-0 scale-95">
-                            <Menu.Items className="absolute right-0 mt-1 w-32 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-10">
-                                <div className="py-1">
-                                    <Menu.Item>{({ active }) => (<button onClick={() => openEditModal(client)} className={`${active ? 'bg-gray-50' : ''} group flex w-full items-center px-4 py-2 text-sm text-gray-700`}>Editar</button>)}</Menu.Item>
-                                    <Menu.Item>{({ active }) => (<button onClick={() => handleDelete(client)} className={`${active ? 'bg-red-50 text-red-600' : ''} group flex w-full items-center px-4 py-2 text-sm text-red-600`}>Excluir</button>)}</Menu.Item>
-                                </div>
-                            </Menu.Items>
-                        </Transition>
-                    </Menu>
-                </div>
-
-                <div className="space-y-2 mb-4">
-                    <div className="flex flex-wrap gap-2">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium uppercase tracking-wide
-                            ${client.tipo_brinde === 'Brinde VIP' ? 'bg-purple-100 text-purple-700' : 
-                              client.tipo_brinde === 'Não Recebe' ? 'bg-gray-100 text-gray-500' : 'bg-blue-50 text-blue-700'}`}>
-                            {client.tipo_brinde || 'Brinde Médio'}
+                    <div className="flex justify-between items-start gap-2">
+                        <span className="text-gray-400 whitespace-nowrap">End:</span>
+                        <span className="text-gray-600 font-medium truncate text-right" title={`${client.endereco}, ${client.numero || ''} - ${client.bairro || ''}`}>
+                            {client.endereco ? `${client.endereco}, ${client.numero || ''}` : '-'}
                         </span>
-                        {client.socio && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-orange-50 text-orange-700 border border-orange-100 uppercase tracking-wide">
-                                Sócio: {client.socio}
-                            </span>
-                        )}
+                    </div>
+
+                    <div className="flex justify-between items-center">
+                        <span className="text-gray-400">Local:</span>
+                        <span className="text-gray-600 font-medium">
+                            {client.cidade || client.estado ? `${client.cidade || ''}/${client.estado || ''}` : '-'}
+                        </span>
+                    </div>
+
+                    <div className="flex justify-between items-center">
+                        <span className="text-gray-400">Tel:</span>
+                        <span className="text-gray-600 font-medium">{client.telefone || '-'}</span>
                     </div>
                 </div>
 
-                <div className="space-y-1.5 pt-3 border-t border-gray-100 text-xs text-gray-600">
-                    {client.cidade && (
-                        <div className="flex items-center gap-2">
-                            <MapPin className="h-3.5 w-3.5 text-gray-400" />
-                            <span className="truncate">{client.cidade}/{client.estado}</span>
-                        </div>
-                    )}
-                    {client.email && (
-                        <div className="flex items-center gap-2">
-                            <Mail className="h-3.5 w-3.5 text-gray-400" />
-                            <span className="truncate">{client.email}</span>
-                        </div>
-                    )}
-                    {client.telefone && (
-                        <div className="flex items-center gap-2">
-                            <Phone className="h-3.5 w-3.5 text-gray-400" />
-                            <span>{client.telefone}</span>
-                        </div>
-                    )}
+                {/* RODAPÉ DO CARD (AÇÕES) */}
+                <div className="border-t border-gray-100 pt-2 flex justify-between items-center transition-opacity">
+                    <div className="flex gap-2">
+                        {client.telefone && (
+                            <>
+                                <button onClick={(e) => handleWhatsApp(client, e)} className="p-1.5 text-green-600 bg-green-50 hover:bg-green-100 rounded-md transition-colors" title="WhatsApp"><MessageCircle className="h-4 w-4" /></button>
+                                <button onClick={(e) => handle3CX(client, e)} className="p-1.5 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-md transition-colors" title="Ligar"><Phone className="h-4 w-4" /></button>
+                            </>
+                        )}
+                        {client.email && (
+                            <button onClick={(e) => handleEmail(client, e)} className="p-1.5 text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-md transition-colors" title="Email"><Mail className="h-4 w-4" /></button>
+                        )}
+                    </div>
+                    <div className="flex gap-1">
+                        <button onClick={(e) => { e.stopPropagation(); openEditModal(client); }} className="p-1.5 text-gray-500 hover:text-[#112240] rounded-md transition-colors" title="Editar"><Pencil className="h-4 w-4" /></button>
+                        <button onClick={(e) => { e.stopPropagation(); handleDelete(client); }} className="p-1.5 text-gray-400 hover:text-red-600 rounded-md transition-colors" title="Excluir"><Trash2 className="h-4 w-4" /></button>
+                    </div>
                 </div>
 
             </div>
