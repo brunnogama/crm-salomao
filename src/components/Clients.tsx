@@ -26,7 +26,6 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
   
   const fileInputRef = useRef<HTMLInputElement>(null)
   
-  // Filtros e Busca
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [filterSocio, setFilterSocio] = useState<string>('')
@@ -115,7 +114,7 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
     return result
   }, [clients, searchTerm, filterSocio, filterBrinde, sortOrder])
 
-  // --- NOVA ESTRATÉGIA DE DELETE ---
+  // --- DELETE MANUAL ---
   const handleDelete = async (client: ClientData) => {
     if (!client.id) return alert("Erro: Registro sem ID.")
 
@@ -165,9 +164,9 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
 
       if (jsonData.length === 0) throw new Error('Arquivo vazio.')
 
-      // Correção: usar getSession ao invés de getUser
-      const { data: { session } } = await supabase.auth.getSession()
-      const userEmail = session?.user?.email || 'Importação'
+      // Correção de Tipo: Força any para evitar erro de build
+      const { data: { user } } = await (supabase.auth as any).getUser()
+      const userEmail = user?.email || 'Importação'
 
       const normalizeKeys = (obj: any) => {
           const newObj: any = {};
@@ -224,9 +223,9 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
   }
 
   const handleSave = async (client: ClientData) => {
-    // Correção: usar getSession ao invés de getUser
-    const { data: { session } } = await supabase.auth.getSession()
-    const userEmail = session?.user?.email || 'Sistema'
+    // Correção de Tipo: Força any
+    const { data: { user } } = await (supabase.auth as any).getUser()
+    const userEmail = user?.email || 'Sistema'
     
     const dbData: any = {
         nome: client.nome,
@@ -361,7 +360,7 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
                             <div className="p-1">
                                 {[{ id: 'newest', label: 'Mais Recentes' }, { id: 'oldest', label: 'Mais Antigos' }, { id: 'az', label: 'Nome (A-Z)' }, { id: 'za', label: 'Nome (Z-A)' }].map((opt) => (
                                     <Menu.Item key={opt.id}>
-                                        {({ active }) => (
+                                        {({ active }: { active: boolean }) => (
                                             <button onClick={() => setSortOrder(opt.id as any)} className={`${active ? 'bg-gray-50' : ''} group flex w-full items-center justify-between px-3 py-2 text-xs text-gray-700 rounded-md`}>
                                                 {opt.label}{sortOrder === opt.id && <Check className="h-3 w-3 text-blue-600" />}
                                             </button>
