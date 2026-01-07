@@ -194,7 +194,7 @@ export function Settings() {
     }
   }
 
-  // --- FUNÇÃO RESETAR SISTEMA (CORRIGIDA) ---
+  // --- FUNÇÃO RESETAR SISTEMA (CORRIGIDA PARA UUID) ---
   const handleSystemReset = async () => {
     if (!confirm('⚠️ PERIGO: Isso apagará TODOS os dados (Clientes, Magistrados e Tarefas). Tem certeza absoluta?')) return;
     
@@ -212,42 +212,63 @@ export function Settings() {
 
         // PASSO 1: Limpar TODAS as tarefas (remove dependências FK)
         setStatus({ type: null, message: '1/3: Removendo tarefas do Kanban...' })
-        const { error: errTasks } = await supabase
-            .from('tasks')
-            .delete()
-            .neq('id', 0) // Trick: deleta tudo onde id != 0
         
-        if (errTasks) {
-            console.error('Erro ao limpar tasks:', errTasks)
-            throw new Error(`Falha ao limpar tarefas: ${errTasks.message}`)
+        // Primeiro, buscar todos os IDs para deletar
+        const { data: allTasks } = await supabase.from('tasks').select('id')
+        
+        if (allTasks && allTasks.length > 0) {
+            // Deletar cada task individualmente ou em lote
+            const { error: errTasks } = await supabase
+                .from('tasks')
+                .delete()
+                .in('id', allTasks.map(t => t.id))
+            
+            if (errTasks) {
+                console.error('Erro ao limpar tasks:', errTasks)
+                throw new Error(`Falha ao limpar tarefas: ${errTasks.message}`)
+            }
+            console.log(`✅ ${allTasks.length} tarefas removidas`)
+        } else {
+            console.log('✅ Nenhuma tarefa para remover')
         }
-        console.log('✅ Tarefas removidas')
 
         // PASSO 2: Limpar Magistrados
         setStatus({ type: null, message: '2/3: Removendo magistrados...' })
-        const { error: errMag } = await supabase
-            .from('magistrados')
-            .delete()
-            .neq('id', 0)
+        const { data: allMag } = await supabase.from('magistrados').select('id')
         
-        if (errMag) {
-            console.error('Erro ao limpar magistrados:', errMag)
-            throw new Error(`Falha ao limpar magistrados: ${errMag.message}`)
+        if (allMag && allMag.length > 0) {
+            const { error: errMag } = await supabase
+                .from('magistrados')
+                .delete()
+                .in('id', allMag.map(m => m.id))
+            
+            if (errMag) {
+                console.error('Erro ao limpar magistrados:', errMag)
+                throw new Error(`Falha ao limpar magistrados: ${errMag.message}`)
+            }
+            console.log(`✅ ${allMag.length} magistrados removidos`)
+        } else {
+            console.log('✅ Nenhum magistrado para remover')
         }
-        console.log('✅ Magistrados removidos')
 
         // PASSO 3: Limpar Clientes
         setStatus({ type: null, message: '3/3: Removendo clientes...' })
-        const { error: errClientes } = await supabase
-            .from('clientes')
-            .delete()
-            .neq('id', 0)
+        const { data: allClientes } = await supabase.from('clientes').select('id')
         
-        if (errClientes) {
-            console.error('Erro ao limpar clientes:', errClientes)
-            throw new Error(`Falha ao limpar clientes: ${errClientes.message}`)
+        if (allClientes && allClientes.length > 0) {
+            const { error: errClientes } = await supabase
+                .from('clientes')
+                .delete()
+                .in('id', allClientes.map(c => c.id))
+            
+            if (errClientes) {
+                console.error('Erro ao limpar clientes:', errClientes)
+                throw new Error(`Falha ao limpar clientes: ${errClientes.message}`)
+            }
+            console.log(`✅ ${allClientes.length} clientes removidos`)
+        } else {
+            console.log('✅ Nenhum cliente para remover')
         }
-        console.log('✅ Clientes removidos')
 
         // Sucesso!
         setStatus({ type: 'success', message: '✅ Sistema resetado com sucesso! Todos os dados foram removidos.' })
