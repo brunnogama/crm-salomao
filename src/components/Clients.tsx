@@ -114,34 +114,37 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
     return result
   }, [clients, searchTerm, filterSocio, filterBrinde, sortOrder])
 
-  // --- FUNÇÃO DE DELETAR (Corrigida) ---
+  // --- FUNÇÃO DE DELETAR ---
   const handleDelete = async (client: ClientData) => {
-    if (!client.id) return alert("Erro: Registro sem ID.")
+    if (!client.id) return window.alert("Erro: Registo sem ID. Atualize a página.")
 
-    if (confirm(`Tem certeza que deseja excluir permanentemente: ${client.nome}?`)) {
+    if (window.confirm(`Tem a certeza que deseja excluir permanentemente: ${client.nome}?`)) {
         try {
             const { error } = await supabase.from(tableName).delete().eq('id', client.id)
             
             if (error) {
-                console.error("Erro Supabase:", error)
-                throw new Error(error.message)
+                // Erro de permissão comum
+                if (error.code === '42501') {
+                    throw new Error("Permissão negada. Verifique o RLS no Supabase.")
+                }
+                throw error
             }
 
             setClients(current => current.filter(c => c.id !== client.id))
             await logAction('EXCLUIR', tableName.toUpperCase(), `Excluiu: ${client.nome}`)
             
         } catch (error: any) {
-            alert(`Falha ao excluir: ${error.message}`)
+            window.alert(`Falha ao excluir: ${error.message}`)
         }
     }
   }
 
-  // --- FUNÇÃO DE IMPORTAR (Corrigida) ---
+  // --- FUNÇÃO DE IMPORTAR ---
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
 
-    if(!confirm(`Importar para: ${tableName.toUpperCase()}?`)) {
+    if(!window.confirm(`Importar ficheiro para a tabela: ${tableName.toUpperCase()}?`)) {
         if (fileInputRef.current) fileInputRef.current.value = ''
         return
     }
@@ -154,12 +157,12 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
       const worksheet = workbook.Sheets[workbook.SheetNames[0]]
       const jsonData = utils.sheet_to_json(worksheet)
 
-      if (jsonData.length === 0) throw new Error('Arquivo vazio')
+      if (jsonData.length === 0) throw new Error('Ficheiro vazio ou ilegível.')
 
       const { data: { user } } = await supabase.auth.getUser()
       const userEmail = user?.email || 'Importação'
 
-      // Normaliza as chaves do Excel
+      // Normaliza as chaves
       const normalizeKeys = (obj: any) => {
           const newObj: any = {};
           Object.keys(obj).forEach(key => {
@@ -196,19 +199,18 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
       const { error } = await supabase.from(tableName).insert(itemsToInsert)
       if (error) throw error
       
-      alert(`${itemsToInsert.length} registros importados com sucesso!`)
+      window.alert(`${itemsToInsert.length} registos importados com sucesso!`)
       await logAction('IMPORTAR', tableName.toUpperCase(), `Importou ${itemsToInsert.length} itens`)
       fetchClients()
 
     } catch (error: any) {
-      alert('Erro na importação: ' + error.message)
+      window.alert('Erro na importação: ' + error.message)
     } finally {
       setImporting(false)
       if (fileInputRef.current) fileInputRef.current.value = ''
     }
   }
 
-  // Gatilho para o input de arquivo oculto
   const triggerFileInput = () => {
       if (fileInputRef.current) {
           fileInputRef.current.value = '';
@@ -259,14 +261,14 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
         setClientToEdit(null)
         fetchClients()
     } catch (error: any) {
-        alert(`Erro ao salvar: ${error.message}`)
+        window.alert(`Erro ao salvar: ${error.message}`)
     }
   }
 
   const handleWhatsApp = (client: ClientData, e?: React.MouseEvent) => {
     if(e) { e.preventDefault(); e.stopPropagation(); }
     const cleanPhone = (client.telefone || '').replace(/\D/g, '')
-    if(!cleanPhone) return alert("Telefone não cadastrado.")
+    if(!cleanPhone) return window.alert("Telefone não cadastrado.")
     const message = `Olá Sr(a). ${client.nome}.\n\nSomos do Salomão Advogados...`
     window.open(`https://wa.me/55${cleanPhone}?text=${encodeURIComponent(message)}`, '_blank')
   }
@@ -274,13 +276,13 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
   const handle3CX = (client: ClientData, e?: React.MouseEvent) => {
     if(e) { e.preventDefault(); e.stopPropagation(); }
     const cleanPhone = (client.telefone || '').replace(/\D/g, '')
-    if(!cleanPhone) return alert("Telefone não cadastrado.")
+    if(!cleanPhone) return window.alert("Telefone não cadastrado.")
     window.location.href = `tel:${cleanPhone}`
   }
 
   const handleEmail = (client: ClientData, e?: React.MouseEvent) => {
     if(e) { e.preventDefault(); e.stopPropagation(); }
-    if(!client.email) return alert("E-mail não cadastrado.")
+    if(!client.email) return window.alert("E-mail não cadastrado.")
     const subject = encodeURIComponent("Atualização Cadastral - Salomão Advogados")
     const body = encodeURIComponent(`Olá Sr(a). ${client.nome}...`)
     window.open(`mailto:${client.email}?subject=${subject}&body=${body}`, '_blank')
@@ -294,7 +296,7 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
   }
 
   const handlePrintList = () => {
-    if (processedClients.length === 0) return alert("Lista vazia.")
+    if (processedClients.length === 0) return window.alert("Lista vazia.")
     const printWindow = window.open('', '', 'width=900,height=800')
     if (!printWindow) return
     const listHtml = processedClients.map(c => `<div><strong>${c.nome}</strong> (${c.empresa})</div>`).join('')
@@ -329,7 +331,7 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
         <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 bg-white p-2 rounded-xl border border-gray-100 shadow-sm">
             <div className="pl-2">
                 <p className="text-sm font-medium text-gray-500">
-                    <span className="font-bold text-[#112240]">{processedClients.length}</span> registros
+                    <span className="font-bold text-[#112240]">{processedClients.length}</span> registos
                 </p>
             </div>
             
@@ -392,7 +394,7 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
                 </div>
 
                 <button onClick={() => { setClientToEdit(null); setIsModalOpen(true); }} className="flex items-center gap-2 bg-[#112240] hover:bg-[#1a3a6c] text-white px-4 py-2 rounded-lg font-bold text-xs sm:text-sm transition-colors shadow-sm whitespace-nowrap">
-                    <Plus className="h-4 w-4" /><span className="hidden sm:inline">Novo Registro</span>
+                    <Plus className="h-4 w-4" /><span className="hidden sm:inline">Novo Registo</span>
                 </button>
             </div>
         </div>
