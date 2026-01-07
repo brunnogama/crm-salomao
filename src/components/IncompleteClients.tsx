@@ -96,7 +96,7 @@ export function IncompleteClients() {
     if (!error) fetchIncompleteClients();
   }
 
-  // --- LÓGICA DE FILTRAGEM (SEARCH ANYTHING) ---
+  // --- LÓGICA DE FILTRAGEM ---
   const filteredClients = clients.filter(client => {
     if (!searchTerm) return true;
     const searchLower = searchTerm.toLowerCase();
@@ -116,25 +116,32 @@ export function IncompleteClients() {
   )
 
   return (
-    <>
-      {/* HEADER E BUSCA */}
-      <div className="flex flex-col gap-4 mb-6">
-        <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold text-[#112240] flex items-center gap-2">
-                Cadastros Incompletos
-                <span className="bg-red-100 text-red-600 text-xs px-2 py-0.5 rounded-full">{filteredClients.length}</span>
-            </h2>
+    <div className="space-y-6">
+      
+      {/* HEADER UNIFICADO (Sem título duplicado) */}
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-2 rounded-xl border border-gray-100 shadow-sm">
             
-            <button 
-                onClick={() => {
-                    setIsSearchOpen(!isSearchOpen);
-                    if(isSearchOpen) setSearchTerm(''); 
-                }}
-                className={`p-2 rounded-lg transition-colors ${isSearchOpen ? 'bg-blue-100 text-blue-600' : 'bg-white text-gray-400 hover:text-[#112240] hover:bg-gray-50 border border-gray-200'}`}
-                title="Buscar na lista"
-            >
-                {isSearchOpen ? <X className="h-5 w-5" /> : <Search className="h-5 w-5" />}
-            </button>
+            {/* Lado Esquerdo: Contador */}
+            <div className="pl-2">
+                <p className="text-sm font-medium text-gray-500">
+                    <span className="font-bold text-red-600">{filteredClients.length}</span> cadastros com pendências
+                </p>
+            </div>
+            
+            {/* Lado Direito: Ações */}
+            <div className="flex items-center gap-2">
+                <button 
+                    onClick={() => {
+                        setIsSearchOpen(!isSearchOpen);
+                        if(isSearchOpen) setSearchTerm(''); 
+                    }}
+                    className={`p-2 rounded-lg transition-colors ${isSearchOpen ? 'bg-blue-100 text-blue-600' : 'bg-gray-50 text-gray-400 hover:text-[#112240] hover:bg-gray-100 border border-gray-200'}`}
+                    title="Buscar na lista"
+                >
+                    {isSearchOpen ? <X className="h-5 w-5" /> : <Search className="h-5 w-5" />}
+                </button>
+            </div>
         </div>
 
         {/* INPUT DESLIZANTE */}
@@ -213,6 +220,6 @@ export function IncompleteClients() {
         onSave={handleSave}
         clientToEdit={clientToEdit}
       />
-    </>
+    </div>
   )
 }
