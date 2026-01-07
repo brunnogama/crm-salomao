@@ -10,6 +10,7 @@ export interface GiftHistoryItem {
 }
 
 export interface ClientData {
+  id?: number; // ADICIONADO: ID opcional para compatibilidade
   nome: string;
   empresa: string;
   cargo: string;
@@ -116,19 +117,16 @@ export function NewClientModal({ isOpen, onClose, onSave, clientToEdit }: NewCli
     }
   }
 
-  // --- NOVA LÓGICA DE ADICIONAR ANO ---
   const addHistoryYear = () => {
     const yearInput = window.prompt("Digite o ano que deseja adicionar (ex: 2026):");
     
-    if (!yearInput) return; // Usuário cancelou
+    if (!yearInput) return;
 
-    // Validação simples de 4 dígitos
     if (!/^\d{4}$/.test(yearInput)) {
         alert("Por favor, digite um ano válido (4 dígitos).");
         return;
     }
 
-    // Verificar se já existe
     const exists = formData.historico_brindes?.some(h => h.ano === yearInput);
     if (exists) {
         alert("Este ano já existe no histórico.");
@@ -140,7 +138,7 @@ export function NewClientModal({ isOpen, onClose, onSave, clientToEdit }: NewCli
         historico_brindes: [
             { ano: yearInput, tipo: '', obs: '' }, 
             ...(prev.historico_brindes || [])
-        ].sort((a, b) => Number(b.ano) - Number(a.ano)) // Ordena decrescente
+        ].sort((a, b) => Number(b.ano) - Number(a.ano))
     }));
   }
 
@@ -258,7 +256,7 @@ export function NewClientModal({ isOpen, onClose, onSave, clientToEdit }: NewCli
                         <div className="space-y-4">
                             <div className="flex justify-between items-center mb-4">
                                 <p className="text-sm text-gray-500">Registro anual de presentes enviados.</p>
-                                <button onClick={addHistoryYear} className="text-xs font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1">+ Adicionar Ano</button>
+                                <button onClick={addHistoryYear} className="text-xs font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1">+ Adicionar Ano Futuro</button>
                             </div>
                             <div className="space-y-3">
                                 {(formData.historico_brindes || []).map((item, idx) => (
@@ -270,7 +268,6 @@ export function NewClientModal({ isOpen, onClose, onSave, clientToEdit }: NewCli
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                             <div>
                                                 <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Tipo de Brinde</label>
-                                                {/* CAMPO ALTERADO PARA SELECT */}
                                                 <select 
                                                     value={item.tipo} 
                                                     onChange={(e) => updateHistoryItem(idx, 'tipo', e.target.value)}

@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { 
-  MoreHorizontal, Plus, Search, X, Filter, 
-  MapPin, Building, Mail, Phone, Gift 
+  MoreHorizontal, Plus, Search, X, 
+  MapPin, Mail, Phone 
 } from 'lucide-react'
 import { Menu, Transition } from '@headlessui/react'
 import { Fragment } from 'react'
@@ -26,7 +26,6 @@ export function Clients({ initialFilters }: ClientsProps) {
     setLoading(true)
     let query = supabase.from('clientes').select('*').order('created_at', { ascending: false })
     
-    // Aplica filtros vindos do Dashboard (se houver)
     if (initialFilters?.socio) query = query.eq('socio', initialFilters.socio)
     if (initialFilters?.brinde) query = query.eq('tipo_brinde', initialFilters.brinde)
 
@@ -44,14 +43,12 @@ export function Clients({ initialFilters }: ClientsProps) {
   const handleSave = async (client: ClientData) => {
     try {
         if (clientToEdit) {
-            // Edição
             const { error } = await supabase
                 .from('clientes')
                 .update(client)
-                .eq('email', clientToEdit.email) // Usando email como chave por enquanto (ideal seria ID)
+                .eq('email', clientToEdit.email)
             if (error) throw error
         } else {
-            // Criação
             const { error } = await supabase.from('clientes').insert([client])
             if (error) throw error
         }
@@ -81,7 +78,7 @@ export function Clients({ initialFilters }: ClientsProps) {
     setIsModalOpen(true)
   }
 
-  // --- LÓGICA DE FILTRAGEM (SEARCH ANYTHING) ---
+  // --- LÓGICA DE FILTRAGEM ---
   const filteredClients = clients.filter(client => {
     if (!searchTerm) return true;
     const searchLower = searchTerm.toLowerCase();
@@ -118,11 +115,10 @@ export function Clients({ initialFilters }: ClientsProps) {
             </div>
             
             <div className="flex items-center gap-2">
-                {/* Botão de Busca */}
                 <button 
                     onClick={() => {
                         setIsSearchOpen(!isSearchOpen);
-                        if(isSearchOpen) setSearchTerm(''); // Limpa ao fechar
+                        if(isSearchOpen) setSearchTerm(''); 
                     }}
                     className={`p-2 rounded-lg transition-colors ${isSearchOpen ? 'bg-blue-100 text-blue-600' : 'bg-white text-gray-400 hover:text-[#112240] hover:bg-gray-50 border border-gray-200'}`}
                     title="Buscar na lista"
@@ -159,9 +155,9 @@ export function Clients({ initialFilters }: ClientsProps) {
       {/* LISTA DE CARDS */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {filteredClients.map((client) => (
+            // AQUI ESTAVA O ERRO: key={client.id} - agora é seguro pois definimos id opcional
             <div key={client.id || client.email} className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md transition-shadow group relative">
                 
-                {/* Cabeçalho do Card */}
                 <div className="flex justify-between items-start mb-3">
                     <div className="flex items-center gap-3 overflow-hidden">
                         <div className="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center text-[#112240] font-bold text-sm shrink-0 uppercase">
@@ -173,7 +169,6 @@ export function Clients({ initialFilters }: ClientsProps) {
                         </div>
                     </div>
                     
-                    {/* Menu de Ações */}
                     <Menu as="div" className="relative ml-2">
                         <Menu.Button className="p-1 rounded-md text-gray-400 hover:text-[#112240] hover:bg-gray-50">
                             <MoreHorizontal className="h-5 w-5" />
@@ -189,7 +184,6 @@ export function Clients({ initialFilters }: ClientsProps) {
                     </Menu>
                 </div>
 
-                {/* Tags e Info */}
                 <div className="space-y-2 mb-4">
                     <div className="flex flex-wrap gap-2">
                         <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium uppercase tracking-wide
@@ -205,7 +199,6 @@ export function Clients({ initialFilters }: ClientsProps) {
                     </div>
                 </div>
 
-                {/* Detalhes de Contato */}
                 <div className="space-y-1.5 pt-3 border-t border-gray-100 text-xs text-gray-600">
                     {client.cidade && (
                         <div className="flex items-center gap-2">
@@ -231,7 +224,6 @@ export function Clients({ initialFilters }: ClientsProps) {
         ))}
       </div>
 
-      {/* Empty State da Busca */}
       {filteredClients.length === 0 && (
           <div className="text-center py-12 text-gray-400">
               <Search className="h-12 w-12 mx-auto mb-3 opacity-20" />
