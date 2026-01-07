@@ -22,12 +22,10 @@ export function Clients({ initialFilters }: ClientsProps) {
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   
-  // Filtros Locais
   const [filterSocio, setFilterSocio] = useState<string>('')
   const [filterBrinde, setFilterBrinde] = useState<string>('')
   const [sortOrder, setSortOrder] = useState<'newest' | 'oldest' | 'az' | 'za'>('newest')
 
-  // Listas únicas para os dropdowns
   const [availableSocios, setAvailableSocios] = useState<string[]>([])
   const [availableBrindes, setAvailableBrindes] = useState<string[]>([])
 
@@ -38,8 +36,6 @@ export function Clients({ initialFilters }: ClientsProps) {
     const { data, error } = await query
     if (!error && data) {
         setClients(data)
-        
-        // Extrair listas únicas usando tipo_brinde (snake_case)
         const socios = Array.from(new Set(data.map(c => c.socio).filter(Boolean))) as string[]
         const brindes = Array.from(new Set(data.map(c => c.tipo_brinde).filter(Boolean))) as string[]
         setAvailableSocios(socios.sort())
@@ -54,11 +50,9 @@ export function Clients({ initialFilters }: ClientsProps) {
     fetchClients()
   }, [initialFilters])
 
-  // --- LÓGICA CENTRAL DE FILTRAGEM ---
   const processedClients = useMemo(() => {
     let result = [...clients]
 
-    // 1. Busca por Texto
     if (searchTerm) {
         const lowerTerm = searchTerm.toLowerCase()
         result = result.filter(c => 
@@ -70,15 +64,9 @@ export function Clients({ initialFilters }: ClientsProps) {
         )
     }
 
-    // 2. Filtros Específicos (usando tipo_brinde)
-    if (filterSocio) {
-        result = result.filter(c => c.socio === filterSocio)
-    }
-    if (filterBrinde) {
-        result = result.filter(c => c.tipo_brinde === filterBrinde)
-    }
+    if (filterSocio) result = result.filter(c => c.socio === filterSocio)
+    if (filterBrinde) result = result.filter(c => c.tipo_brinde === filterBrinde)
 
-    // 3. Ordenação
     result.sort((a: any, b: any) => {
         if (sortOrder === 'newest') return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
         if (sortOrder === 'oldest') return new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
@@ -90,7 +78,6 @@ export function Clients({ initialFilters }: ClientsProps) {
     return result
   }, [clients, searchTerm, filterSocio, filterBrinde, sortOrder])
 
-  // --- AÇÕES DO CRUD ---
   const handleSave = async (client: ClientData) => {
     try {
         if (clientToEdit) {
@@ -135,103 +122,54 @@ export function Clients({ initialFilters }: ClientsProps) {
   return (
     <div className="space-y-6">
       
-      {/* HEADER + FERRAMENTAS */}
+      {/* HEADER UNIFICADO (TUDO NA MESMA LINHA) */}
       <div className="flex flex-col gap-4">
         
-        {/* Linha 1: Título e Ações Principais */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-                <h2 className="text-2xl font-bold text-[#112240]">Base de Clientes</h2>
-                <p className="text-sm text-gray-500">
-                    Exibindo {processedClients.length} de {clients.length} registros
+        <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 bg-white p-2 rounded-xl border border-gray-100 shadow-sm">
+            
+            {/* Lado Esquerdo: Contador */}
+            <div className="pl-2">
+                <p className="text-sm font-medium text-gray-500">
+                    <span className="font-bold text-[#112240]">{processedClients.length}</span> registros
                 </p>
             </div>
             
-            <div className="flex items-center gap-2 self-end md:self-auto">
-                <button 
-                    onClick={() => {
-                        setIsSearchOpen(!isSearchOpen);
-                        if(isSearchOpen) setSearchTerm(''); 
-                    }}
-                    className={`p-2 rounded-lg transition-colors ${isSearchOpen ? 'bg-blue-100 text-blue-600' : 'bg-white text-gray-400 hover:text-[#112240] hover:bg-gray-50 border border-gray-200'}`}
-                    title="Buscar"
-                >
-                    {isSearchOpen ? <X className="h-5 w-5" /> : <Search className="h-5 w-5" />}
-                </button>
+            {/* Lado Direito: Filtros, Ordenação e Ações */}
+            <div className="flex flex-wrap items-center gap-2">
+                
+                {/* Filtro Sócio */}
+                <div className="relative">
+                    <select 
+                        value={filterSocio}
+                        onChange={(e) => setFilterSocio(e.target.value)}
+                        className={`appearance-none pl-3 pr-8 py-2 rounded-lg text-xs font-bold border focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors cursor-pointer
+                            ${filterSocio ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'}`}
+                    >
+                        <option value="">Todos os Sócios</option>
+                        {availableSocios.map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                </div>
 
-                <button 
-                    onClick={openNewModal}
-                    className="flex items-center gap-2 bg-[#112240] hover:bg-[#1a3a6c] text-white px-4 py-2 rounded-lg font-bold text-sm transition-colors shadow-sm"
-                >
-                    <Plus className="h-4 w-4" /> 
-                    <span className="hidden sm:inline">Novo Cliente</span>
-                </button>
-            </div>
-        </div>
+                {/* Filtro Brinde */}
+                <div className="relative">
+                    <select 
+                        value={filterBrinde}
+                        onChange={(e) => setFilterBrinde(e.target.value)}
+                        className={`appearance-none pl-3 pr-8 py-2 rounded-lg text-xs font-bold border focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors cursor-pointer
+                            ${filterBrinde ? 'bg-purple-50 text-purple-700 border-purple-200' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'}`}
+                    >
+                        <option value="">Todos os Brindes</option>
+                        {availableBrindes.map(b => <option key={b} value={b}>{b}</option>)}
+                    </select>
+                </div>
 
-        {/* Linha 2: Busca Deslizante */}
-        <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isSearchOpen ? 'max-h-20 opacity-100' : 'max-h-0 opacity-0'}`}>
-            <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <input 
-                    type="text" 
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder="Busque por nome, empresa, cidade, cargo ou sócio..."
-                    className="w-full pl-10 pr-4 py-3 bg-white border border-blue-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-[#112240] placeholder:text-gray-400 shadow-sm"
-                    autoFocus={isSearchOpen}
-                />
-            </div>
-        </div>
-
-        {/* Linha 3: Barra de Filtros e Ordenação */}
-        <div className="flex flex-wrap items-center gap-3 pb-2 border-b border-gray-100">
-            <div className="flex items-center gap-2 text-sm text-gray-500 mr-2">
-                <Filter className="h-4 w-4" />
-                <span className="font-bold">Filtrar por:</span>
-            </div>
-
-            <div className="relative">
-                <select 
-                    value={filterSocio}
-                    onChange={(e) => setFilterSocio(e.target.value)}
-                    className={`appearance-none pl-3 pr-8 py-1.5 rounded-lg text-xs font-medium border focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors cursor-pointer
-                        ${filterSocio ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
-                >
-                    <option value="">Todos os Sócios</option>
-                    {availableSocios.map(s => <option key={s} value={s}>{s}</option>)}
-                </select>
-            </div>
-
-            <div className="relative">
-                <select 
-                    value={filterBrinde}
-                    onChange={(e) => setFilterBrinde(e.target.value)}
-                    className={`appearance-none pl-3 pr-8 py-1.5 rounded-lg text-xs font-medium border focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors cursor-pointer
-                        ${filterBrinde ? 'bg-purple-50 text-purple-700 border-purple-200' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
-                >
-                    <option value="">Todos os Brindes</option>
-                    {availableBrindes.map(b => <option key={b} value={b}>{b}</option>)}
-                </select>
-            </div>
-
-            {(filterSocio || filterBrinde) && (
-                <button 
-                    onClick={() => { setFilterSocio(''); setFilterBrinde(''); }}
-                    className="text-xs text-red-500 hover:text-red-700 font-bold hover:underline ml-auto md:ml-0"
-                >
-                    Limpar
-                </button>
-            )}
-
-            <div className="ml-auto flex items-center gap-2">
-                <span className="text-xs text-gray-400 font-medium hidden sm:inline">Ordem:</span>
+                {/* Ordenação */}
                 <Menu as="div" className="relative">
-                    <Menu.Button className="flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-bold text-gray-600 hover:text-[#112240] hover:bg-gray-50 transition-colors">
+                    <Menu.Button className="flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs font-bold text-gray-600 hover:text-[#112240] hover:bg-gray-100 transition-colors">
                         <ArrowUpDown className="h-3.5 w-3.5" />
-                        {sortOrder === 'newest' ? 'Mais Recentes' : 
-                         sortOrder === 'oldest' ? 'Mais Antigos' : 
-                         sortOrder === 'az' ? 'Nome (A-Z)' : 'Nome (Z-A)'}
+                        <span className="hidden sm:inline">
+                            {sortOrder === 'newest' ? 'Recentes' : sortOrder === 'oldest' ? 'Antigos' : 'Nome'}
+                        </span>
                     </Menu.Button>
                     <Transition as={Fragment} enter="transition ease-out duration-100" enterFrom="transform opacity-0 scale-95" enterTo="transform opacity-100 scale-100" leave="transition ease-in duration-75" leaveFrom="transform opacity-100 scale-100" leaveTo="transform opacity-0 scale-95">
                         <Menu.Items className="absolute right-0 mt-1 w-40 origin-top-right rounded-lg bg-white shadow-xl ring-1 ring-black ring-opacity-5 focus:outline-none z-20">
@@ -258,6 +196,44 @@ export function Clients({ initialFilters }: ClientsProps) {
                         </Menu.Items>
                     </Transition>
                 </Menu>
+
+                <div className="h-6 w-px bg-gray-200 mx-1"></div>
+
+                {/* Botão Busca */}
+                <button 
+                    onClick={() => {
+                        setIsSearchOpen(!isSearchOpen);
+                        if(isSearchOpen) setSearchTerm(''); 
+                    }}
+                    className={`p-2 rounded-lg transition-colors ${isSearchOpen ? 'bg-blue-100 text-blue-600' : 'bg-gray-50 text-gray-400 hover:text-[#112240] hover:bg-gray-100 border border-gray-200'}`}
+                    title="Buscar"
+                >
+                    {isSearchOpen ? <X className="h-5 w-5" /> : <Search className="h-5 w-5" />}
+                </button>
+
+                {/* Botão Novo */}
+                <button 
+                    onClick={openNewModal}
+                    className="flex items-center gap-2 bg-[#112240] hover:bg-[#1a3a6c] text-white px-4 py-2 rounded-lg font-bold text-xs sm:text-sm transition-colors shadow-sm whitespace-nowrap"
+                >
+                    <Plus className="h-4 w-4" /> 
+                    <span className="hidden sm:inline">Novo Cliente</span>
+                </button>
+            </div>
+        </div>
+
+        {/* Busca Deslizante */}
+        <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isSearchOpen ? 'max-h-20 opacity-100' : 'max-h-0 opacity-0'}`}>
+            <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input 
+                    type="text" 
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder="Busque por nome, empresa, cidade, cargo ou sócio..."
+                    className="w-full pl-10 pr-4 py-3 bg-white border border-blue-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-[#112240] placeholder:text-gray-400 shadow-sm"
+                    autoFocus={isSearchOpen}
+                />
             </div>
         </div>
 
@@ -266,7 +242,6 @@ export function Clients({ initialFilters }: ClientsProps) {
       {/* LISTA DE CARDS */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {processedClients.map((client) => (
-            // CORREÇÃO: Usando client.id ou client.email como chave
             <div key={client.id || client.email} className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md transition-shadow group relative animate-fadeIn">
                 
                 <div className="flex justify-between items-start mb-3">
