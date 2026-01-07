@@ -57,6 +57,17 @@ export function Magistrados() {
     }
   }
 
+  const handleLock = () => {
+    // Limpa o PIN antes de bloquear
+    setPinInput(['', '', '', ''])
+    setErrorMsg('')
+    setIsPinCorrect(false)
+    // Pequeno delay para garantir que o foco está correto quando a tela aparecer
+    setTimeout(() => {
+      document.getElementById('pin-0')?.focus()
+    }, 100)
+  }
+
   // 1. Acesso Negado
   if (!loading && !hasAccess) {
     return (
@@ -98,7 +109,7 @@ export function Magistrados() {
     <div className="h-full flex flex-col">
       <div className="bg-yellow-50 border-l-4 border-yellow-400 p-2 mb-4 flex items-center justify-between">
         <div className="flex items-center gap-2 text-yellow-800 text-xs font-bold"><KeyRound className="h-4 w-4" /> MODO SEGURO: Magistrados</div>
-        <button onClick={() => setIsPinCorrect(false)} className="text-xs font-bold underline text-yellow-800 hover:text-yellow-900">Bloquear Tela</button>
+        <button onClick={handleLock} className="text-xs font-bold underline text-yellow-800 hover:text-yellow-900">Bloquear Tela</button>
       </div>
       <Clients tableName="magistrados" />
     </div>
