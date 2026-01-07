@@ -14,7 +14,7 @@ import { logAction } from '../lib/logger'
 
 interface ClientsProps {
   initialFilters?: { socio?: string; brinde?: string };
-  tableName?: string;
+  tableName?: string; // 'clientes' ou 'magistrados'
 }
 
 export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps) {
@@ -101,33 +101,47 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
     if (filterSocio) result = result.filter(c => c.socio === filterSocio)
     if (filterBrinde) result = result.filter(c => c.tipo_brinde === filterBrinde)
 
-    const collator = new Intl.Collator('pt-BR', { sensitivity: 'base' })
-    result.sort((a, b) => {
-        if (sortOrder === 'az') return collator.compare(a.nome || '', b.nome || '')
-        if (sortOrder === 'za') return collator.compare(b.nome || '', a.nome || '')
-        if (sortOrder === 'oldest') return new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime()
-        return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
+    result.sort((a: any, b: any) => {
+        const dateA = a.created_at ? new Date(a.created_at).getTime() : 0
+        const dateB = b.created_at ? new Date(b.created_at).getTime() : 0
+        if (sortOrder === 'newest') return dateB - dateA
+        if (sortOrder === 'oldest') return dateA - dateB
+        if (sortOrder === 'az') return (a.nome || '').localeCompare(b.nome || '')
+        if (sortOrder === 'za') return (b.nome || '').localeCompare(a.nome || '')
+        return 0
     })
 
     return result
   }, [clients, searchTerm, filterSocio, filterBrinde, sortOrder])
 
+  // --- DELETE MANUAL ---
   const handleDelete = async (client: ClientData) => {
-    if (!confirm(`Tem certeza que deseja excluir: ${client.nome}?\n\nEsta ação não pode ser desfeita.`)) {
-        return
-    }
+    if (!client.id) return alert("Erro: Registro sem ID.")
 
-    try {
-        await supabase.from('tasks').delete().eq('client_id', client.id)
-        const { error } = await supabase.from(tableName).delete().eq('id', client.id)
-        
-        if (error) throw new Error(error.message)
+    if (confirm(`Tem certeza que deseja excluir permanentemente: ${client.nome}?`)) {
+        try {
+            console.log(`Iniciando exclusão manual para ID ${client.id}...`)
 
-        setClients(current => current.filter(c => c.id !== client.id))
-        await logAction('EXCLUIR', tableName.toUpperCase(), `Excluiu: ${client.nome}`)
-        
-    } catch (error: any) {
-        alert(`Erro ao excluir: ${error.message}`)
+            // 1. Tenta limpar tarefas vinculadas primeiro
+            try {
+               await supabase.from('tasks').delete().eq('client_id', client.id);
+            } catch (e) { console.warn("Aviso: Não foi possível limpar tarefas vinculadas.", e) }
+
+            // 2. Agora tenta excluir o cliente
+            const { error } = await supabase.from(tableName).delete().eq('id', client.id)
+            
+            if (error) {
+                console.error("Erro Supabase:", error)
+                throw new Error(error.message)
+            }
+
+            // 3. Sucesso na interface
+            setClients(current => current.filter(c => c.id !== client.id))
+            await logAction('EXCLUIR', tableName.toUpperCase(), `Excluiu: ${client.nome}`)
+            
+        } catch (error: any) {
+            alert(`Erro ao excluir: ${error.message}\nVerifique permissões.`)
+        }
     }
   }
 
@@ -150,7 +164,8 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
 
       if (jsonData.length === 0) throw new Error('Arquivo vazio.')
 
-      const { data: { user } } = await supabase.auth.getUser()
+      // Correção de Tipo: Força any para evitar erro de build
+      const { data: { user } } = await (supabase.auth as any).getUser()
       const userEmail = user?.email || 'Importação'
 
       const normalizeKeys = (obj: any) => {
@@ -183,28 +198,81 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
             created_by: userEmail,
             updated_by: userEmail
         }
-      }).filter(Boolean)
-
-      if (itemsToInsert.length === 0) throw new Error('Nenhum item válido.')
-
-      const { error } = await supabase.from(tableName).insert(itemsToInsert)
-
-      if (error) throw error
-
-      alert(`✅ ${itemsToInsert.length} registros importados com sucesso!`)
-      await logAction('IMPORTAR', tableName.toUpperCase(), `Importou ${itemsToInsert.length} registros`)
-      fetchClients()
+      }).filter(Boolean);
       
+      const { error } = await supabase.from(tableName).insert(itemsToInsert)
+      if (error) throw error
+      
+      alert(`${itemsToInsert.length} importados com sucesso!`)
+      await logAction('IMPORTAR', tableName.toUpperCase(), `Importou ${itemsToInsert.length} itens`)
+      fetchClients()
+
     } catch (error: any) {
-      alert(`Erro ao importar:\n${error.message}`)
+      alert('Erro na importação: ' + error.message)
     } finally {
       setImporting(false)
       if (fileInputRef.current) fileInputRef.current.value = ''
     }
   }
 
-  const triggerFileInput = () => fileInputRef.current?.click()
+  const triggerFileInput = () => {
+      if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+          fileInputRef.current.click();
+      }
+  }
 
+  const handleSave = async (client: ClientData) => {
+    // Correção de Tipo: Força any
+    const { data: { user } } = await (supabase.auth as any).getUser()
+    const userEmail = user?.email || 'Sistema'
+    
+    const dbData: any = {
+        nome: client.nome,
+        empresa: client.empresa,
+        cargo: client.cargo,
+        telefone: client.telefone,
+        tipo_brinde: client.tipo_brinde,
+        outro_brinde: client.outro_brinde,
+        quantidade: client.quantidade,
+        cep: client.cep,
+        endereco: client.endereco,
+        numero: client.numero,
+        complemento: client.complemento,
+        bairro: client.bairro,
+        cidade: client.cidade,
+        estado: client.estado,
+        email: client.email,
+        socio: client.socio,
+        observacoes: client.observacoes,
+        ignored_fields: client.ignored_fields,
+        historico_brindes: client.historico_brindes,
+        updated_by: userEmail,
+        updated_at: new Date().toISOString()
+    }
+
+    try {
+        if (client.id) {
+            // EDITAR cliente existente
+            const { error } = await supabase.from(tableName).update(dbData).eq('id', client.id)
+            if (error) throw error
+            await logAction('EDITAR', tableName.toUpperCase(), `Atualizou: ${client.nome}`)
+        } else {
+            // CRIAR novo cliente
+            dbData.created_by = userEmail
+            const { error } = await supabase.from(tableName).insert([dbData])
+            if (error) throw error
+            await logAction('CRIAR', tableName.toUpperCase(), `Criou: ${client.nome}`)
+        }
+        setIsModalOpen(false)
+        setClientToEdit(null)
+        fetchClients()
+    } catch (error: any) {
+        alert(`Erro ao salvar: ${error.message}`)
+    }
+  }
+
+  // Helpers
   const handleWhatsApp = (client: ClientData, e?: React.MouseEvent) => {
     if(e) { e.preventDefault(); e.stopPropagation(); }
     const cleanPhone = (client.telefone || '').replace(/\D/g, '')
@@ -249,12 +317,6 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
     setIsModalOpen(true)
   }
 
-  const handleSave = async () => {
-    setIsModalOpen(false)
-    setClientToEdit(null)
-    await fetchClients()
-  }
-
   if (loading) return (
     <div className="flex justify-center items-center h-full">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#112240]"></div>
@@ -266,6 +328,7 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
       <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".xlsx, .xls" className="hidden" />
 
       <div className="flex-shrink-0 flex flex-col gap-4">
+        {/* HEADER */}
         <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 bg-white p-2 rounded-xl border border-gray-100 shadow-sm">
             <div className="pl-2">
                 <p className="text-sm font-medium text-gray-500">
@@ -344,6 +407,7 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
             <div className="flex flex-col items-center justify-center py-12 text-gray-400">
                 <AlertTriangle className="h-12 w-12 mb-2 opacity-20" />
                 <p>Nenhum registro encontrado em {tableName}.</p>
+                {tableName === 'magistrados' && <p className="text-xs mt-2">Verifique se você importou a base corretamente.</p>}
             </div>
         ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
