@@ -450,41 +450,44 @@ export function Settings() {
             </div>
 
             <div className="space-y-4">
-                <button 
-                    onClick={handleDownloadTemplate}
-                    className="w-full flex items-center justify-center gap-3 p-4 border-2 border-dashed border-gray-300 rounded-lg text-gray-700 hover:border-gray-400 hover:bg-gray-50 font-medium text-sm"
-                >
-                    <Download className="h-5 w-5" />
-                    <div className="text-left">
-                        <p className="font-bold">Baixar Planilha Modelo</p>
-                        <p className="text-xs text-gray-500">Template com campos configurados</p>
-                    </div>
-                </button>
+                {/* Botões lado a lado */}
+                <div className="grid grid-cols-2 gap-3">
+                    <button 
+                        onClick={handleDownloadTemplate}
+                        className="flex flex-col items-center justify-center gap-2 p-4 border-2 border-green-300 bg-green-50 rounded-lg text-green-700 hover:border-green-400 hover:bg-green-100 font-medium"
+                    >
+                        <Download className="h-6 w-6" />
+                        <div className="text-center">
+                            <p className="font-bold text-xs">Baixar Modelo</p>
+                            <p className="text-[10px] text-green-600">Template Excel</p>
+                        </div>
+                    </button>
 
-                <div className="relative">
-                    <input 
-                        ref={fileInputRef}
-                        type="file" 
-                        accept=".xlsx, .xls"
-                        onChange={handleFileUpload}
-                        disabled={loading}
-                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                    />
-                    <div className={`flex flex-col items-center justify-center gap-3 py-8 bg-gray-900 text-white rounded-lg ${loading ? 'opacity-70 cursor-not-allowed' : 'hover:bg-gray-800 cursor-pointer'}`}>
-                        {loading ? (
-                            <>
-                                <RefreshCw className="h-6 w-6 animate-spin" />
-                                <span className="font-bold">Importando...</span>
-                            </>
-                        ) : (
-                            <>
-                                <Upload className="h-6 w-6" />
-                                <div className="text-center">
-                                    <p className="font-bold">Selecionar Arquivo Excel</p>
-                                    <p className="text-xs text-gray-400 mt-1">Arraste ou clique para upload</p>
-                                </div>
-                            </>
-                        )}
+                    <div className="relative">
+                        <input 
+                            ref={fileInputRef}
+                            type="file" 
+                            accept=".xlsx, .xls"
+                            onChange={handleFileUpload}
+                            disabled={loading}
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                        />
+                        <div className={`flex flex-col items-center justify-center gap-2 p-4 h-full bg-gray-900 text-white rounded-lg ${loading ? 'opacity-70 cursor-not-allowed' : 'hover:bg-gray-800 cursor-pointer'}`}>
+                            {loading ? (
+                                <>
+                                    <RefreshCw className="h-6 w-6 animate-spin" />
+                                    <p className="font-bold text-xs">Importando...</p>
+                                </>
+                            ) : (
+                                <>
+                                    <Upload className="h-6 w-6" />
+                                    <div className="text-center">
+                                        <p className="font-bold text-xs">Selecionar Arquivo</p>
+                                        <p className="text-[10px] text-gray-400">Excel (.xlsx, .xls)</p>
+                                    </div>
+                                </>
+                            )}
+                        </div>
                     </div>
                 </div>
 
@@ -571,6 +574,86 @@ export function Settings() {
                     </div>
                     <p className="font-bold text-gray-900">Flow Metrics</p>
                     <p className="text-xs text-gray-600 mt-1">Análise de Dados e Desenvolvimento</p>
+                </div>
+
+                {/* Tecnologias */}
+                <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <div className="flex items-center gap-2 mb-3">
+                        <Code className="h-4 w-4 text-gray-600" />
+                        <p className="font-bold text-gray-900 text-xs">Stack Tecnológica</p>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-3">
+                        <div>
+                            <p className="text-[10px] font-bold text-gray-500 uppercase mb-1.5">Frontend</p>
+                            <div className="space-y-1">
+                                <div className="flex items-center gap-1.5">
+                                    <div className="h-1 w-1 rounded-full bg-blue-500"></div>
+                                    <span className="text-xs text-gray-700">React 18</span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                    <div className="h-1 w-1 rounded-full bg-blue-500"></div>
+                                    <span className="text-xs text-gray-700">TypeScript</span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                    <div className="h-1 w-1 rounded-full bg-blue-500"></div>
+                                    <span className="text-xs text-gray-700">Tailwind CSS</span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                    <div className="h-1 w-1 rounded-full bg-blue-500"></div>
+                                    <span className="text-xs text-gray-700">Vite</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <p className="text-[10px] font-bold text-gray-500 uppercase mb-1.5">Backend</p>
+                            <div className="space-y-1">
+                                <div className="flex items-center gap-1.5">
+                                    <div className="h-1 w-1 rounded-full bg-green-500"></div>
+                                    <span className="text-xs text-gray-700">Supabase</span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                    <div className="h-1 w-1 rounded-full bg-green-500"></div>
+                                    <span className="text-xs text-gray-700">PostgreSQL</span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                    <div className="h-1 w-1 rounded-full bg-green-500"></div>
+                                    <span className="text-xs text-gray-700">Cloudflare</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="col-span-2">
+                            <p className="text-[10px] font-bold text-gray-500 uppercase mb-1.5">Bibliotecas</p>
+                            <div className="grid grid-cols-2 gap-x-2 gap-y-1">
+                                <div className="flex items-center gap-1.5">
+                                    <div className="h-1 w-1 rounded-full bg-purple-500"></div>
+                                    <span className="text-xs text-gray-700">Headless UI</span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                    <div className="h-1 w-1 rounded-full bg-purple-500"></div>
+                                    <span className="text-xs text-gray-700">Lucide Icons</span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                    <div className="h-1 w-1 rounded-full bg-purple-500"></div>
+                                    <span className="text-xs text-gray-700">Recharts</span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                    <div className="h-1 w-1 rounded-full bg-purple-500"></div>
+                                    <span className="text-xs text-gray-700">SheetJS</span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                    <div className="h-1 w-1 rounded-full bg-purple-500"></div>
+                                    <span className="text-xs text-gray-700">IMask</span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                    <div className="h-1 w-1 rounded-full bg-purple-500"></div>
+                                    <span className="text-xs text-gray-700">DnD Kit</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <div className="p-4 bg-gray-900 rounded-lg text-white">
