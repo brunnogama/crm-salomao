@@ -219,33 +219,30 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
     setSearchTerm('')
     setFilterSocio('')
     setFilterBrinde('')
-    setSortOrder('newest')
+    // NÃO limpa sortOrder - ordenação não é filtro
   }
 
-  const hasActiveFilters = searchTerm !== '' || filterSocio !== '' || filterBrinde !== '' || sortOrder !== 'newest'
+  // CORRIGIDO: sortOrder NÃO é considerado filtro ativo
+  const hasActiveFilters = searchTerm !== '' || filterSocio !== '' || filterBrinde !== ''
 
   const getBrindeColors = (tipo: string) => {
     if (tipo === 'Brinde VIP') {
       return {
-        bar: 'bg-gradient-to-b from-purple-500 to-purple-600',
         avatar: 'bg-gradient-to-br from-purple-500 to-purple-600',
         badge: 'bg-purple-100 text-purple-700 border-purple-200'
       }
     } else if (tipo === 'Brinde Médio') {
       return {
-        bar: 'bg-gradient-to-b from-green-500 to-green-600',
         avatar: 'bg-gradient-to-br from-green-500 to-green-600',
         badge: 'bg-green-100 text-green-700 border-green-200'
       }
     } else if (tipo === 'Outro') {
       return {
-        bar: 'bg-gradient-to-b from-blue-500 to-blue-600',
         avatar: 'bg-gradient-to-br from-blue-500 to-blue-600',
         badge: 'bg-blue-100 text-blue-700 border-blue-200'
       }
     } else {
       return {
-        bar: 'bg-gradient-to-b from-gray-400 to-gray-500',
         avatar: 'bg-gradient-to-br from-gray-400 to-gray-500',
         badge: 'bg-gray-100 text-gray-700 border-gray-200'
       }
@@ -509,7 +506,7 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
                                         </td>
                                         <td className="px-4 py-3 text-right">
                                             <div className="inline-flex gap-1">
-                                                <button onClick={(e) => { e.stopPropagation(); openEditModal(client); }} className="p-1.5 rounded bg-gray-50 text-gray-600 hover:bg-gray-100" title="Editar">
+                                                <button onClick={(e) => { e.stopPropagation(); openEditModal(client); }} className="p-1.5 rounded bg-gray-50 text-gray-600 hover:bg-gray-100" title="Visualizar">
                                                     <Pencil className="h-3.5 w-3.5" />
                                                 </button>
                                                 <button onClick={(e) => handleDeleteClient(client, e)} className="p-1.5 rounded bg-red-50 text-red-600 hover:bg-red-100" title="Excluir">

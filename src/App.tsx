@@ -108,14 +108,16 @@ export default function App() {
           </header>
           
           <div className="p-4 md:p-8 flex-1 overflow-hidden h-full">
-              {activePage === 'dashboard' && <Dashboard onNavigateWithFilter={navigateWithFilter} />}
-              {activePage === 'clientes' && <Clients initialFilters={clientFilters} />}
-              {activePage === 'magistrados' && <Magistrados />} 
-              {activePage === 'incompletos' && <IncompleteClients />}
-              {activePage === 'kanban' && <Kanban />}
-              {activePage === 'historico' && <History />} 
-              {activePage === 'manual' && <Manual />} 
-              {activePage === 'configuracoes' && (<div className="h-full overflow-y-auto pr-2 custom-scrollbar"><Settings /></div>)}
+              <div className="h-full overflow-y-auto pr-2 custom-scrollbar">
+                  {activePage === 'dashboard' && <Dashboard onNavigateWithFilter={navigateWithFilter} />}
+                  {activePage === 'clientes' && <Clients initialFilters={clientFilters} />}
+                  {activePage === 'magistrados' && <Magistrados />} 
+                  {activePage === 'incompletos' && <IncompleteClients />}
+                  {activePage === 'kanban' && <Kanban />}
+                  {activePage === 'historico' && <History />} 
+                  {activePage === 'manual' && <Manual />} 
+                  {activePage === 'configuracoes' && <Settings />}
+              </div>
           </div>
         </main>
       </div>
