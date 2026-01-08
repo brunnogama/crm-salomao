@@ -140,6 +140,9 @@ export function Settings() {
   const [magistradosConfig, setMagistradosConfig] = useState({ pin: '', emails: '' })
   const [loadingConfig, setLoadingConfig] = useState(false)
 
+  // --- CHANGELOG ---
+  const [showAllVersions, setShowAllVersions] = useState(false)
+
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -360,51 +363,10 @@ export function Settings() {
       )}
 
       {/* --- CONFIGURAÇÃO: MAGISTRADOS --- */}
-      <div className="bg-white rounded-xl shadow-sm border border-orange-200 p-6">
-        <div className="flex items-center gap-3 mb-6">
-            <div className="p-2 bg-orange-50 rounded-lg text-orange-700"><Lock className="h-6 w-6" /></div>
-            <div>
-                <h3 className="font-bold text-[#112240] text-lg">Segurança: Módulo Magistrados</h3>
-                <p className="text-sm text-gray-500">Controle de acesso à área restrita.</p>
-            </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">PIN de Acesso (4 dígitos)</label>
-                <input 
-                    type="text" 
-                    maxLength={4}
-                    value={magistradosConfig.pin}
-                    onChange={e => setMagistradosConfig({...magistradosConfig, pin: e.target.value.replace(/\D/g,'')})}
-                    className="w-full border border-gray-300 rounded-lg p-2.5 outline-none focus:border-orange-500 font-mono text-center tracking-widest text-lg"
-                    placeholder="0000"
-                />
-            </div>
-            <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Emails Permitidos (separar por vírgula)</label>
-                <textarea 
-                    rows={3}
-                    value={magistradosConfig.emails}
-                    onChange={e => setMagistradosConfig({...magistradosConfig, emails: e.target.value})}
-                    className="w-full border border-gray-300 rounded-lg p-2.5 outline-none focus:border-orange-500 text-xs"
-                    placeholder="email1@salomao.adv.br, email2@salomao.adv.br"
-                />
-            </div>
-        </div>
-        <div className="mt-4 flex justify-end">
-            <button 
-                onClick={handleSaveConfigMagistrados}
-                disabled={loadingConfig}
-                className="px-4 py-2 bg-orange-600 text-white font-bold rounded-lg hover:bg-orange-700 transition-colors flex items-center gap-2"
-            >
-                <Save className="h-4 w-4" /> Salvar Segurança
-            </button>
-        </div>
-      </div>
-
-      {/* --- GESTÃO DE USUÁRIOS --- */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        
+        {/* COLUNA 1: GESTÃO DE USUÁRIOS */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <div className="flex justify-between items-center mb-6">
               <div className="flex items-center gap-3">
                   <div className="p-2 bg-blue-50 rounded-lg text-blue-700"><Users className="h-6 w-6" /></div>
@@ -459,8 +421,53 @@ export function Settings() {
                   </tbody>
               </table>
           </div>
+        </div>
+
+        {/* COLUNA 2: SEGURANÇA MAGISTRADOS */}
+        <div className="bg-white rounded-xl shadow-sm border border-orange-200 p-6">
+        <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 bg-orange-50 rounded-lg text-orange-700"><Lock className="h-6 w-6" /></div>
+            <div>
+                <h3 className="font-bold text-[#112240] text-lg">Segurança: Módulo Magistrados</h3>
+                <p className="text-sm text-gray-500">Controle de acesso à área restrita.</p>
+            </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">PIN de Acesso (4 dígitos)</label>
+                <input 
+                    type="text" 
+                    maxLength={4}
+                    value={magistradosConfig.pin}
+                    onChange={e => setMagistradosConfig({...magistradosConfig, pin: e.target.value.replace(/\D/g,'')})}
+                    className="w-full border border-gray-300 rounded-lg p-2.5 outline-none focus:border-orange-500 font-mono text-center tracking-widest text-lg"
+                    placeholder="0000"
+                />
+            </div>
+            <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Emails Permitidos (separar por vírgula)</label>
+                <textarea 
+                    rows={3}
+                    value={magistradosConfig.emails}
+                    onChange={e => setMagistradosConfig({...magistradosConfig, emails: e.target.value})}
+                    className="w-full border border-gray-300 rounded-lg p-2.5 outline-none focus:border-orange-500 text-xs"
+                    placeholder="email1@salomao.adv.br, email2@salomao.adv.br"
+                />
+            </div>
+        </div>
+        <div className="mt-4 flex justify-end">
+            <button 
+                onClick={handleSaveConfigMagistrados}
+                disabled={loadingConfig}
+                className="px-4 py-2 bg-orange-600 text-white font-bold rounded-lg hover:bg-orange-700 transition-colors flex items-center gap-2"
+            >
+                <Save className="h-4 w-4" /> Salvar Segurança
+            </button>
+        </div>
       </div>
 
+      {/* LINHA 2: IMPORTAR DADOS + ZONA DE PERIGO */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         
         {/* --- IMPORTAÇÃO DE DADOS --- */}
@@ -661,10 +668,10 @@ export function Settings() {
       </div>
 
       {/* --- SEÇÃO DE CRÉDITOS --- */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
 
         {/* SEÇÃO DE CRÉDITOS */}
-        <div className="md:col-span-2 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-100 shadow-sm">
+        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-100 shadow-sm">
             <div className="flex items-center gap-2 mb-6">
                 <Code className="h-5 w-5 text-blue-600" />
                 <h3 className="font-bold text-[#112240] text-lg">Créditos e Informações</h3>
@@ -806,14 +813,14 @@ export function Settings() {
         </div>
 
         {/* SEÇÃO DE CHANGELOG */}
-        <div className="md:col-span-2 bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
+        <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
             <div className="flex items-center gap-2 mb-6">
                 <History className="h-5 w-5 text-gray-600" />
                 <h3 className="font-bold text-[#112240] text-lg">Histórico de Versões</h3>
             </div>
 
             <div className="space-y-6">
-                {CHANGELOG.map((log) => (
+                {CHANGELOG.slice(0, showAllVersions ? CHANGELOG.length : 3).map((log) => (
                     <div key={log.version} className="border-l-4 border-blue-200 pl-4 relative">
                         {/* Badge de Versão */}
                         <div className="flex items-center gap-3 mb-2">
@@ -841,6 +848,23 @@ export function Settings() {
                         </ul>
                     </div>
                 ))}
+            </div>
+
+            {/* Botão Ver mais/Ver menos */}
+            {CHANGELOG.length > 3 && (
+                <div className="mt-6 pt-6 border-t border-gray-200 flex justify-center">
+                    <button
+                        onClick={() => setShowAllVersions(!showAllVersions)}
+                        className="group flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 border border-blue-200 rounded-xl font-bold text-sm text-blue-700 transition-all hover:scale-105"
+                    >
+                        <History className="h-4 w-4" />
+                        <span>{showAllVersions ? `Mostrar Menos` : `Ver Todas as Versões (${CHANGELOG.length})`}</span>
+                        <div className={`h-5 w-5 rounded-full bg-blue-100 flex items-center justify-center transition-transform ${showAllVersions ? 'rotate-180' : ''}`}>
+                            <span className="text-blue-600 text-xs font-black">↓</span>
+                        </div>
+                    </button>
+                </div>
+            )}
             </div>
 
             {/* Legenda */}
