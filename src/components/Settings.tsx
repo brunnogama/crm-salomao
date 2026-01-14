@@ -25,107 +25,6 @@ interface GenericItem {
   ativo?: boolean;
 }
 
-// --- COMPONENTE GENÉRICO PARA CRUD (SÓCIOS / TIPOS DE BRINDE) ---
-// Isso corrige o erro de "tableName is not defined" encapsulando a lógica
-function SimpleCrud({ tableName, title, icon: Icon, isAdmin }: { tableName: string, title: string, icon: any, isAdmin: boolean }) {
-  const [items, setItems] = useState<GenericItem[]>([])
-  const [loading, setLoading] = useState(false)
-  const [newItem, setNewItem] = useState('')
-  const [isAdding, setIsAdding] = useState(false)
-
-  const fetchItems = async () => {
-    const { data } = await supabase.from(tableName).select('*').order('nome')
-    if (data) setItems(data)
-  }
-
-  useEffect(() => { fetchItems() }, [tableName])
-
-  const handleAdd = async () => {
-    if (!newItem.trim()) return
-    setLoading(true)
-    // AQUI O tableName ESTÁ DEFINIDO PELO PROP
-    const { error } = await supabase.from(tableName).insert({ nome: newItem, ativo: true })
-    
-    if (!error) {
-      await logAction('CREATE', tableName.toUpperCase(), `Criou ${newItem}`)
-      setNewItem('')
-      setIsAdding(false)
-      fetchItems()
-    } else {
-      alert('Erro ao salvar: ' + error.message)
-    }
-    setLoading(false)
-  }
-
-  const handleDelete = async (id: number, nome: string) => {
-    if (!isAdmin) return alert('Apenas Admin')
-    if (!confirm(`Excluir ${nome}?`)) return
-    
-    // AQUI O tableName TAMBÉM ESTÁ DEFINIDO
-    const { error } = await supabase.from(tableName).delete().eq('id', id)
-    if (!error) {
-      await logAction('DELETE', tableName.toUpperCase(), `Excluiu ${nome}`)
-      fetchItems()
-    }
-  }
-
-  return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex flex-col h-full">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-gray-100 rounded-lg"><Icon className="h-5 w-5 text-gray-700" /></div>
-          <h3 className="font-bold text-gray-900 text-sm">{title}</h3>
-        </div>
-        {isAdmin && (
-          <button 
-            onClick={() => setIsAdding(!isAdding)} 
-            className={`p-1.5 rounded-lg transition-colors ${isAdding ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600 hover:bg-blue-100'}`}
-          >
-            {isAdding ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
-          </button>
-        )}
-      </div>
-
-      {isAdding && (
-        <div className="flex gap-2 mb-4 animate-in fade-in slide-in-from-top-2">
-          <input 
-            value={newItem}
-            onChange={(e) => setNewItem(e.target.value)}
-            placeholder="Novo item..."
-            className="flex-1 text-xs border border-blue-200 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500/20"
-            autoFocus
-            onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
-          />
-          <button 
-            onClick={handleAdd} 
-            disabled={loading}
-            className="px-3 py-1 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-700"
-          >
-            OK
-          </button>
-        </div>
-      )}
-
-      <div className="flex-1 overflow-y-auto max-h-48 custom-scrollbar space-y-1">
-        {items.map(item => (
-          <div key={item.id} className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-lg group">
-            <span className="text-xs text-gray-700 font-medium">{item.nome}</span>
-            {isAdmin && (
-              <button 
-                onClick={() => handleDelete(item.id, item.nome)}
-                className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition-all p-1"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </button>
-            )}
-          </div>
-        ))}
-        {items.length === 0 && <p className="text-xs text-gray-400 text-center py-4">Nenhum registro</p>}
-      </div>
-    </div>
-  )
-}
-
 const CHANGELOG = [
   {
     version: '1.5.0',
@@ -192,12 +91,82 @@ export function Settings() {
 
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  // --- ESTADOS PARA TIPOS DE BRINDE E SÓCIOS ---
+  const [brindes, setBrindes] = useState<GenericItem[]>([])
+  const [newBrinde, setNewBrinde] = useState('')
+  const [isAddingBrinde, setIsAddingBrinde] = useState(false)
+
+  const [socios, setSocios] = useState<GenericItem[]>([])
+  const [newSocio, setNewSocio] = useState('')
+  const [isAddingSocio, setIsAddingSocio] = useState(false)
+
   useEffect(() => {
     fetchCurrentUserRole();
     fetchUsers();
     fetchMagistradosConfig();
+    fetchBrindes();
+    fetchSocios();
   }, [])
 
+  // --- FUNÇÕES DE BRINDE (Explicitamente separadas para evitar erro de tableName) ---
+  const fetchBrindes = async () => {
+    const { data } = await supabase.from('tipos_brinde').select('*').order('nome')
+    if (data) setBrindes(data)
+  }
+
+  const handleAddBrinde = async () => {
+    if (!newBrinde.trim()) return
+    const { error } = await supabase.from('tipos_brinde').insert({ nome: newBrinde, ativo: true })
+    if (!error) {
+        await logAction('CREATE', 'TIPOS_BRINDE', `Criou ${newBrinde}`)
+        setNewBrinde('')
+        setIsAddingBrinde(false)
+        fetchBrindes()
+    } else {
+        alert('Erro: ' + error.message)
+    }
+  }
+
+  const handleDeleteBrinde = async (id: number, nome: string) => {
+    if (!isAdmin) return alert('Apenas Admin')
+    if (!confirm(`Excluir ${nome}?`)) return
+    const { error } = await supabase.from('tipos_brinde').delete().eq('id', id)
+    if (!error) {
+        await logAction('DELETE', 'TIPOS_BRINDE', `Excluiu ${nome}`)
+        fetchBrindes()
+    }
+  }
+
+  // --- FUNÇÕES DE SÓCIOS (Explicitamente separadas) ---
+  const fetchSocios = async () => {
+    const { data } = await supabase.from('socios').select('*').order('nome')
+    if (data) setSocios(data)
+  }
+
+  const handleAddSocio = async () => {
+    if (!newSocio.trim()) return
+    const { error } = await supabase.from('socios').insert({ nome: newSocio, ativo: true })
+    if (!error) {
+        await logAction('CREATE', 'SOCIOS', `Criou ${newSocio}`)
+        setNewSocio('')
+        setIsAddingSocio(false)
+        fetchSocios()
+    } else {
+        alert('Erro: ' + error.message)
+    }
+  }
+
+  const handleDeleteSocio = async (id: number, nome: string) => {
+    if (!isAdmin) return alert('Apenas Admin')
+    if (!confirm(`Excluir ${nome}?`)) return
+    const { error } = await supabase.from('socios').delete().eq('id', id)
+    if (!error) {
+        await logAction('DELETE', 'SOCIOS', `Excluiu ${nome}`)
+        fetchSocios()
+    }
+  }
+
+  // --- FUNÇÕES GERAIS ---
   const fetchCurrentUserRole = async () => {
     try {
       const { data: { user } } = await (supabase.auth as any).getUser()
@@ -325,14 +294,9 @@ export function Settings() {
     try {
         try { await supabase.from('tasks').delete().neq('id', 0) } catch (e) { console.warn(e) }
         
-        // Limpar tabelas principais
         await supabase.from('magistrados').delete().neq('id', 0)
         await supabase.from('clientes').delete().neq('id', 0)
         
-        // Opcional: Limpar tabelas auxiliares se necessário (descomente se quiser resetar tudo mesmo)
-        // await supabase.from('socios').delete().neq('id', 0)
-        // await supabase.from('tipos_brinde').delete().neq('id', 0)
-
         setStatus({ type: 'success', message: 'Sistema resetado!' })
         await logAction('RESET', 'SISTEMA', 'Resetou toda a base')
         
@@ -566,20 +530,107 @@ export function Settings() {
         </div>
       </div>
 
-      {/* LINHA 2: CADASTROS GERAIS (NOVO) */}
+      {/* LINHA 2: CADASTROS GERAIS (SEPARADOS) */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <SimpleCrud 
-          tableName="tipos_brinde" 
-          title="Tipos de Brinde" 
-          icon={Tag} 
-          isAdmin={isAdmin} 
-        />
-        <SimpleCrud 
-          tableName="socios" 
-          title="Sócios Cadastrados" 
-          icon={Briefcase} 
-          isAdmin={isAdmin} 
-        />
+        
+        {/* CRUD TIPOS DE BRINDE */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex flex-col h-full">
+            <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                    <div className="p-2 bg-gray-100 rounded-lg"><Tag className="h-5 w-5 text-gray-700" /></div>
+                    <h3 className="font-bold text-gray-900 text-sm">Tipos de Brinde</h3>
+                </div>
+                {isAdmin && (
+                    <button 
+                        onClick={() => setIsAddingBrinde(!isAddingBrinde)} 
+                        className={`p-1.5 rounded-lg transition-colors ${isAddingBrinde ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600 hover:bg-blue-100'}`}
+                    >
+                        {isAddingBrinde ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+                    </button>
+                )}
+            </div>
+
+            {isAddingBrinde && (
+                <div className="flex gap-2 mb-4 animate-in fade-in slide-in-from-top-2">
+                    <input 
+                        value={newBrinde}
+                        onChange={(e) => setNewBrinde(e.target.value)}
+                        placeholder="Novo tipo..."
+                        className="flex-1 text-xs border border-blue-200 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500/20"
+                        autoFocus
+                        onKeyDown={(e) => e.key === 'Enter' && handleAddBrinde()}
+                    />
+                    <button onClick={handleAddBrinde} className="px-3 py-1 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-700">OK</button>
+                </div>
+            )}
+
+            <div className="flex-1 overflow-y-auto max-h-48 custom-scrollbar space-y-1">
+                {brindes.map(item => (
+                    <div key={item.id} className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-lg group">
+                        <span className="text-xs text-gray-700 font-medium">{item.nome}</span>
+                        {isAdmin && (
+                            <button 
+                                onClick={() => handleDeleteBrinde(item.id, item.nome)}
+                                className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition-all p-1"
+                            >
+                                <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                        )}
+                    </div>
+                ))}
+                {brindes.length === 0 && <p className="text-xs text-gray-400 text-center py-4">Nenhum registro</p>}
+            </div>
+        </div>
+
+        {/* CRUD SÓCIOS */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex flex-col h-full">
+            <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                    <div className="p-2 bg-gray-100 rounded-lg"><Briefcase className="h-5 w-5 text-gray-700" /></div>
+                    <h3 className="font-bold text-gray-900 text-sm">Sócios Cadastrados</h3>
+                </div>
+                {isAdmin && (
+                    <button 
+                        onClick={() => setIsAddingSocio(!isAddingSocio)} 
+                        className={`p-1.5 rounded-lg transition-colors ${isAddingSocio ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600 hover:bg-blue-100'}`}
+                    >
+                        {isAddingSocio ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+                    </button>
+                )}
+            </div>
+
+            {isAddingSocio && (
+                <div className="flex gap-2 mb-4 animate-in fade-in slide-in-from-top-2">
+                    <input 
+                        value={newSocio}
+                        onChange={(e) => setNewSocio(e.target.value)}
+                        placeholder="Nome do sócio..."
+                        className="flex-1 text-xs border border-blue-200 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500/20"
+                        autoFocus
+                        onKeyDown={(e) => e.key === 'Enter' && handleAddSocio()}
+                    />
+                    <button onClick={handleAddSocio} className="px-3 py-1 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-700">OK</button>
+                </div>
+            )}
+
+            <div className="flex-1 overflow-y-auto max-h-48 custom-scrollbar space-y-1">
+                {socios.map(item => (
+                    <div key={item.id} className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-lg group">
+                        <span className="text-xs text-gray-700 font-medium">{item.nome}</span>
+                        {isAdmin && (
+                            <button 
+                                onClick={() => handleDeleteSocio(item.id, item.nome)}
+                                className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition-all p-1"
+                            >
+                                <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                        )}
+                    </div>
+                ))}
+                {socios.length === 0 && <p className="text-xs text-gray-400 text-center py-4">Nenhum registro</p>}
+            </div>
+        </div>
+
       </div>
 
       {/* LINHA 3: IMPORTAR DADOS + ZONA PERIGO */}
