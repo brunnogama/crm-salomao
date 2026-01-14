@@ -75,10 +75,8 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
         }))
         setClients(formattedClients)
         
-        // ORDENAÇÃO ALFABÉTICA APLICADA AQUI
-        const socios = Array.from(new Set(formattedClients.map(c => c.socio).filter(Boolean)))
-            .sort((a, b) => a.localeCompare(b))
-            
+        // Ordenação alfabética aplicada aqui
+        const socios = Array.from(new Set(formattedClients.map(c => c.socio).filter(Boolean))).sort((a, b) => a.localeCompare(b))
         const brindes = Array.from(new Set(formattedClients.map(c => c.tipo_brinde).filter(Boolean)))
         setAvailableSocios(socios)
         setAvailableBrindes(brindes)
@@ -90,17 +88,8 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
     fetchClients()
   }, [tableName])
 
-  // Lógica para ler parâmetros da URL caso o componente seja montado em uma nova janela
   useEffect(() => {
-    // Se vier props (navegação interna) usa props, senão tenta ler URL (nova janela)
-    if (initialFilters?.socio) {
-        setFilterSocio(initialFilters.socio)
-    } else {
-        const urlParams = new URLSearchParams(window.location.search)
-        const socioParam = urlParams.get('socio')
-        if (socioParam) setFilterSocio(socioParam)
-    }
-
+    if (initialFilters?.socio) setFilterSocio(initialFilters.socio)
     if (initialFilters?.brinde) setFilterBrinde(initialFilters.brinde)
   }, [initialFilters])
 
@@ -287,46 +276,34 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
         <div className="p-4 sm:p-5 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-200">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
+
                     <button onClick={() => setIsSearchOpen(!isSearchOpen)} className={`p-2 rounded-lg transition-all ${isSearchOpen ? 'bg-blue-600 text-white shadow-lg' : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'}`}>
                         <Search className="h-5 w-5" />
                     </button>
 
                     <Menu as="div" className="relative">
+
                         <Menu.Button className="p-2 rounded-lg bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors">
                             <Filter className="h-5 w-5" />
                         </Menu.Button>
-                        <Transition as={Fragment} enter="transition ease-out duration-100" enterFrom="transform opacity-0 scale-95" enterTo="transform opacity-100 scale-100" leave="transition ease-in duration-75" leaveFrom="transform opacity-100 scale-100" leaveTo="transform opacity-0 scale-95">
-                            <Menu.Items className="absolute left-0 mt-2 w-64 origin-top-left rounded-xl bg-white shadow-xl border border-gray-200 p-3 z-50">
-                                <div className="space-y-3">
-                                    <div>
-                                        <label className="text-xs font-bold text-gray-500 uppercase px-1">Sócio</label>
-                                        <div className="mt-1 border border-gray-200 rounded-lg max-h-48 overflow-y-auto bg-gray-50">
-                                            <button 
-                                                onClick={() => setFilterSocio('')}
-                                                className={`w-full text-left px-3 py-2 text-sm hover:bg-blue-100 transition-colors ${filterSocio === '' ? 'font-bold text-blue-700 bg-blue-50' : 'text-gray-600'}`}
-                                            >
-                                                Todos (Limpar)
-                                            </button>
-                                            {availableSocios.map(s => (
-                                                <button 
-                                                    key={s} 
-                                                    onClick={() => {
-                                                        // Abre nova janela com filtro via URL mantendo UI padrão
-                                                        const url = new URL(window.location.href)
-                                                        url.searchParams.set('socio', s)
-                                                        window.open(url.toString(), '_blank')
-                                                    }}
-                                                    className={`w-full text-left px-3 py-2 text-sm hover:bg-blue-100 transition-colors border-t border-gray-100 ${filterSocio === s ? 'font-bold text-blue-700 bg-blue-50' : 'text-gray-600'}`}
-                                                    title="Clique para abrir relação em nova janela"
-                                                >
-                                                    {s}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
 
+                        <Transition as={Fragment} enter="transition ease-out duration-100" enterFrom="transform opacity-0 scale-95" enterTo="transform opacity-100 scale-100" leave="transition ease-in duration-75" leaveFrom="transform opacity-100 scale-100" leaveTo="transform opacity-0 scale-95">
+
+                            <Menu.Items className="absolute left-0 mt-2 w-56 origin-top-left rounded-xl bg-white shadow-xl border border-gray-200 p-2 z-50">
+                                <div className="space-y-2">
                                     <div>
-                                        <label className="text-xs font-bold text-gray-500 uppercase px-1">Tipo Brinde</label>
+
+                                        <label className="text-xs font-bold text-gray-500 uppercase px-2">Sócio</label>
+
+                                        <select value={filterSocio} onChange={(e) => setFilterSocio(e.target.value)} className="w-full mt-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20">
+                                            <option value="">Todos</option>
+                                            {availableSocios.map(s => <option key={s} value={s}>{s}</option>)}
+                                        </select>
+                                    </div>
+                                    <div>
+
+                                        <label className="text-xs font-bold text-gray-500 uppercase px-2">Tipo Brinde</label>
+
                                         <select value={filterBrinde} onChange={(e) => setFilterBrinde(e.target.value)} className="w-full mt-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20">
                                             <option value="">Todos</option>
                                             {availableBrindes.map(b => <option key={b} value={b}>{b}</option>)}
@@ -338,10 +315,13 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
                     </Menu>
 
                     <Menu as="div" className="relative">
+
                         <Menu.Button className="p-2 rounded-lg bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors">
                             <ArrowUpDown className="h-5 w-5" />
                         </Menu.Button>
+
                         <Transition as={Fragment} enter="transition ease-out duration-100" enterFrom="transform opacity-0 scale-95" enterTo="transform opacity-100 scale-100" leave="transition ease-in duration-75" leaveFrom="transform opacity-100 scale-100" leaveTo="transform opacity-0 scale-95">
+
                             <Menu.Items className="absolute left-0 mt-2 w-48 origin-top-left rounded-xl bg-white shadow-xl border border-gray-200 p-1 z-50">
                                 {[
                                     { value: 'newest', label: 'Mais Recentes' },
@@ -351,6 +331,7 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
                                 ].map(option => (
                                     <Menu.Item key={option.value}>
                                         {({ active }) => (
+
                                             <button onClick={() => setSortOrder(option.value as any)} className={`w-full text-left px-3 py-2 rounded-lg text-sm flex items-center justify-between ${active ? 'bg-blue-50' : ''} ${sortOrder === option.value ? 'text-blue-600 font-bold' : 'text-gray-700'}`}>
                                                 {option.label}
                                                 {sortOrder === option.value && <Check className="h-4 w-4" />}
@@ -363,6 +344,7 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
                     </Menu>
 
                     {hasActiveFilters && (
+
                         <button onClick={clearAllFilters} className="px-3 py-2 rounded-lg bg-amber-100 text-amber-700 hover:bg-amber-200 transition-colors text-xs font-bold flex items-center gap-2 border border-amber-300 shadow-sm animate-pulse">
                             <X className="h-3.5 w-3.5" /> Limpar Filtros
                         </button>
@@ -389,12 +371,17 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
                     </div>
 
                     <div className="flex items-center gap-1">
+
                         <button onClick={triggerFileInput} disabled={importing} className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200 transition-colors" title="Importar Excel">
+
                             {importing ? <Loader2 className="h-5 w-5 animate-spin" /> : <Upload className="h-5 w-5" />}
                         </button>
+
                         <button onClick={handleExportExcel} className="p-2 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 border border-green-200 transition-colors" title="Exportar Excel"><FileSpreadsheet className="h-5 w-5" /></button>
+
                         <button onClick={handlePrintList} className="p-2 rounded-lg bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200 transition-colors" title="Imprimir Lista"><Printer className="h-5 w-5" /></button>
                     </div>
+
 
                     <button onClick={() => { setClientToEdit(null); setIsModalOpen(true); }} className="flex items-center gap-2 bg-[#112240] hover:bg-[#1a3a6c] text-white px-4 py-2 rounded-lg font-bold text-xs sm:text-sm transition-colors shadow-sm whitespace-nowrap">
                         <Plus className="h-4 w-4" /><span className="hidden sm:inline">Novo Registro</span>
@@ -403,9 +390,11 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
             </div>
         </div>
 
+
         <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isSearchOpen ? 'max-h-20 opacity-100' : 'max-h-0 opacity-0'}`}>
             <div className="relative p-4">
                 <Search className="absolute left-7 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+
                 <input type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Busque por nome, empresa..." className="w-full pl-10 pr-4 py-3 bg-white border border-blue-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20" autoFocus={isSearchOpen} />
             </div>
         </div>
@@ -433,12 +422,15 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
                             >
                                 <div className="flex items-start justify-between mb-2.5">
                                     <div className="flex gap-2.5 flex-1">
+
                                         <div className={`h-11 w-11 rounded-xl flex items-center justify-center text-white font-black text-base shadow-lg ${colors.avatar}`}>
                                             {client.nome?.charAt(0)?.toUpperCase() || '?'}
                                         </div>
                                         
                                         <div className="flex-1 overflow-hidden">
+
                                             <h3 className="font-bold text-gray-900 text-sm truncate">{client.nome}</h3>
+
                                             <p className="text-xs text-gray-500 truncate">{client.cargo || 'Sem cargo'}</p>
                                         </div>
                                     </div>
@@ -449,14 +441,19 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
                                 </div>
 
                                 <div className="space-y-1.5 mb-3">
+
                                     <div className="flex items-center gap-2 bg-blue-50 p-2 rounded-lg border border-blue-100">
+
                                         <Info className="h-3.5 w-3.5 text-blue-600 flex-shrink-0" />
+
                                         <span className="text-xs text-blue-900 font-medium truncate">Sócio: {client.socio || 'N/A'}</span>
                                     </div>
                                     
                                     {client.empresa && (
+
                                         <div className="flex items-center gap-2 bg-purple-50 p-2 rounded-lg border border-purple-100">
                                             <Briefcase className="h-3.5 w-3.5 text-purple-600 flex-shrink-0" />
+
                                             <span className="text-xs text-purple-900 font-medium truncate">Empresa: {client.empresa}</span>
                                         </div>
                                     )}
@@ -466,15 +463,18 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
                                     <div className="flex gap-1">
                                         {client.telefone && (
                                             <>
+
                                                 <button onClick={(e) => handleWhatsApp(client.telefone, e)} className="p-1.5 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 transition-colors" title="WhatsApp">
                                                     <MessageCircle className="h-3.5 w-3.5" />
                                                 </button>
+
                                                 <button onClick={(e) => handlePhoneCall(client.telefone, e)} className="p-1.5 rounded-lg bg-cyan-50 text-cyan-600 hover:bg-cyan-100 transition-colors" title="Ligar com 3CX">
                                                     <Phone className="h-3.5 w-3.5" />
                                                 </button>
                                             </>
                                         )}
                                         {client.email && (
+
                                             <button onClick={(e) => handleEmail(client.email, e)} className="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors" title="E-mail">
                                                 <Mail className="h-3.5 w-3.5" />
                                             </button>
@@ -482,9 +482,11 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
                                     </div>
                                     
                                     <div className="flex gap-1">
+
                                         <button onClick={(e) => { e.stopPropagation(); openEditModal(client); }} className="p-1.5 rounded-lg bg-gray-50 text-gray-600 hover:bg-gray-100 transition-colors" title="Editar">
                                             <Pencil className="h-3.5 w-3.5" />
                                         </button>
+
                                         <button onClick={(e) => handleDeleteClient(client, e)} className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors" title="Excluir">
                                             <Trash2 className="h-3.5 w-3.5" />
                                         </button>
@@ -500,12 +502,19 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
                     <table className="w-full">
                         <thead className="bg-gray-50 border-b-2 border-gray-200">
                             <tr>
+
                                 <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase">Nome</th>
+
                                 <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase">Empresa</th>
+
                                 <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase">Cargo</th>
+
                                 <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase">Sócio</th>
+
                                 <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase">Brinde</th>
+
                                 <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase">Contato</th>
+
                                 <th className="px-4 py-3 text-right text-xs font-bold text-gray-600 uppercase">Ações</th>
                             </tr>
                         </thead>
@@ -520,12 +529,15 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
                                     >
                                         <td className="px-4 py-3">
                                             <div className="flex items-center gap-3">
+
                                                 <div className={`h-8 w-8 rounded-lg flex items-center justify-center text-white font-bold text-xs ${colors.avatar}`}>
                                                     {client.nome?.charAt(0)?.toUpperCase() || '?'}
                                                 </div>
+
                                                 <span className="font-medium text-gray-900 text-sm">{client.nome}</span>
                                             </div>
                                         </td>
+
                                         <td className="px-4 py-3 text-sm text-gray-600">{client.empresa || '-'}</td>
                                         <td className="px-4 py-3 text-sm text-gray-600">{client.cargo || '-'}</td>
                                         <td className="px-4 py-3 text-sm text-gray-600">{client.socio || '-'}</td>
@@ -538,15 +550,18 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
                                             <div className="flex items-center gap-2">
                                                 {client.telefone && (
                                                     <>
+
                                                         <button onClick={(e) => handleWhatsApp(client.telefone, e)} className="p-1 rounded bg-green-50 text-green-600 hover:bg-green-100" title="WhatsApp">
                                                             <MessageCircle className="h-3.5 w-3.5" />
                                                         </button>
+
                                                         <button onClick={(e) => handlePhoneCall(client.telefone, e)} className="p-1 rounded bg-cyan-50 text-cyan-600 hover:bg-cyan-100" title="Ligar com 3CX">
                                                             <Phone className="h-3.5 w-3.5" />
                                                         </button>
                                                     </>
                                                 )}
                                                 {client.email && (
+
                                                     <button onClick={(e) => handleEmail(client.email, e)} className="p-1 rounded bg-blue-50 text-blue-600 hover:bg-blue-100" title="E-mail">
                                                         <Mail className="h-3.5 w-3.5" />
                                                     </button>
@@ -555,9 +570,11 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
                                         </td>
                                         <td className="px-4 py-3 text-right">
                                             <div className="inline-flex gap-1">
+
                                                 <button onClick={(e) => { e.stopPropagation(); openEditModal(client); }} className="p-1.5 rounded bg-gray-50 text-gray-600 hover:bg-gray-100" title="Visualizar">
                                                     <Pencil className="h-3.5 w-3.5" />
                                                 </button>
+
                                                 <button onClick={(e) => handleDeleteClient(client, e)} className="p-1.5 rounded bg-red-50 text-red-600 hover:bg-red-100" title="Excluir">
                                                     <Trash2 className="h-3.5 w-3.5" />
                                                 </button>
@@ -574,6 +591,7 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
 
         <div className="px-4 sm:px-6 py-4 bg-gray-50 border-t border-gray-200">
             <p className="text-sm text-gray-600 text-center">
+
                 <span className="font-bold text-gray-900">{processedClients.length}</span> registro(s) encontrado(s)
             </p>
         </div>
