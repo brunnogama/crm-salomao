@@ -75,11 +75,13 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
         }))
         setClients(formattedClients)
         
-        // ORDENAÇÃO ALFABÉTICA APLICADA AQUI
+        // ORDENAÇÃO ALFABÉTICA PARA SÓCIOS E BRINDES
         const socios = Array.from(new Set(formattedClients.map(c => c.socio).filter(Boolean)))
             .sort((a, b) => a.localeCompare(b))
             
         const brindes = Array.from(new Set(formattedClients.map(c => c.tipo_brinde).filter(Boolean)))
+            .sort((a, b) => a.localeCompare(b))
+
         setAvailableSocios(socios)
         setAvailableBrindes(brindes)
     }
@@ -90,18 +92,24 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
     fetchClients()
   }, [tableName])
 
-  // Lógica para ler parâmetros da URL caso o componente seja montado em uma nova janela
+  // Lógica para ler parâmetros da URL
   useEffect(() => {
-    // Se vier props (navegação interna) usa props, senão tenta ler URL (nova janela)
+    const urlParams = new URLSearchParams(window.location.search)
+    
+    // Prioriza props, depois URL
     if (initialFilters?.socio) {
         setFilterSocio(initialFilters.socio)
     } else {
-        const urlParams = new URLSearchParams(window.location.search)
         const socioParam = urlParams.get('socio')
         if (socioParam) setFilterSocio(socioParam)
     }
 
-    if (initialFilters?.brinde) setFilterBrinde(initialFilters.brinde)
+    if (initialFilters?.brinde) {
+        setFilterBrinde(initialFilters.brinde)
+    } else {
+        const brindeParam = urlParams.get('brinde')
+        if (brindeParam) setFilterBrinde(brindeParam)
+    }
   }, [initialFilters])
 
   // Modal sempre abre em modo VISUALIZAÇÃO
@@ -298,6 +306,7 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
                         <Transition as={Fragment} enter="transition ease-out duration-100" enterFrom="transform opacity-0 scale-95" enterTo="transform opacity-100 scale-100" leave="transition ease-in duration-75" leaveFrom="transform opacity-100 scale-100" leaveTo="transform opacity-0 scale-95">
                             <Menu.Items className="absolute left-0 mt-2 w-64 origin-top-left rounded-xl bg-white shadow-xl border border-gray-200 p-3 z-50">
                                 <div className="space-y-3">
+                                    {/* FILTRO SÓCIOS */}
                                     <div>
                                         <label className="text-xs font-bold text-gray-500 uppercase px-1">Sócio</label>
                                         <div className="mt-1 border border-gray-200 rounded-lg max-h-48 overflow-y-auto bg-gray-50">
@@ -311,13 +320,12 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
                                                 <button 
                                                     key={s} 
                                                     onClick={() => {
-                                                        // Abre nova janela com filtro via URL mantendo UI padrão
                                                         const url = new URL(window.location.href)
                                                         url.searchParams.set('socio', s)
                                                         window.open(url.toString(), '_blank')
                                                     }}
                                                     className={`w-full text-left px-3 py-2 text-sm hover:bg-blue-100 transition-colors border-t border-gray-100 ${filterSocio === s ? 'font-bold text-blue-700 bg-blue-50' : 'text-gray-600'}`}
-                                                    title="Clique para abrir relação em nova janela"
+                                                    title="Abrir em nova janela"
                                                 >
                                                     {s}
                                                 </button>
@@ -325,12 +333,31 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
                                         </div>
                                     </div>
 
+                                    {/* FILTRO BRINDES - UI PADRONIZADA */}
                                     <div>
                                         <label className="text-xs font-bold text-gray-500 uppercase px-1">Tipo Brinde</label>
-                                        <select value={filterBrinde} onChange={(e) => setFilterBrinde(e.target.value)} className="w-full mt-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20">
-                                            <option value="">Todos</option>
-                                            {availableBrindes.map(b => <option key={b} value={b}>{b}</option>)}
-                                        </select>
+                                        <div className="mt-1 border border-gray-200 rounded-lg max-h-48 overflow-y-auto bg-gray-50">
+                                            <button 
+                                                onClick={() => setFilterBrinde('')}
+                                                className={`w-full text-left px-3 py-2 text-sm hover:bg-blue-100 transition-colors ${filterBrinde === '' ? 'font-bold text-blue-700 bg-blue-50' : 'text-gray-600'}`}
+                                            >
+                                                Todos (Limpar)
+                                            </button>
+                                            {availableBrindes.map(b => (
+                                                <button 
+                                                    key={b} 
+                                                    onClick={() => {
+                                                        const url = new URL(window.location.href)
+                                                        url.searchParams.set('brinde', b)
+                                                        window.open(url.toString(), '_blank')
+                                                    }}
+                                                    className={`w-full text-left px-3 py-2 text-sm hover:bg-blue-100 transition-colors border-t border-gray-100 ${filterBrinde === b ? 'font-bold text-blue-700 bg-blue-50' : 'text-gray-600'}`}
+                                                    title="Abrir em nova janela"
+                                                >
+                                                    {b}
+                                                </button>
+                                            ))}
+                                        </div>
                                     </div>
                                 </div>
                             </Menu.Items>
