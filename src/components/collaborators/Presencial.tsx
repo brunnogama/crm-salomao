@@ -1,31 +1,45 @@
-import { useState, useEffect, useRef } from 'react'
-import { Upload, FileSpreadsheet, RefreshCw, Trash2, Search, Filter } from 'lucide-react'
+import { useState, useEffect, useRef, useMemo } from 'react'
+import { Upload, FileSpreadsheet, RefreshCw, Trash2, LayoutList, BarChart3, Calendar } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import { supabase } from '../../lib/supabase'
 
 interface PresenceRecord {
   id: string;
   nome_colaborador: string;
-  data_hora: string; // ISO String do banco
+  data_hora: string; // ISO String
 }
 
-// ATENÇÃO: A palavra 'export' abaixo é obrigatória para o App.tsx encontrar este componente
+interface ReportItem {
+  nome: string;
+  diasPresentes: number;
+  diasSemana: { [key: string]: number }; // Ex: { 'Seg': 4, 'Ter': 2 }
+}
+
 export function Presencial() {
+  // Estados Gerais
   const [records, setRecords] = useState<PresenceRecord[]>([])
   const [loading, setLoading] = useState(false)
+  
+  // Estados de Upload/Exclusão
   const [uploading, setUploading] = useState(false)
   const [progress, setProgress] = useState(0)
   const [deleting, setDeleting] = useState(false) 
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // Função para buscar dados do Supabase
+  // Estados do Relatório
+  const [viewMode, setViewMode] = useState<'list' | 'report'>('report') // Padrão: Relatório
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth())
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
+
+  // --- BUSCA DE DADOS ---
   const fetchRecords = async () => {
     setLoading(true)
+    // Aumentei o limit para garantir que pegue o mês todo na análise
     const { data, error } = await supabase
       .from('presenca_portaria')
       .select('*')
       .order('data_hora', { ascending: false })
-      .limit(2000)
+      .limit(5000) 
 
     if (error) {
       console.error('Erro ao buscar registros:', error)
@@ -39,6 +53,57 @@ export function Presencial() {
     fetchRecords()
   }, [])
 
+  // --- LÓGICA DO RELATÓRIO (UseMemo para performance) ---
+  const reportData = useMemo(() => {
+    const grouped: { [key: string]: { uniqueDays: Set<string>, weekDays: { [key: number]: number } } } = {}
+
+    records.forEach(record => {
+      const dateObj = new Date(record.data_hora)
+      
+      // Filtro de Mês e Ano
+      if (dateObj.getMonth() !== selectedMonth || dateObj.getFullYear() !== selectedYear) {
+        return
+      }
+
+      const nome = record.nome_colaborador.toUpperCase() // Normalizar nomes
+      const dayKey = dateObj.toLocaleDateString('pt-BR') // Chave para dia único (DD/MM/AAAA)
+      const weekDay = dateObj.getDay() // 0 (Dom) a 6 (Sab)
+
+      if (!grouped[nome]) {
+        grouped[nome] = { uniqueDays: new Set(), weekDays: {} }
+      }
+
+      // Adiciona ao Set (Sets automaticamente ignoram duplicatas, resolvendo entradas repetidas no mesmo dia)
+      if (!grouped[nome].uniqueDays.has(dayKey)) {
+        grouped[nome].uniqueDays.add(dayKey)
+        
+        // Contabiliza o dia da semana apenas uma vez por dia
+        grouped[nome].weekDays[weekDay] = (grouped[nome].weekDays[weekDay] || 0) + 1
+      }
+    })
+
+    // Transforma o objeto agrupado em array para a tabela
+    const result: ReportItem[] = Object.keys(grouped).map(nome => {
+      const weekDaysMap: { [key: string]: number } = {}
+      const days = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
+      
+      // Mapeia números (0-6) para nomes (Dom-Sáb)
+      Object.entries(grouped[nome].weekDays).forEach(([dayIndex, count]) => {
+         weekDaysMap[days[Number(dayIndex)]] = count
+      })
+
+      return {
+        nome: nome,
+        diasPresentes: grouped[nome].uniqueDays.size,
+        diasSemana: weekDaysMap
+      }
+    })
+
+    // Ordena por quem veio mais vezes
+    return result.sort((a, b) => b.diasPresentes - a.diasPresentes)
+  }, [records, selectedMonth, selectedYear])
+
+  // --- UTILS DE IMPORTAÇÃO ---
   const findValue = (row: any, keys: string[]) => {
     const rowKeys = Object.keys(row).map(k => k.trim().toLowerCase())
     const targetKey = keys.find(k => rowKeys.includes(k.toLowerCase()))
@@ -69,7 +134,6 @@ export function Presencial() {
         const recordsToInsert = data.map((row: any) => {
           const nome = findValue(row, ['nome', 'colaborador', 'funcionario']) || 'Desconhecido'
           const tempoRaw = findValue(row, ['tempo', 'data', 'horario'])
-          
           let dataFinal = new Date()
 
           if (tempoRaw && typeof tempoRaw === 'string') {
@@ -86,186 +150,175 @@ export function Presencial() {
         })
 
         const validRecords = recordsToInsert.filter((r:any) => r.nome_colaborador !== 'Desconhecido')
+        if (validRecords.length === 0) { alert('Erro nas colunas.'); setUploading(false); return; }
 
-        if (validRecords.length === 0) {
-            alert('Não foi possível identificar as colunas "Nome" ou "Tempo" no arquivo.')
-            setUploading(false)
-            return
-        }
-
-        // Lógica de Lotes (Batch)
         const BATCH_SIZE = 100 
         const totalBatches = Math.ceil(validRecords.length / BATCH_SIZE)
 
         for (let i = 0; i < validRecords.length; i += BATCH_SIZE) {
             const batch = validRecords.slice(i, i + BATCH_SIZE)
             const { error } = await supabase.from('presenca_portaria').insert(batch)
-            
             if (error) throw error
-
             const currentBatch = Math.floor(i / BATCH_SIZE) + 1
-            const percent = Math.round((currentBatch / totalBatches) * 100)
-            setProgress(percent)
+            setProgress(Math.round((currentBatch / totalBatches) * 100))
         }
 
-        alert(`${validRecords.length} registros importados com sucesso!`)
+        alert(`${validRecords.length} registros importados!`)
         fetchRecords()
-
-      } catch (error) {
-        console.error("Erro na importação:", error)
-        alert("Erro ao processar arquivo.")
-      } finally {
-        setUploading(false)
-        setProgress(0)
-        if (fileInputRef.current) fileInputRef.current.value = ''
-      }
+      } catch (error) { console.error(error); alert("Erro na importação."); } 
+      finally { setUploading(false); setProgress(0); if (fileInputRef.current) fileInputRef.current.value = '' }
     }
     reader.readAsBinaryString(file)
   }
 
   const handleClearHistory = async () => {
-      const confirmacao = confirm(
-        "⚠️ ATENÇÃO: Isso apagará TODOS os registros de presença.\n\n" +
-        "Essa ação não pode ser desfeita. Tem certeza?"
-      )
-
-      if (!confirmacao) return;
-
+      if (!confirm("Isso apagará TODOS os registros. Continuar?")) return;
       setDeleting(true)
       try {
-          const { error, count } = await supabase
-            .from('presenca_portaria')
-            .delete({ count: 'exact' })
-            .neq('id', '00000000-0000-0000-0000-000000000000') 
-          
+          const { error } = await supabase.from('presenca_portaria').delete().neq('id', '00000000-0000-0000-0000-000000000000') 
           if (error) throw error
-
-          if (count === 0 && records.length > 0) {
-             alert("O banco de dados bloqueou a exclusão. Verifique se você rodou o comando SQL de permissão 'delete'.")
-          } else {
-             alert("Base de dados limpa com sucesso!")
-             setRecords([]) 
-             fetchRecords()
-          }
-
-      } catch (error: any) {
-          console.error(error)
-          alert("Erro ao apagar: " + error.message)
-      } finally {
-          setDeleting(false)
-      }
+          setRecords([]); fetchRecords()
+      } catch (error: any) { alert("Erro: " + error.message) } 
+      finally { setDeleting(false) }
   }
 
-  const formatDisplayDate = (isoString: string) => {
-      if(!isoString) return '-'
-      const date = new Date(isoString)
-      return date.toLocaleDateString('pt-BR')
-  }
-
-  const formatDisplayTime = (isoString: string) => {
-      if(!isoString) return '-'
-      const date = new Date(isoString)
-      return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-  }
+  // --- RENDER ---
+  const months = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
+  const years = Array.from({length: 5}, (_, i) => new Date().getFullYear() - i) // [2026, 2025, ...]
 
   return (
     <div className="flex flex-col h-full bg-gray-100 space-y-6">
       
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
-        <div>
-          <h2 className="text-xl font-bold text-[#112240]">Controle de Presença</h2>
-          <p className="text-sm text-gray-500">Importe a planilha da portaria para alimentar o banco de dados.</p>
+      {/* Header e Controles */}
+      <div className="flex flex-col gap-4 bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+            <h2 className="text-xl font-bold text-[#112240]">Controle de Presença</h2>
+            <p className="text-sm text-gray-500">Gestão de acessos físicos ao escritório.</p>
+            </div>
+            
+            {/* Botões de Ação */}
+            <div className="flex items-center gap-2">
+                <input type="file" accept=".xlsx, .xls" ref={fileInputRef} onChange={handleFileUpload} className="hidden" />
+                <button onClick={() => fetchRecords()} className="p-2 text-gray-400 hover:text-blue-600 transition-colors" title="Atualizar"><RefreshCw className={`h-5 w-5 ${loading ? 'animate-spin' : ''}`} /></button>
+                <button onClick={handleClearHistory} disabled={deleting || records.length === 0} className="p-2 text-gray-400 hover:text-red-600 transition-colors" title="Limpar Tudo"><Trash2 className="h-5 w-5" /></button>
+                <button onClick={() => fileInputRef.current?.click()} disabled={uploading} className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+                    {uploading ? `Importando ${progress}%` : <><FileSpreadsheet className="h-4 w-4" /> Importar</>}
+                </button>
+            </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <input 
-            type="file" 
-            accept=".xlsx, .xls" 
-            ref={fileInputRef} 
-            onChange={handleFileUpload} 
-            className="hidden" 
-          />
-          
-          <button 
-            onClick={() => fetchRecords()}
-            className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors"
-            title="Atualizar lista"
-          >
-            <RefreshCw className={`h-5 w-5 ${loading ? 'animate-spin' : ''}`} />
-          </button>
+        {/* Abas e Filtros */}
+        <div className="flex flex-col md:flex-row items-center justify-between border-t border-gray-100 pt-4 gap-4">
+            <div className="flex bg-gray-100 p-1 rounded-lg">
+                <button 
+                    onClick={() => setViewMode('report')}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${viewMode === 'report' ? 'bg-white text-[#112240] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                >
+                    <BarChart3 className="h-4 w-4" /> Relatório Mensal
+                </button>
+                <button 
+                    onClick={() => setViewMode('list')}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${viewMode === 'list' ? 'bg-white text-[#112240] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                >
+                    <LayoutList className="h-4 w-4" /> Registros Brutos
+                </button>
+            </div>
 
-          {/* BOTÃO DE EXCLUIR DADOS */}
-          <button 
-            onClick={handleClearHistory}
-            disabled={deleting || records.length === 0}
-            className="flex items-center gap-2 bg-red-50 hover:bg-red-100 text-red-600 px-4 py-2 rounded-lg transition-colors shadow-sm disabled:opacity-50 border border-red-200"
-          >
-            {deleting ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-            <span>{deleting ? 'Excluindo...' : 'Excluir Dados'}</span>
-          </button>
-
-          {/* BOTÃO DE IMPORTAR */}
-          <button 
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploading}
-            className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors shadow-sm disabled:opacity-50 min-w-[160px] justify-center"
-          >
-            {uploading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <FileSpreadsheet className="h-4 w-4" />}
-            <span>{uploading ? `Importando ${progress}%` : 'Importar XLSX'}</span>
-          </button>
+            {viewMode === 'report' && (
+                <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-gray-400" />
+                    <select 
+                        value={selectedMonth} 
+                        onChange={(e) => setSelectedMonth(Number(e.target.value))}
+                        className="bg-gray-50 border border-gray-200 text-gray-700 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2"
+                    >
+                        {months.map((m, i) => <option key={i} value={i}>{m}</option>)}
+                    </select>
+                    <select 
+                        value={selectedYear} 
+                        onChange={(e) => setSelectedYear(Number(e.target.value))}
+                        className="bg-gray-50 border border-gray-200 text-gray-700 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2"
+                    >
+                        {years.map(y => <option key={y} value={y}>{y}</option>)}
+                    </select>
+                </div>
+            )}
         </div>
       </div>
 
-      {/* Conteúdo */}
+      {/* Conteúdo Principal */}
       <div className="flex-1 bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden flex flex-col">
         
-        {/* Barra de Status */}
-        <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
-          <div className="flex items-center gap-2 text-sm text-gray-500">
-             <span>Registros visualizados: <strong>{records.length}</strong></span>
-          </div>
-        </div>
-
-        {/* Tabela */}
-        <div className="flex-1 overflow-auto">
-          {records.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center text-gray-400 opacity-60">
-              <Upload className="h-16 w-16 mb-4 text-gray-300" />
-              <p className="text-lg font-medium">Nenhum registro encontrado</p>
-              <p className="text-sm">Importe uma planilha para começar.</p>
+        {/* VIEW: RELATÓRIO */}
+        {viewMode === 'report' && (
+            <div className="flex-1 overflow-auto">
+                 {reportData.length === 0 ? (
+                    <div className="h-64 flex flex-col items-center justify-center text-gray-400">
+                        <p>Nenhum dado encontrado para {months[selectedMonth]} de {selectedYear}.</p>
+                    </div>
+                ) : (
+                    <table className="w-full text-left border-collapse">
+                        <thead className="bg-gray-50 sticky top-0 z-10 text-xs uppercase text-gray-500 font-semibold tracking-wider">
+                            <tr>
+                                <th className="px-6 py-4 border-b">Colaborador</th>
+                                <th className="px-6 py-4 border-b text-center">Dias Presenciais</th>
+                                <th className="px-6 py-4 border-b">Frequência Semanal</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                            {reportData.map((item, idx) => (
+                                <tr key={idx} className="hover:bg-blue-50/50">
+                                    <td className="px-6 py-4 font-medium text-[#112240] text-sm">{item.nome}</td>
+                                    <td className="px-6 py-4 text-center">
+                                        <span className="bg-blue-100 text-blue-800 text-xs font-bold px-3 py-1 rounded-full">
+                                            {item.diasPresentes} dias
+                                        </span>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <div className="flex gap-2">
+                                            {['Seg', 'Ter', 'Qua', 'Qui', 'Sex'].map(day => (
+                                                <div key={day} className={`text-xs px-2 py-1 rounded border ${item.diasSemana[day] ? 'bg-green-50 border-green-200 text-green-700 font-bold' : 'bg-gray-50 border-gray-100 text-gray-300'}`}>
+                                                    {day}
+                                                    {item.diasSemana[day] ? ` (${item.diasSemana[day]})` : ''}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                )}
             </div>
-          ) : (
-            <table className="w-full text-left border-collapse">
-              <thead className="bg-gray-50 sticky top-0 z-10 text-xs uppercase text-gray-500 font-semibold tracking-wider">
-                <tr>
-                  <th className="px-6 py-4 border-b border-gray-200">Nome do Colaborador</th>
-                  <th className="px-6 py-4 border-b border-gray-200 w-48">Data</th>
-                  <th className="px-6 py-4 border-b border-gray-200 w-48">Hora</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {records.map((record) => (
-                  <tr key={record.id} className="hover:bg-blue-50/50 transition-colors group text-sm text-gray-700">
-                    <td className="px-6 py-3 font-medium text-[#112240] capitalize">
-                        {record.nome_colaborador.toLowerCase()}
-                    </td>
-                    <td className="px-6 py-3">
-                      <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs border border-gray-200 font-mono">
-                        {formatDisplayDate(record.data_hora)}
-                      </span>
-                    </td>
-                    <td className="px-6 py-3">
-                        <span className="text-gray-500 font-mono">
-                            {formatDisplayTime(record.data_hora)}
-                        </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
+        )}
+
+        {/* VIEW: LISTA BRUTA (ANTIGA) */}
+        {viewMode === 'list' && (
+             <div className="flex-1 overflow-auto">
+                <table className="w-full text-left border-collapse">
+                <thead className="bg-gray-50 sticky top-0 z-10 text-xs uppercase text-gray-500 font-semibold tracking-wider">
+                    <tr>
+                    <th className="px-6 py-4 border-b">Nome</th>
+                    <th className="px-6 py-4 border-b">Data</th>
+                    <th className="px-6 py-4 border-b">Hora</th>
+                    </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                    {records.map((record) => {
+                        const date = new Date(record.data_hora)
+                        return (
+                            <tr key={record.id} className="hover:bg-gray-50 text-sm text-gray-700">
+                                <td className="px-6 py-3 font-medium capitalize">{record.nome_colaborador.toLowerCase()}</td>
+                                <td className="px-6 py-3">{date.toLocaleDateString('pt-BR')}</td>
+                                <td className="px-6 py-3 text-gray-500 font-mono">{date.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'})}</td>
+                            </tr>
+                        )
+                    })}
+                </tbody>
+                </table>
+             </div>
+        )}
       </div>
     </div>
   )
