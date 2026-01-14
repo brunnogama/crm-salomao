@@ -288,23 +288,27 @@ export function Clients({ initialFilters, tableName = 'clientes' }: ClientsProps
                         </Menu.Button>
 
                         <Transition as={Fragment} enter="transition ease-out duration-100" enterFrom="transform opacity-0 scale-95" enterTo="transform opacity-100 scale-100" leave="transition ease-in duration-75" leaveFrom="transform opacity-100 scale-100" leaveTo="transform opacity-0 scale-95">
-
-                            <Menu.Items className="absolute left-0 mt-2 w-56 origin-top-left rounded-xl bg-white shadow-xl border border-gray-200 p-2 z-50">
-                                <div className="space-y-2">
+                            {/* MENU ATUALIZADO COM UI PADRÃO */}
+                            <Menu.Items className="absolute left-0 mt-2 w-72 origin-top-left rounded-xl bg-white shadow-xl border border-gray-200 p-4 z-50 ring-1 ring-black ring-opacity-5 focus:outline-none">
+                                <div className="space-y-4">
                                     <div>
-
-                                        <label className="text-xs font-bold text-gray-500 uppercase px-2">Sócio</label>
-
-                                        <select value={filterSocio} onChange={(e) => setFilterSocio(e.target.value)} className="w-full mt-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20">
+                                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5 ml-1">Sócio</label>
+                                        <select 
+                                            value={filterSocio} 
+                                            onChange={(e) => setFilterSocio(e.target.value)} 
+                                            className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 focus:bg-white focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
+                                        >
                                             <option value="">Todos</option>
                                             {availableSocios.map(s => <option key={s} value={s}>{s}</option>)}
                                         </select>
                                     </div>
                                     <div>
-
-                                        <label className="text-xs font-bold text-gray-500 uppercase px-2">Tipo Brinde</label>
-
-                                        <select value={filterBrinde} onChange={(e) => setFilterBrinde(e.target.value)} className="w-full mt-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20">
+                                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5 ml-1">Tipo Brinde</label>
+                                        <select 
+                                            value={filterBrinde} 
+                                            onChange={(e) => setFilterBrinde(e.target.value)} 
+                                            className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 focus:bg-white focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
+                                        >
                                             <option value="">Todos</option>
                                             {availableBrindes.map(b => <option key={b} value={b}>{b}</option>)}
                                         </select>
