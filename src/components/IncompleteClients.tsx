@@ -1,12 +1,14 @@
+// src/components/IncompleteClients.tsx
 import { useEffect, useState, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
 import { 
   CheckCircle, Pencil, XCircle, Search, X, 
-  Filter, ArrowUpDown, Check 
+  Filter, ArrowUpDown, Check, Download 
 } from 'lucide-react'
 import { Menu, Transition } from '@headlessui/react'
 import { Fragment } from 'react'
 import { NewClientModal, ClientData } from './NewClientModal'
+import * as XLSX from 'xlsx'
 
 export function IncompleteClients() {
   const [clients, setClients] = useState<ClientData[]>([])
@@ -149,6 +151,23 @@ export function IncompleteClients() {
     if (!error) fetchIncompleteClients();
   }
 
+  // --- EXPORTAR XLSX ---
+  const handleExport = () => {
+    const ws = XLSX.utils.json_to_sheet(processedClients);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Pendencias");
+    XLSX.writeFile(wb, "clientes_pendentes.xlsx");
+  }
+
+  // --- LIMPAR FILTROS ---
+  const hasActiveFilters = searchTerm !== '' || filterSocio !== '' || filterBrinde !== '';
+  
+  const clearFilters = () => {
+    setSearchTerm('');
+    setFilterSocio('');
+    setFilterBrinde('');
+  }
+
   if (loading) return (
     <div className="flex justify-center items-center h-64">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#112240]"></div>
@@ -204,6 +223,18 @@ export function IncompleteClients() {
                     </select>
                 </div>
 
+                {/* Botão Limpar Filtros */}
+                {hasActiveFilters && (
+                    <button 
+                        onClick={clearFilters}
+                        className="p-2 bg-red-50 text-red-600 border border-red-200 rounded-lg hover:bg-red-100 transition-colors flex items-center gap-1"
+                        title="Limpar todos os filtros"
+                    >
+                        <X className="h-4 w-4" />
+                        <span className="text-xs font-bold hidden sm:inline">Limpar</span>
+                    </button>
+                )}
+
                 {/* Ordenação */}
                 <Menu as="div" className="relative">
                     <Menu.Button className="flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs font-bold text-gray-600 hover:text-[#112240] hover:bg-gray-100 transition-colors">
@@ -240,11 +271,20 @@ export function IncompleteClients() {
 
                 <div className="h-6 w-px bg-gray-200 mx-1"></div>
 
+                {/* Botão Exportar */}
+                <button 
+                    onClick={handleExport}
+                    className="p-2 bg-gray-50 text-gray-400 border border-gray-200 rounded-lg hover:text-green-600 hover:bg-green-50 hover:border-green-200 transition-colors"
+                    title="Exportar para XLSX"
+                >
+                    <Download className="h-5 w-5" />
+                </button>
+
                 {/* Botão Busca */}
                 <button 
                     onClick={() => {
                         setIsSearchOpen(!isSearchOpen);
-                        if(isSearchOpen) setSearchTerm(''); 
+                        if(isSearchOpen && !filterSocio && !filterBrinde) setSearchTerm(''); 
                     }}
                     className={`p-2 rounded-lg transition-colors ${isSearchOpen ? 'bg-blue-100 text-blue-600' : 'bg-gray-50 text-gray-400 hover:text-[#112240] hover:bg-gray-100 border border-gray-200'}`}
                     title="Buscar na lista"
@@ -276,11 +316,11 @@ export function IncompleteClients() {
           <div className="flex flex-col items-center justify-center py-12 text-gray-400 bg-white rounded-xl border border-dashed border-gray-300">
               <CheckCircle className="h-10 w-10 mb-2 text-green-500" />
               <p className="font-medium">
-                  {searchTerm || filterSocio || filterBrinde ? 'Nenhuma pendência encontrada com estes filtros.' : 'Tudo certo! Nenhum cadastro pendente.'}
+                  {hasActiveFilters ? 'Nenhuma pendência encontrada com estes filtros.' : 'Tudo certo! Nenhum cadastro pendente.'}
               </p>
-              {(searchTerm || filterSocio || filterBrinde) && (
+              {hasActiveFilters && (
                   <button 
-                      onClick={() => {setSearchTerm(''); setFilterBrinde(''); setFilterSocio('');}}
+                      onClick={clearFilters}
                       className="mt-2 text-blue-600 text-sm font-bold hover:underline"
                   >
                       Limpar filtros
@@ -297,9 +337,10 @@ export function IncompleteClients() {
                   return (
                       <div key={client.id} className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow flex flex-col md:flex-row md:items-center justify-between gap-4 group border-l-4 border-l-red-400">
                           <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-1">
+                              <div className="flex items-center gap-2 mb-1 flex-wrap">
                                   <h3 className="font-bold text-[#112240] text-lg">{client.nome || 'Sem Nome'}</h3>
                                   {client.empresa && <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{client.empresa}</span>}
+                                  {client.socio && <span className="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full border border-blue-100">Sócio: {client.socio}</span>}
                               </div>
                               <div className="flex flex-wrap gap-2 mt-2">
                                   {missing.map(field => (
