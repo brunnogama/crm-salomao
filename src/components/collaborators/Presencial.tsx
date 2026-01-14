@@ -1,80 +1,156 @@
-import { useState, useRef } from 'react'
-import { Upload, FileSpreadsheet, Search, Filter } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { Upload, FileSpreadsheet, Search, Filter, RefreshCw, Trash2 } from 'lucide-react'
 import * as XLSX from 'xlsx'
+import { supabase } from '../../lib/supabase'
 
 interface PresenceRecord {
   id: string;
-  nome: string;
-  data: string; // Formatado BR
-  hora: string;
-  rawDate: Date; // Para ordenação futura
+  nome_colaborador: string;
+  data_hora: string; // ISO String do banco
 }
 
 export function Presencial() {
   const [records, setRecords] = useState<PresenceRecord[]>([])
-  const [fileName, setFileName] = useState<string>('')
+  const [loading, setLoading] = useState(false)
+  const [uploading, setUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Função para buscar dados do Supabase
+  const fetchRecords = async () => {
+    setLoading(true)
+    const { data, error } = await supabase
+      .from('presenca_portaria')
+      .select('*')
+      .order('data_hora', { ascending: false })
+
+    if (error) {
+      console.error('Erro ao buscar registros:', error)
+    } else {
+      setRecords(data || [])
+    }
+    setLoading(false)
+  }
+
+  // Carrega os dados ao abrir a tela
+  useEffect(() => {
+    fetchRecords()
+  }, [])
+
+  // Função auxiliar para achar a chave correta no objeto do Excel (case insensitive)
+  const findValue = (row: any, keys: string[]) => {
+    const rowKeys = Object.keys(row).map(k => k.trim().toLowerCase())
+    const targetKey = keys.find(k => rowKeys.includes(k.toLowerCase()))
+    
+    if (targetKey) {
+        // Encontra a chave original correspondente
+        const originalKey = Object.keys(row).find(k => k.trim().toLowerCase() === targetKey.toLowerCase())
+        return originalKey ? row[originalKey] : null
+    }
+    return null
+  }
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
 
-    setFileName(file.name)
-
+    setUploading(true)
     const reader = new FileReader()
-    reader.onload = (evt) => {
-      const bstr = evt.target?.result
-      const wb = XLSX.read(bstr, { type: 'binary' })
-      const wsname = wb.SheetNames[0]
-      const ws = wb.Sheets[wsname]
-      const data = XLSX.utils.sheet_to_json(ws)
+    
+    reader.onload = async (evt) => {
+      try {
+        const bstr = evt.target?.result
+        const wb = XLSX.read(bstr, { type: 'binary' })
+        const wsname = wb.SheetNames[0]
+        const ws = wb.Sheets[wsname]
+        const data = XLSX.utils.sheet_to_json(ws)
 
-      const processedData: PresenceRecord[] = data.map((row: any, index) => {
-        // Formato esperado: "2025-11-19 16:54:41"
-        const tempoRaw = row['Tempo'] || ''
-        let dataFormatada = '-'
-        let horaFormatada = '-'
-        let dataObjeto = new Date()
+        console.log("Linha crua do Excel (debug):", data[0]) // Para ver no console o que está vindo
 
-        if (typeof tempoRaw === 'string' && tempoRaw.includes(' ')) {
-          const [datePart, timePart] = tempoRaw.split(' ')
-          const [year, month, day] = datePart.split('-')
+        const recordsToInsert = data.map((row: any) => {
+          // Tenta encontrar o nome (aceita: 'Nome', 'NOME', 'Colaborador', etc)
+          const nome = findValue(row, ['nome', 'colaborador', 'funcionario']) || 'Desconhecido'
           
-          dataFormatada = `${day}/${month}/${year}`
-          horaFormatada = timePart
-          dataObjeto = new Date(tempoRaw)
+          // Tenta encontrar o tempo (aceita: 'Tempo', 'Data', 'Hora')
+          const tempoRaw = findValue(row, ['tempo', 'data', 'horario'])
+          
+          let dataFinal = new Date()
+
+          // Tratamento da Data "2025-11-19 16:54:41"
+          if (tempoRaw && typeof tempoRaw === 'string') {
+             // Se for string no formato ISO ou parecido
+             dataFinal = new Date(tempoRaw)
+          } else if (typeof tempoRaw === 'number') {
+             // Se o Excel importou como número serial
+             // (XLSX converte data serial do Excel para JS Date se necessário, mas aqui assumimos string)
+             dataFinal = new Date((tempoRaw - (25567 + 2)) * 86400 * 1000)
+          }
+
+          return {
+            nome_colaborador: nome,
+            data_hora: isNaN(dataFinal.getTime()) ? new Date() : dataFinal, // Fallback para agora se der erro
+            arquivo_origem: file.name
+          }
+        })
+
+        // Filtrar apenas linhas que tenham nome válido (opcional)
+        const validRecords = recordsToInsert.filter((r:any) => r.nome_colaborador !== 'Desconhecido')
+
+        if (validRecords.length === 0) {
+            alert('Não foi possível identificar as colunas "Nome" ou "Tempo" no arquivo. Verifique o console (F12) para detalhes.')
+            setUploading(false)
+            return
         }
 
-        return {
-          id: `row-${index}`,
-          nome: row['Nome'] || 'Desconhecido',
-          data: dataFormatada,
-          hora: horaFormatada,
-          rawDate: dataObjeto
-        }
-      })
+        // Inserir no Supabase
+        const { error } = await supabase.from('presenca_portaria').insert(validRecords)
 
-      setRecords(processedData)
+        if (error) throw error
+
+        alert(`${validRecords.length} registros importados com sucesso!`)
+        fetchRecords() // Atualiza a lista
+
+      } catch (error) {
+        console.error("Erro na importação:", error)
+        alert("Erro ao processar arquivo. Verifique o formato.")
+      } finally {
+        setUploading(false)
+        if (fileInputRef.current) fileInputRef.current.value = '' // Limpa o input
+      }
     }
     reader.readAsBinaryString(file)
   }
 
-  const handleTriggerUpload = () => {
-    fileInputRef.current?.click()
+  const handleClearHistory = async () => {
+      if(confirm("Tem certeza que deseja apagar TODO o histórico?")){
+          await supabase.from('presenca_portaria').delete().neq('id', '00000000-0000-0000-0000-000000000000') // Deleta tudo
+          fetchRecords()
+      }
+  }
+
+  // Formatadores visuais
+  const formatDisplayDate = (isoString: string) => {
+      if(!isoString) return '-'
+      const date = new Date(isoString)
+      return date.toLocaleDateString('pt-BR')
+  }
+
+  const formatDisplayTime = (isoString: string) => {
+      if(!isoString) return '-'
+      const date = new Date(isoString)
+      return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
   }
 
   return (
     <div className="flex flex-col h-full bg-gray-100 space-y-6">
       
-      {/* Header da Página com Ações */}
+      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
         <div>
           <h2 className="text-xl font-bold text-[#112240]">Controle de Presença</h2>
-          <p className="text-sm text-gray-500">Importe a planilha da portaria para visualizar os acessos.</p>
+          <p className="text-sm text-gray-500">Importe a planilha da portaria para alimentar o banco de dados.</p>
         </div>
 
         <div className="flex items-center gap-3">
-          {/* Botão de Upload Escondido */}
           <input 
             type="file" 
             accept=".xlsx, .xls" 
@@ -84,30 +160,34 @@ export function Presencial() {
           />
           
           <button 
-            onClick={handleTriggerUpload}
-            className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors shadow-sm"
+            onClick={() => fetchRecords()}
+            className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors"
+            title="Atualizar lista"
           >
-            <FileSpreadsheet className="h-4 w-4" />
-            <span>Importar XLSX</span>
+            <RefreshCw className={`h-5 w-5 ${loading ? 'animate-spin' : ''}`} />
+          </button>
+
+          <button 
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors shadow-sm disabled:opacity-50"
+          >
+            {uploading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <FileSpreadsheet className="h-4 w-4" />}
+            <span>{uploading ? 'Importando...' : 'Importar XLSX'}</span>
           </button>
         </div>
       </div>
 
-      {/* Área de Conteúdo */}
+      {/* Conteúdo */}
       <div className="flex-1 bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden flex flex-col">
         
-        {/* Barra de Filtros (Placeholder Visual) */}
+        {/* Barra de Status */}
         <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
           <div className="flex items-center gap-2 text-sm text-gray-500">
-            {records.length > 0 ? (
-               <span>Mostrando <strong>{records.length}</strong> registros do arquivo <em>{fileName}</em></span>
-            ) : (
-               <span>Nenhum arquivo importado.</span>
-            )}
+             <span>Total de registros no banco: <strong>{records.length}</strong></span>
           </div>
           <div className="flex gap-2">
-             <button className="p-2 text-gray-400 hover:text-[#112240] transition-colors" title="Filtrar"><Filter className="h-4 w-4" /></button>
-             <button className="p-2 text-gray-400 hover:text-[#112240] transition-colors" title="Buscar"><Search className="h-4 w-4" /></button>
+             <button onClick={handleClearHistory} className="p-2 text-red-300 hover:text-red-500 transition-colors" title="Limpar Histórico"><Trash2 className="h-4 w-4" /></button>
           </div>
         </div>
 
@@ -116,8 +196,8 @@ export function Presencial() {
           {records.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-gray-400 opacity-60">
               <Upload className="h-16 w-16 mb-4 text-gray-300" />
-              <p className="text-lg font-medium">Aguardando importação</p>
-              <p className="text-sm">Clique em "Importar XLSX" para começar</p>
+              <p className="text-lg font-medium">Nenhum registro encontrado</p>
+              <p className="text-sm">Importe uma planilha para começar.</p>
             </div>
           ) : (
             <table className="w-full text-left border-collapse">
@@ -125,21 +205,23 @@ export function Presencial() {
                 <tr>
                   <th className="px-6 py-4 border-b border-gray-200">Nome do Colaborador</th>
                   <th className="px-6 py-4 border-b border-gray-200 w-48">Data</th>
-                  <th className="px-6 py-4 border-b border-gray-200 w-48">Hora de Entrada</th>
+                  <th className="px-6 py-4 border-b border-gray-200 w-48">Hora</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {records.map((record) => (
                   <tr key={record.id} className="hover:bg-blue-50/50 transition-colors group text-sm text-gray-700">
-                    <td className="px-6 py-3 font-medium text-[#112240]">{record.nome}</td>
+                    <td className="px-6 py-3 font-medium text-[#112240] capitalize">
+                        {record.nome_colaborador.toLowerCase()}
+                    </td>
                     <td className="px-6 py-3">
                       <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs border border-gray-200 font-mono">
-                        {record.data}
+                        {formatDisplayDate(record.data_hora)}
                       </span>
                     </td>
                     <td className="px-6 py-3">
                         <span className="text-gray-500 font-mono">
-                            {record.hora}
+                            {formatDisplayTime(record.data_hora)}
                         </span>
                     </td>
                   </tr>
