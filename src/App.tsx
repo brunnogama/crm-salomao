@@ -24,7 +24,8 @@ import {
   KanbanSquare,
   BookOpen,
   History as HistoryIcon, // Renomeado para não conflitar com o componente History
-  Settings as SettingsIcon 
+  Settings as SettingsIcon,
+  Truck // Ícone para Logística
 } from 'lucide-react'
 import { ModuleSelector } from './components/ModuleSelector'
 import { UnderConstruction } from './components/UnderConstruction'
@@ -45,6 +46,7 @@ export default function App() {
     clientes: Users,
     magistrados: Gavel,
     incompletos: FileWarning,
+    logistica: Truck, // Mapeamento do ícone Logística
     kanban: KanbanSquare,
     configuracoes: SettingsIcon,
     historico: HistoryIcon,
@@ -56,6 +58,7 @@ export default function App() {
     clientes: 'Gerencie a base de prospects e clientes ativos.',
     magistrados: 'Área restrita para relacionamento com Autoridades.',
     incompletos: 'Atenção: Cadastros que necessitam de preenchimento.',
+    logistica: 'Gestão de entregas e controle logístico.',
     kanban: 'Gerencie suas tarefas de forma visual.',
     configuracoes: 'Preferências do sistema e gestão de acessos.',
     historico: 'Audit Log: Rastreabilidade de ações no sistema.',
@@ -67,6 +70,7 @@ export default function App() {
     clientes: 'Clientes',
     magistrados: 'Autoridades',
     incompletos: 'Cadastros Incompletos',
+    logistica: 'Logística',
     kanban: 'Kanban',
     configuracoes: 'Configurações',
     historico: 'Histórico de Atividades',
@@ -179,6 +183,7 @@ export default function App() {
                   {activePage === 'clientes' && <Clients initialFilters={clientFilters} />}
                   {activePage === 'magistrados' && <Magistrados />} 
                   {activePage === 'incompletos' && <IncompleteClients />}
+                  {activePage === 'logistica' && <UnderConstruction moduleName="Logística" onBack={() => setActivePage('dashboard')} />}
                   {activePage === 'kanban' && <Kanban />}
                   {activePage === 'historico' && <History />} 
                   {activePage === 'manual' && <Manual />} 
