@@ -32,7 +32,6 @@ export interface ClientData {
   observacoes: string;
   ignored_fields?: string[] | null;
   historico_brindes?: GiftHistoryItem[] | null;
-  // --- CAMPOS DE AUDITORIA ---
   created_at?: string;
   updated_at?: string;
   created_by?: string;
@@ -44,12 +43,12 @@ interface NewClientModalProps {
   onClose: () => void;
   onSave: (client: ClientData) => void;
   clientToEdit?: ClientData | null;
+  tableName?: string; // Adicionado prop tableName
 }
 
-const BRINDE_OPTIONS = ['Brinde VIP', 'Brinde Médio', 'Brinde Pequeno', 'Não Recebe', 'Outro']
-
-export function NewClientModal({ isOpen, onClose, onSave, clientToEdit }: NewClientModalProps) {
+export function NewClientModal({ isOpen, onClose, onSave, clientToEdit, tableName = 'clientes' }: NewClientModalProps) {
   const [activeTab, setActiveTab] = useState<'geral' | 'endereco' | 'historico'>('geral')
+  const [brindeOptions, setBrindeOptions] = useState<string[]>(['Brinde VIP', 'Brinde Médio', 'Não Recebe', 'Outro'])
   
   const [formData, setFormData] = useState<ClientData>({
     nome: '', empresa: '', cargo: '', telefone: '',
@@ -58,6 +57,22 @@ export function NewClientModal({ isOpen, onClose, onSave, clientToEdit }: NewCli
     email: '', socio: '', observacoes: '', ignored_fields: [],
     historico_brindes: []
   })
+
+  // Busca os tipos de brinde do banco de dados (Settings)
+  useEffect(() => {
+    const fetchBrindeTypes = async () => {
+        const { data } = await supabase.from('tipos_brinde').select('nome').eq('ativo', true).order('nome')
+        
+        if (data && data.length > 0) {
+            // Se tiver dados no banco, usa eles + opções padrão
+            const dbOptions = data.map(d => d.nome)
+            // Garante que 'Outro' e 'Não Recebe' existam, mas sem duplicar
+            const finalOptions = [...new Set([...dbOptions, 'Não Recebe', 'Outro'])]
+            setBrindeOptions(finalOptions)
+        }
+    }
+    fetchBrindeTypes()
+  }, [])
 
   const initializeHistory = (currentHistory?: GiftHistoryItem[] | null) => {
     const defaultYears = ['2025', '2024'];
@@ -98,7 +113,7 @@ export function NewClientModal({ isOpen, onClose, onSave, clientToEdit }: NewCli
 
     try {
       if (clientToEdit?.id) {
-        // UPDATE - Atualizar cliente existente
+        // UPDATE - Usando a prop tableName corretamente
         const { error } = await supabase
           .from(tableName)
           .update(formData)
@@ -107,7 +122,7 @@ export function NewClientModal({ isOpen, onClose, onSave, clientToEdit }: NewCli
         if (error) throw error
         await logAction('UPDATE', tableName.toUpperCase(), `Editou ${formData.nome}`)
       } else {
-        // INSERT - Criar novo cliente
+        // INSERT - Usando a prop tableName corretamente
         const { error } = await supabase
           .from(tableName)
           .insert([formData])
@@ -116,7 +131,7 @@ export function NewClientModal({ isOpen, onClose, onSave, clientToEdit }: NewCli
         await logAction('CREATE', tableName.toUpperCase(), `Criou ${formData.nome}`)
       }
       
-      onSave() // Atualiza lista
+      onSave(formData) // Atualiza lista
       onClose()
     } catch (error: any) {
       console.error('Erro ao salvar:', error)
@@ -178,7 +193,6 @@ export function NewClientModal({ isOpen, onClose, onSave, clientToEdit }: NewCli
     }));
   }
 
-  // Helper para formatar data e hora
   const formatAuditDate = (dateString?: string) => {
     if (!dateString) return '-';
     try {
@@ -246,7 +260,7 @@ export function NewClientModal({ isOpen, onClose, onSave, clientToEdit }: NewCli
                             <div>
                                 <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Tipo de Brinde (Atual)</label>
                                 <select value={formData.tipo_brinde} onChange={e => setFormData({...formData, tipo_brinde: e.target.value})} className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-[#112240] outline-none">
-                                    {BRINDE_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                    {brindeOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                                 </select>
                             </div>
                             {formData.tipo_brinde === 'Outro' && (
@@ -321,7 +335,7 @@ export function NewClientModal({ isOpen, onClose, onSave, clientToEdit }: NewCli
                                                     className="w-full border border-gray-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-[#112240] outline-none bg-white"
                                                 >
                                                     <option value="">Selecione...</option>
-                                                    {BRINDE_OPTIONS.map(opt => (
+                                                    {brindeOptions.map(opt => (
                                                         <option key={opt} value={opt}>{opt}</option>
                                                     ))}
                                                 </select>
@@ -338,15 +352,10 @@ export function NewClientModal({ isOpen, onClose, onSave, clientToEdit }: NewCli
                     )}
                 </div>
 
-                {/* --- FOOTER UNIFICADO COM AUDITORIA VISUAL --- */}
                 <div className="bg-gradient-to-r from-gray-50 to-gray-100 border-t border-gray-200 shrink-0">
-                  
-                  {/* Informações de Auditoria: Visível apenas se o cliente já existe (Edição) */}
                   {clientToEdit && (
                     <div className="px-6 py-3 bg-gradient-to-r from-blue-50/50 to-purple-50/50 border-b border-blue-100/50">
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                        
-                        {/* Criado */}
                         <div className="flex items-center gap-2 bg-white/70 rounded-lg px-3 py-2 border border-blue-100 shadow-sm">
                           <div className="flex items-center justify-center h-7 w-7 rounded-full bg-blue-100">
                             <Clock className="h-3.5 w-3.5 text-blue-600" />
@@ -362,7 +371,6 @@ export function NewClientModal({ isOpen, onClose, onSave, clientToEdit }: NewCli
                           </div>
                         </div>
                         
-                        {/* Editado */}
                         <div className="flex items-center gap-2 bg-white/70 rounded-lg px-3 py-2 border border-purple-100 shadow-sm">
                           <div className="flex items-center justify-center h-7 w-7 rounded-full bg-purple-100">
                             <Save className="h-3.5 w-3.5 text-purple-600" />
@@ -377,7 +385,6 @@ export function NewClientModal({ isOpen, onClose, onSave, clientToEdit }: NewCli
                             )}
                           </div>
                         </div>
-                        
                       </div>
                     </div>
                   )}
