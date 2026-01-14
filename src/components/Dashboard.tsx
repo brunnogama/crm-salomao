@@ -118,7 +118,7 @@ export function Dashboard({ onNavigateWithFilter }: DashboardProps) {
           tipo,
           qtd: qtd as number
         }))
-      }));
+      })).sort((a: any, b: any) => b.total - a.total); // Ordenação aplicada aqui
 
       const formattedStateData = Object.entries(stateMap)
         .map(([name, value]) => ({ name, value }))
