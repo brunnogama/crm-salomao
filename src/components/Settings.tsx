@@ -120,21 +120,21 @@ export function Settings() {
   
   // --- CONTROLE DE PERMISSÃO ---
   const [currentUserRole, setCurrentUserRole] = useState<string>('')
-  // Define se o usuário é admin
-  const isAdmin = currentUserRole === 'Administrador'
+  
+  // CORREÇÃO AQUI: Aceita tanto 'Administrador' quanto 'Admin'
+  const isAdmin = ['Administrador', 'Admin'].includes(currentUserRole)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    fetchCurrentUserRole(); // Busca a permissão ao carregar
+    fetchCurrentUserRole();
     fetchUsers();
     fetchMagistradosConfig();
   }, [])
 
-  // Função para checar o cargo do usuário logado
   const fetchCurrentUserRole = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser()
+      const { data: { user } } = await (supabase.auth as any).getUser()
       if (user?.email) {
         const { data } = await supabase
           .from('usuarios_permitidos')
@@ -177,7 +177,6 @@ export function Settings() {
   }
 
   const openUserModal = (user?: AppUser) => {
-    // Bloqueia abertura do modal se não for admin
     if (!isAdmin) return alert("Apenas administradores podem gerenciar usuários.");
 
     if (user) {
@@ -214,7 +213,7 @@ export function Settings() {
   }
 
   const handleSaveUser = async () => {
-    if (!isAdmin) return; // Segurança extra
+    if (!isAdmin) return;
 
     if (!userForm.email) return alert("E-mail obrigatório")
     try {
@@ -258,8 +257,10 @@ export function Settings() {
     setStatus({ type: null, message: 'Limpando base de dados...' })
 
     try {
-        const { error: errTasks } = await supabase.from('tasks').delete().neq('id', 0);
-        if (errTasks) console.warn("Aviso tarefas:", errTasks);
+        // Tenta limpar tarefas primeiro
+        try {
+            await supabase.from('tasks').delete().neq('id', 0)
+        } catch (e) { console.warn(e) }
 
         const { error: err1 } = await supabase.from('magistrados').delete().neq('id', 0)
         if (err1) throw err1
@@ -288,7 +289,6 @@ export function Settings() {
   }
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Bloqueia upload se não for admin
     if (!isAdmin) {
         alert("Apenas administradores podem importar dados.");
         if (fileInputRef.current) fileInputRef.current.value = '';
@@ -619,8 +619,6 @@ export function Settings() {
             )}
         </div>
       </div>
-
-      
 
       {/* LINHA 3: CRÉDITOS + CHANGELOG */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
