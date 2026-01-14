@@ -29,7 +29,7 @@ export default function App() {
   const moduleDescriptions: Record<string, string> = {
     dashboard: 'Visão geral de performance e indicadores chave.',
     clientes: 'Gerencie a base de prospects e clientes ativos.',
-    magistrados: 'Área restrita para relacionamento com magistrados.',
+    magistrados: 'Área restrita para relacionamento com Autoridades.',
     incompletos: 'Atenção: Cadastros que necessitam de preenchimento.',
     kanban: 'Gerencie suas tarefas de forma visual.',
     configuracoes: 'Preferências do sistema e gestão de acessos.',
@@ -40,7 +40,7 @@ export default function App() {
   const pageTitles: Record<string, string> = {
     dashboard: 'Dashboard',
     clientes: 'Clientes',
-    magistrados: 'Magistrados',
+    magistrados: 'Autoridades',
     incompletos: 'Cadastros Incompletos',
     kanban: 'Kanban',
     configuracoes: 'Configurações',
