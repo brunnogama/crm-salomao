@@ -104,7 +104,7 @@ export function Magistrados() {
 
           {/* Título e Subtítulo */}
           <div className="text-center mb-8">
-            <h3 className="text-2xl font-black text-gray-900 mb-2 tracking-tight">Área de Magistrados</h3>
+            <h3 className="text-2xl font-black text-gray-900 mb-2 tracking-tight">Área de Autoridades</h3>
             <p className="text-sm text-gray-500 font-medium">Digite o PIN de 4 dígitos para acessar</p>
           </div>
 
@@ -180,7 +180,7 @@ export function Magistrados() {
   return (
     <div className="h-full flex flex-col">
       <div className="bg-yellow-50 border-l-4 border-yellow-400 p-2 mb-4 flex items-center justify-between">
-        <div className="flex items-center gap-2 text-yellow-800 text-xs font-bold"><KeyRound className="h-4 w-4" /> MODO SEGURO: Magistrados</div>
+        <div className="flex items-center gap-2 text-yellow-800 text-xs font-bold"><KeyRound className="h-4 w-4" /> MODO SEGURO: Autoridades</div>
         <button onClick={handleLock} className="text-xs font-bold underline text-yellow-800 hover:text-yellow-900">Bloquear Tela</button>
       </div>
       <Clients tableName="magistrados" />

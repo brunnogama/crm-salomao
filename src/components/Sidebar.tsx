@@ -8,7 +8,7 @@ import {
   Settings, 
   FileWarning,
   X,
-  Gavel // Ícone para Magistrados
+  Gavel // Ícone para Autoridades (antigo Magistrados)
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
@@ -43,8 +43,6 @@ export function Sidebar({ activePage, onNavigate, isOpen, onClose }: SidebarProp
         if (!c.cidade) missing.push('Cidade')
         if (!c.estado) missing.push('UF')
         if (!c.email) missing.push('Email')
-        // Telefone e Sócio muitas vezes são opcionais ou tratados à parte, 
-        // mas se forem obrigatórios no seu fluxo, adicione aqui.
         
         // Retorna verdadeiro se houver campos faltando que não foram ignorados
         return missing.filter(f => !ignored.includes(f)).length > 0
@@ -64,7 +62,8 @@ export function Sidebar({ activePage, onNavigate, isOpen, onClose }: SidebarProp
   const mainItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'clientes', label: 'Clientes', icon: Users },
-    { id: 'magistrados', label: 'Magistrados', icon: Gavel }, // Item Novo
+    // Mantive o ID 'magistrados' para não quebrar a rota, mas mudei o Label
+    { id: 'magistrados', label: 'Autoridades', icon: Gavel }, 
     { id: 'incompletos', label: 'Incompletos', icon: FileWarning, badge: incompleteCount },
     { id: 'kanban', label: 'Kanban', icon: KanbanSquare },
   ]
