@@ -5,6 +5,7 @@ import Login from './Login'
 import { Sidebar as CrmSidebar } from './components/Sidebar'
 import { Sidebar as RhSidebar } from './components/collaborators/Sidebar'
 
+// Componentes Gerais e do CRM
 import { Clients } from './components/Clients'
 import { Magistrados } from './components/Magistrados'
 import { Settings } from './components/Settings'
@@ -14,6 +15,12 @@ import { Dashboard } from './components/Dashboard'
 import { History } from './components/History'
 import { Manual } from './components/Manual'
 import { WelcomeModal } from './components/WelcomeModal'
+import { ModuleSelector } from './components/ModuleSelector'
+import { UnderConstruction } from './components/UnderConstruction'
+
+// Componentes do RH
+import { Presencial } from './components/collaborators/Presencial' // <--- IMPORTANTE: Importando o novo componente
+
 import { 
   Menu, 
   LogOut, 
@@ -28,10 +35,8 @@ import {
   History as HistoryIcon,
   Settings as SettingsIcon,
   Truck,
-  MapPin // Ícone para Presencial
+  MapPin 
 } from 'lucide-react'
-import { ModuleSelector } from './components/ModuleSelector'
-import { UnderConstruction } from './components/UnderConstruction'
 
 export default function App() {
   const [session, setSession] = useState<any>(null)
@@ -162,7 +167,6 @@ export default function App() {
 
   // Lógica de Roteamento de Módulos
   if (currentModule === 'home') return <ModuleSelector onSelect={handleModuleSelect} userName={getUserDisplayName()} />
-  // Apenas o módulo Família está bloqueado globalmente
   if (currentModule === 'family') return <UnderConstruction moduleName="Gestão da Família" onBack={() => setCurrentModule('home')} />
 
   return (
@@ -226,9 +230,12 @@ export default function App() {
                   {/* ROTAS DO RH */}
                   {currentModule === 'collaborators' && (
                     <>
-                      {/* Dashboard e Presencial renderizam placeholders dentro do layout */}
+                      {/* Dashboard ainda em construção */}
                       {activePage === 'dashboard' && <UnderConstruction moduleName="Dashboard RH" onBack={() => {}} showBackButton={false} />}
-                      {activePage === 'presencial' && <UnderConstruction moduleName="Controle Presencial" onBack={() => {}} showBackButton={false} />}
+                      
+                      {/* Presencial agora renderiza o novo componente */}
+                      {activePage === 'presencial' && <Presencial />}
+                      
                       {activePage === 'kanban' && <Kanban />}
                       {activePage === 'historico' && <History />}
                       {activePage === 'configuracoes' && <Settings />}
