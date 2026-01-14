@@ -3,18 +3,127 @@ import {
   Download, Upload, FileSpreadsheet, CheckCircle, AlertCircle, 
   Users, Pencil, Trash2, Save, RefreshCw, 
   AlertTriangle, History, Copyright, Code,
-  Shield, UserPlus, Ban, Check, Lock, Building
+  Shield, UserPlus, Ban, Check, Lock, Building,
+  Plus, X, Tag, Briefcase
 } from 'lucide-react'
 import { utils, read, writeFile } from 'xlsx'
 import { supabase } from '../lib/supabase'
 import { logAction } from '../lib/logger'
 
+// --- INTERFACES ---
 interface AppUser {
   id: number;
   nome: string;
   email: string;
   cargo: string;
   ativo: boolean;
+}
+
+interface GenericItem {
+  id: number;
+  nome: string;
+  ativo?: boolean;
+}
+
+// --- COMPONENTE GENÉRICO PARA CRUD (SÓCIOS / TIPOS DE BRINDE) ---
+// Isso corrige o erro de "tableName is not defined" encapsulando a lógica
+function SimpleCrud({ tableName, title, icon: Icon, isAdmin }: { tableName: string, title: string, icon: any, isAdmin: boolean }) {
+  const [items, setItems] = useState<GenericItem[]>([])
+  const [loading, setLoading] = useState(false)
+  const [newItem, setNewItem] = useState('')
+  const [isAdding, setIsAdding] = useState(false)
+
+  const fetchItems = async () => {
+    const { data } = await supabase.from(tableName).select('*').order('nome')
+    if (data) setItems(data)
+  }
+
+  useEffect(() => { fetchItems() }, [tableName])
+
+  const handleAdd = async () => {
+    if (!newItem.trim()) return
+    setLoading(true)
+    // AQUI O tableName ESTÁ DEFINIDO PELO PROP
+    const { error } = await supabase.from(tableName).insert({ nome: newItem, ativo: true })
+    
+    if (!error) {
+      await logAction('CREATE', tableName.toUpperCase(), `Criou ${newItem}`)
+      setNewItem('')
+      setIsAdding(false)
+      fetchItems()
+    } else {
+      alert('Erro ao salvar: ' + error.message)
+    }
+    setLoading(false)
+  }
+
+  const handleDelete = async (id: number, nome: string) => {
+    if (!isAdmin) return alert('Apenas Admin')
+    if (!confirm(`Excluir ${nome}?`)) return
+    
+    // AQUI O tableName TAMBÉM ESTÁ DEFINIDO
+    const { error } = await supabase.from(tableName).delete().eq('id', id)
+    if (!error) {
+      await logAction('DELETE', tableName.toUpperCase(), `Excluiu ${nome}`)
+      fetchItems()
+    }
+  }
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex flex-col h-full">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-gray-100 rounded-lg"><Icon className="h-5 w-5 text-gray-700" /></div>
+          <h3 className="font-bold text-gray-900 text-sm">{title}</h3>
+        </div>
+        {isAdmin && (
+          <button 
+            onClick={() => setIsAdding(!isAdding)} 
+            className={`p-1.5 rounded-lg transition-colors ${isAdding ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600 hover:bg-blue-100'}`}
+          >
+            {isAdding ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+          </button>
+        )}
+      </div>
+
+      {isAdding && (
+        <div className="flex gap-2 mb-4 animate-in fade-in slide-in-from-top-2">
+          <input 
+            value={newItem}
+            onChange={(e) => setNewItem(e.target.value)}
+            placeholder="Novo item..."
+            className="flex-1 text-xs border border-blue-200 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500/20"
+            autoFocus
+            onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
+          />
+          <button 
+            onClick={handleAdd} 
+            disabled={loading}
+            className="px-3 py-1 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-700"
+          >
+            OK
+          </button>
+        </div>
+      )}
+
+      <div className="flex-1 overflow-y-auto max-h-48 custom-scrollbar space-y-1">
+        {items.map(item => (
+          <div key={item.id} className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-lg group">
+            <span className="text-xs text-gray-700 font-medium">{item.nome}</span>
+            {isAdmin && (
+              <button 
+                onClick={() => handleDelete(item.id, item.nome)}
+                className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition-all p-1"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+        ))}
+        {items.length === 0 && <p className="text-xs text-gray-400 text-center py-4">Nenhum registro</p>}
+      </div>
+    </div>
+  )
 }
 
 const CHANGELOG = [
@@ -27,7 +136,7 @@ const CHANGELOG = [
       'Adicionado modal de boas-vindas com informações sobre LGPD',
       'Simplificação dos cards de clientes',
       'Modo visualização/edição no modal',
-      'Removida gestão de sócios'
+      'Removida gestão de sócios do menu lateral'
     ]
   },
   {
@@ -42,16 +151,6 @@ const CHANGELOG = [
     ]
   },
   {
-    version: '1.4.1',
-    date: '07/01/2026',
-    type: 'patch',
-    title: 'Correções de Build',
-    changes: [
-      'Fix de build no Cloudflare',
-      'Atualização de dependências'
-    ]
-  },
-  {
     version: '1.4.0',
     date: '07/01/2026',
     type: 'minor',
@@ -59,36 +158,6 @@ const CHANGELOG = [
     changes: [
       'CRUD completo para tipos de brinde',
       'BrindeSelector avançado'
-    ]
-  },
-  {
-    version: '1.3.0',
-    date: '07/01/2026',
-    type: 'minor',
-    title: 'Melhorias Visuais',
-    changes: [
-      'Redesign dos cards',
-      'Avatares com gradientes'
-    ]
-  },
-  {
-    version: '1.2.0',
-    date: '18/12/2025',
-    type: 'minor',
-    title: 'Restauração de Funcionalidades',
-    changes: [
-      'Templates WhatsApp/Email',
-      'Dashboard otimizado'
-    ]
-  },
-  {
-    version: '1.1.0',
-    date: '07/12/2025',
-    type: 'minor',
-    title: 'Módulo Magistrados',
-    changes: [
-      'Sistema de PIN',
-      'Controle de acesso'
     ]
   },
   {
@@ -118,10 +187,7 @@ export function Settings() {
 
   const [showAllVersions, setShowAllVersions] = useState(false)
   
-  // --- CONTROLE DE PERMISSÃO ---
   const [currentUserRole, setCurrentUserRole] = useState<string>('')
-  
-  // CORREÇÃO AQUI: Aceita tanto 'Administrador' quanto 'Admin'
   const isAdmin = ['Administrador', 'Admin'].includes(currentUserRole)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -257,16 +323,15 @@ export function Settings() {
     setStatus({ type: null, message: 'Limpando base de dados...' })
 
     try {
-        // Tenta limpar tarefas primeiro
-        try {
-            await supabase.from('tasks').delete().neq('id', 0)
-        } catch (e) { console.warn(e) }
-
-        const { error: err1 } = await supabase.from('magistrados').delete().neq('id', 0)
-        if (err1) throw err1
-
-        const { error: err2 } = await supabase.from('clientes').delete().neq('id', 0)
-        if (err2) throw err2
+        try { await supabase.from('tasks').delete().neq('id', 0) } catch (e) { console.warn(e) }
+        
+        // Limpar tabelas principais
+        await supabase.from('magistrados').delete().neq('id', 0)
+        await supabase.from('clientes').delete().neq('id', 0)
+        
+        // Opcional: Limpar tabelas auxiliares se necessário (descomente se quiser resetar tudo mesmo)
+        // await supabase.from('socios').delete().neq('id', 0)
+        // await supabase.from('tipos_brinde').delete().neq('id', 0)
 
         setStatus({ type: 'success', message: 'Sistema resetado!' })
         await logAction('RESET', 'SISTEMA', 'Resetou toda a base')
@@ -327,7 +392,6 @@ export function Settings() {
       }))
       
       const { error } = await supabase.from('clientes').insert(clientsToInsert)
-      
       if (error) throw error
       
       setStatus({ type: 'success', message: `${clientsToInsert.length} clientes importados!` })
@@ -345,7 +409,6 @@ export function Settings() {
   return (
     <div className="max-w-7xl mx-auto pb-12 space-y-6">
 
-      {/* Aviso se não for admin */}
       {!isAdmin && currentUserRole && (
           <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4">
               <div className="flex">
@@ -394,7 +457,6 @@ export function Settings() {
 
       {/* LINHA 1: GESTÃO USUÁRIOS + SEGURANÇA MAGISTRADOS */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        
         {/* GESTÃO DE USUÁRIOS */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <div className="flex justify-between items-center mb-6">
@@ -504,7 +566,23 @@ export function Settings() {
         </div>
       </div>
 
-      {/* LINHA 2: IMPORTAR DADOS + ZONA PERIGO */}
+      {/* LINHA 2: CADASTROS GERAIS (NOVO) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <SimpleCrud 
+          tableName="tipos_brinde" 
+          title="Tipos de Brinde" 
+          icon={Tag} 
+          isAdmin={isAdmin} 
+        />
+        <SimpleCrud 
+          tableName="socios" 
+          title="Sócios Cadastrados" 
+          icon={Briefcase} 
+          isAdmin={isAdmin} 
+        />
+      </div>
+
+      {/* LINHA 3: IMPORTAR DADOS + ZONA PERIGO */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         
         {/* IMPORTAR DADOS */}
@@ -518,7 +596,6 @@ export function Settings() {
             </div>
 
             <div className="space-y-4">
-                {/* Botões lado a lado */}
                 <div className="grid grid-cols-2 gap-3">
                     <button 
                         onClick={handleDownloadTemplate}
@@ -611,16 +688,10 @@ export function Settings() {
                   </p>
               </div>
             </button>
-
-            {isAdmin && (
-                <p className="text-center text-xs text-gray-500 mt-3">
-                    Você precisará digitar "APAGAR" para confirmar
-                </p>
-            )}
         </div>
       </div>
 
-      {/* LINHA 3: CRÉDITOS + CHANGELOG */}
+      {/* LINHA 4: CRÉDITOS + CHANGELOG */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
         {/* CRÉDITOS */}
@@ -650,7 +721,6 @@ export function Settings() {
                     <p className="text-xs text-gray-600 mt-1">Análise de Dados e Desenvolvimento</p>
                 </div>
 
-                {/* Tecnologias */}
                 <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
                     <div className="flex items-center gap-2 mb-3">
                         <Code className="h-4 w-4 text-gray-600" />
@@ -673,10 +743,6 @@ export function Settings() {
                                     <div className="h-1 w-1 rounded-full bg-blue-500"></div>
                                     <span className="text-xs text-gray-700">Tailwind CSS</span>
                                 </div>
-                                <div className="flex items-center gap-1.5">
-                                    <div className="h-1 w-1 rounded-full bg-blue-500"></div>
-                                    <span className="text-xs text-gray-700">Vite</span>
-                                </div>
                             </div>
                         </div>
 
@@ -690,40 +756,6 @@ export function Settings() {
                                 <div className="flex items-center gap-1.5">
                                     <div className="h-1 w-1 rounded-full bg-green-500"></div>
                                     <span className="text-xs text-gray-700">PostgreSQL</span>
-                                </div>
-                                <div className="flex items-center gap-1.5">
-                                    <div className="h-1 w-1 rounded-full bg-green-500"></div>
-                                    <span className="text-xs text-gray-700">Cloudflare</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="col-span-2">
-                            <p className="text-[10px] font-bold text-gray-500 uppercase mb-1.5">Bibliotecas</p>
-                            <div className="grid grid-cols-2 gap-x-2 gap-y-1">
-                                <div className="flex items-center gap-1.5">
-                                    <div className="h-1 w-1 rounded-full bg-purple-500"></div>
-                                    <span className="text-xs text-gray-700">Headless UI</span>
-                                </div>
-                                <div className="flex items-center gap-1.5">
-                                    <div className="h-1 w-1 rounded-full bg-purple-500"></div>
-                                    <span className="text-xs text-gray-700">Lucide Icons</span>
-                                </div>
-                                <div className="flex items-center gap-1.5">
-                                    <div className="h-1 w-1 rounded-full bg-purple-500"></div>
-                                    <span className="text-xs text-gray-700">Recharts</span>
-                                </div>
-                                <div className="flex items-center gap-1.5">
-                                    <div className="h-1 w-1 rounded-full bg-purple-500"></div>
-                                    <span className="text-xs text-gray-700">SheetJS</span>
-                                </div>
-                                <div className="flex items-center gap-1.5">
-                                    <div className="h-1 w-1 rounded-full bg-purple-500"></div>
-                                    <span className="text-xs text-gray-700">IMask</span>
-                                </div>
-                                <div className="flex items-center gap-1.5">
-                                    <div className="h-1 w-1 rounded-full bg-purple-500"></div>
-                                    <span className="text-xs text-gray-700">DnD Kit</span>
                                 </div>
                             </div>
                         </div>
@@ -793,7 +825,6 @@ export function Settings() {
             )}
         </div>
       </div>
-
     </div>
   )
 }
