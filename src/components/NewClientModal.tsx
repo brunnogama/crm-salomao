@@ -1,6 +1,6 @@
-import { Fragment, useState, useEffect } from 'react'
+import { Fragment, useState, useEffect, useRef } from 'react'
 import { Dialog, Transition } from '@headlessui/react'
-import { X, Save, Gift, Calendar, Clock, UserCircle } from 'lucide-react'
+import { X, Save, Gift, Calendar, Clock, UserCircle, ChevronDown, Plus, Trash2, Loader2 } from 'lucide-react'
 import { IMaskInput } from 'react-imask'
 import { supabase } from '../lib/supabase'
 import { logAction } from '../lib/logger'
@@ -43,13 +43,20 @@ interface NewClientModalProps {
   onClose: () => void;
   onSave: (client: ClientData) => void;
   clientToEdit?: ClientData | null;
-  tableName?: string; // Adicionado prop tableName
+  tableName?: string;
 }
 
 export function NewClientModal({ isOpen, onClose, onSave, clientToEdit, tableName = 'clientes' }: NewClientModalProps) {
   const [activeTab, setActiveTab] = useState<'geral' | 'endereco' | 'historico'>('geral')
   const [brindeOptions, setBrindeOptions] = useState<string[]>(['Brinde VIP', 'Brinde Médio', 'Não Recebe', 'Outro'])
   
+  // Estados para o Seletor de Sócios
+  const [sociosList, setSociosList] = useState<{ id: number, nome: string }[]>([])
+  const [isSocioMenuOpen, setIsSocioMenuOpen] = useState(false)
+  const [newSocioName, setNewSocioName] = useState('')
+  const [loadingSocios, setLoadingSocios] = useState(false)
+  const socioMenuRef = useRef<HTMLDivElement>(null)
+
   const [formData, setFormData] = useState<ClientData>({
     nome: '', empresa: '', cargo: '', telefone: '',
     tipo_brinde: 'Brinde Médio', outro_brinde: '', quantidade: 1,
@@ -58,21 +65,73 @@ export function NewClientModal({ isOpen, onClose, onSave, clientToEdit, tableNam
     historico_brindes: []
   })
 
-  // Busca os tipos de brinde do banco de dados (Settings)
+  // Fecha o menu de sócios se clicar fora
   useEffect(() => {
-    const fetchBrindeTypes = async () => {
-        const { data } = await supabase.from('tipos_brinde').select('nome').eq('ativo', true).order('nome')
-        
-        if (data && data.length > 0) {
-            // Se tiver dados no banco, usa eles + opções padrão
-            const dbOptions = data.map(d => d.nome)
-            // Garante que 'Outro' e 'Não Recebe' existam, mas sem duplicar
+    function handleClickOutside(event: MouseEvent) {
+      if (socioMenuRef.current && !socioMenuRef.current.contains(event.target as Node)) {
+        setIsSocioMenuOpen(false)
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Busca Tipos de Brinde e Sócios
+  useEffect(() => {
+    const fetchData = async () => {
+        // Brindes
+        const { data: brindesData } = await supabase.from('tipos_brinde').select('nome').eq('ativo', true).order('nome')
+        if (brindesData && brindesData.length > 0) {
+            const dbOptions = brindesData.map(d => d.nome)
             const finalOptions = [...new Set([...dbOptions, 'Não Recebe', 'Outro'])]
             setBrindeOptions(finalOptions)
         }
+
+        // Sócios
+        fetchSocios()
     }
-    fetchBrindeTypes()
+    fetchData()
   }, [])
+
+  const fetchSocios = async () => {
+      setLoadingSocios(true)
+      const { data } = await supabase.from('socios').select('*').order('nome')
+      if (data) {
+          setSociosList(data)
+      }
+      setLoadingSocios(false)
+  }
+
+  // Adicionar novo sócio direto do menu
+  const handleAddSocio = async (e: React.MouseEvent) => {
+      e.stopPropagation() // Evita fechar o menu
+      if (!newSocioName.trim()) return
+
+      const { error } = await supabase.from('socios').insert({ nome: newSocioName, ativo: true })
+      if (!error) {
+          await logAction('CREATE', 'SOCIOS', `Criou ${newSocioName} via Modal`)
+          setNewSocioName('')
+          fetchSocios()
+      } else {
+          alert('Erro ao adicionar sócio: ' + error.message)
+      }
+  }
+
+  // Excluir sócio direto do menu
+  const handleDeleteSocio = async (id: number, nome: string, e: React.MouseEvent) => {
+      e.stopPropagation()
+      if (!confirm(`Tem certeza que deseja remover "${nome}" da lista de opções?`)) return
+
+      const { error } = await supabase.from('socios').delete().eq('id', id)
+      if (!error) {
+          await logAction('DELETE', 'SOCIOS', `Removeu ${nome} via Modal`)
+          // Se o sócio deletado estava selecionado, limpa o campo
+          if (formData.socio === nome) {
+              setFormData({ ...formData, socio: '' })
+          }
+          fetchSocios()
+      }
+  }
 
   const initializeHistory = (currentHistory?: GiftHistoryItem[] | null) => {
     const defaultYears = ['2025', '2024'];
@@ -103,6 +162,7 @@ export function NewClientModal({ isOpen, onClose, onSave, clientToEdit, tableNam
       })
     }
     setActiveTab('geral')
+    setIsSocioMenuOpen(false)
   }, [clientToEdit, isOpen])
 
   const handleSave = async () => {
@@ -113,7 +173,6 @@ export function NewClientModal({ isOpen, onClose, onSave, clientToEdit, tableNam
 
     try {
       if (clientToEdit?.id) {
-        // UPDATE - Usando a prop tableName corretamente
         const { error } = await supabase
           .from(tableName)
           .update(formData)
@@ -122,7 +181,6 @@ export function NewClientModal({ isOpen, onClose, onSave, clientToEdit, tableNam
         if (error) throw error
         await logAction('UPDATE', tableName.toUpperCase(), `Editou ${formData.nome}`)
       } else {
-        // INSERT - Usando a prop tableName corretamente
         const { error } = await supabase
           .from(tableName)
           .insert([formData])
@@ -131,7 +189,7 @@ export function NewClientModal({ isOpen, onClose, onSave, clientToEdit, tableNam
         await logAction('CREATE', tableName.toUpperCase(), `Criou ${formData.nome}`)
       }
       
-      onSave(formData) // Atualiza lista
+      onSave(formData) 
       onClose()
     } catch (error: any) {
       console.error('Erro ao salvar:', error)
@@ -170,20 +228,16 @@ export function NewClientModal({ isOpen, onClose, onSave, clientToEdit, tableNam
 
   const addHistoryYear = () => {
     const yearInput = window.prompt("Digite o ano que deseja adicionar (ex: 2026):");
-    
     if (!yearInput) return;
-
     if (!/^\d{4}$/.test(yearInput)) {
         alert("Por favor, digite um ano válido (4 dígitos).");
         return;
     }
-
     const exists = formData.historico_brindes?.some(h => h.ano === yearInput);
     if (exists) {
         alert("Este ano já existe no histórico.");
         return;
     }
-
     setFormData(prev => ({
         ...prev,
         historico_brindes: [
@@ -230,7 +284,7 @@ export function NewClientModal({ isOpen, onClose, onSave, clientToEdit, tableNam
                     </button>
                 </div>
 
-                <div className="px-6 py-6 overflow-y-auto custom-scrollbar flex-1">
+                <div className="px-6 py-6 overflow-y-auto custom-scrollbar flex-1" onClick={() => setIsSocioMenuOpen(false)}>
                     {activeTab === 'geral' && (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="md:col-span-2">
@@ -253,10 +307,73 @@ export function NewClientModal({ isOpen, onClose, onSave, clientToEdit, tableNam
                                 <label className="block text-xs font-bold text-gray-500 uppercase mb-1">E-mail</label>
                                 <input type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-[#112240] outline-none" />
                             </div>
-                            <div>
+                            
+                            {/* --- SELETOR DE SÓCIO INTELIGENTE --- */}
+                            <div className="relative" ref={socioMenuRef}>
                                 <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Sócio Responsável</label>
-                                <input type="text" value={formData.socio} onChange={e => setFormData({...formData, socio: e.target.value})} className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-[#112240] outline-none" />
+                                <button 
+                                    type="button"
+                                    onClick={(e) => { e.stopPropagation(); setIsSocioMenuOpen(!isSocioMenuOpen); }}
+                                    className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-[#112240] outline-none bg-white flex items-center justify-between text-left"
+                                >
+                                    <span className={formData.socio ? "text-gray-900" : "text-gray-400"}>
+                                        {formData.socio || "Selecione o sócio..."}
+                                    </span>
+                                    <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${isSocioMenuOpen ? 'rotate-180' : ''}`} />
+                                </button>
+
+                                {/* Dropdown Menu */}
+                                {isSocioMenuOpen && (
+                                    <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2">
+                                        {/* Header: Adicionar Novo */}
+                                        <div className="p-2 bg-gray-50 border-b border-gray-100 flex gap-2" onClick={(e) => e.stopPropagation()}>
+                                            <input 
+                                                type="text" 
+                                                value={newSocioName}
+                                                onChange={(e) => setNewSocioName(e.target.value)}
+                                                placeholder="Novo sócio..."
+                                                className="flex-1 text-xs border border-gray-300 rounded-md px-2 py-1.5 focus:outline-none focus:border-blue-500"
+                                                onKeyDown={(e) => e.key === 'Enter' && handleAddSocio(e as any)}
+                                            />
+                                            <button 
+                                                onClick={handleAddSocio}
+                                                className="bg-[#112240] text-white p-1.5 rounded-md hover:bg-[#1a3a6c] transition-colors"
+                                                title="Adicionar"
+                                            >
+                                                <Plus className="h-4 w-4" />
+                                            </button>
+                                        </div>
+
+                                        {/* Lista de Sócios */}
+                                        <div className="max-h-48 overflow-y-auto custom-scrollbar">
+                                            {loadingSocios ? (
+                                                <div className="p-4 text-center text-gray-400"><Loader2 className="h-5 w-5 animate-spin mx-auto"/></div>
+                                            ) : sociosList.length === 0 ? (
+                                                <div className="p-3 text-center text-xs text-gray-400">Nenhum sócio cadastrado</div>
+                                            ) : (
+                                                sociosList.map((socio) => (
+                                                    <div 
+                                                        key={socio.id} 
+                                                        onClick={(e) => { e.stopPropagation(); setFormData({...formData, socio: socio.nome}); setIsSocioMenuOpen(false); }}
+                                                        className={`px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 cursor-pointer flex justify-between items-center group ${formData.socio === socio.nome ? 'bg-blue-50 font-bold text-[#112240]' : ''}`}
+                                                    >
+                                                        <span>{socio.nome}</span>
+                                                        <button 
+                                                            onClick={(e) => handleDeleteSocio(socio.id, socio.nome, e)}
+                                                            className="text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all p-1"
+                                                            title="Excluir opção"
+                                                        >
+                                                            <Trash2 className="h-3.5 w-3.5" />
+                                                        </button>
+                                                    </div>
+                                                ))
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
+                            {/* ---------------------------------- */}
+
                             <div>
                                 <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Tipo de Brinde (Atual)</label>
                                 <select value={formData.tipo_brinde} onChange={e => setFormData({...formData, tipo_brinde: e.target.value})} className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-[#112240] outline-none">
