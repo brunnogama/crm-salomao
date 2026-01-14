@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, LabelList } from 'recharts';
-import { Users, Gift, LayoutGrid, Award, Map, Gavel } from 'lucide-react';
+import { Users, Gift, LayoutGrid, Award, Map, Gavel, LayoutDashboard } from 'lucide-react';
 
 interface SocioData {
   name: string;
@@ -154,6 +154,14 @@ export function Dashboard({ onNavigateWithFilter }: DashboardProps) {
   return (
     <div className="h-full overflow-y-auto pr-2 custom-scrollbar space-y-8 pb-10">
       
+      {/* HEADER DO MÓDULO */}
+      <div className="flex items-center gap-3">
+        <div className="p-2 bg-[#112240] rounded-lg text-white">
+          <LayoutDashboard className="h-6 w-6" />
+        </div>
+        <h1 className="text-2xl font-bold text-[#112240]">Dashboard</h1>
+      </div>
+
       {/* CARDS DE MÉTRICAS - LINHA ÚNICA */}
       <div className="flex flex-wrap gap-4">
         
