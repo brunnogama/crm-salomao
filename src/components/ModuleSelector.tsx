@@ -47,7 +47,7 @@ export function ModuleSelector({ onSelect, userName }: ModuleSelectorProps) {
                 <div className="p-4 bg-blue-50 text-blue-700 rounded-full mb-6 group-hover:scale-110 transition-transform">
                     <Briefcase className="h-10 w-10" />
                 </div>
-                <h2 className="text-xl font-bold text-[#112240] mb-2">CRM Jurídico</h2>
+                <h2 className="text-xl font-bold text-[#112240] mb-2">Controle de Brindes de Clientes</h2>
                 <p className="text-sm text-gray-500">Gestão de clientes e controle de brindes de final de ano.</p>
             </div>
 
