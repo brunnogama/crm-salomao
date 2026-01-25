@@ -302,14 +302,28 @@ export function Presencial() {
         const wb = XLSX.read(evt.target?.result, { type: 'binary' });
         const ws = wb.Sheets[wb.SheetNames[0]];
         
-        // ===== PASSO 1: CONVERTER SHEET PARA ARRAY, PULANDO AS 7 PRIMEIRAS LINHAS =====
+        // ===== PASSO 1: CONVERTER SHEET PARA ARRAY, PULANDO O CABEÇALHO =====
         const allData = XLSX.utils.sheet_to_json(ws, { 
           header: 1,  // Retorna array de arrays (não objetos)
           raw: false  // Mantém strings quando possível
         }) as any[][];
         
-        // Remove as 7 primeiras linhas (cabeçalho)
-        const dataRows = allData.slice(7);
+        // Encontra a primeira linha de dados (pula cabeçalhos até achar nome válido)
+        let startIndex = 0;
+        for (let i = 0; i < allData.length; i++) {
+          const row = allData[i];
+          if (row && row[0] && typeof row[0] === 'string') {
+            const firstCol = row[0].trim().toLowerCase();
+            // Pula linhas que contenham palavras de cabeçalho
+            if (firstCol !== 'nome' && firstCol !== 'colaborador' && firstCol !== '' && !firstCol.includes('departamento')) {
+              startIndex = i;
+              break;
+            }
+          }
+        }
+        
+        const dataRows = allData.slice(startIndex);
+        console.log(`Linhas puladas: ${startIndex}, Total de dados: ${dataRows.length}`);
         
         console.log(`Total de linhas após pular cabeçalho: ${dataRows.length}`);
         console.log('Primeiras 3 linhas:', dataRows.slice(0, 3));
@@ -349,16 +363,28 @@ export function Presencial() {
               
               // Tenta formato YYYY-MM-DD
               if (datePart.includes('-')) {
-                const [year, month, day] = datePart.split('-').map(p => parseInt(p));
-                if (year && month && day) {
-                  dataFinal = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+                const dateParts = datePart.split('-');
+                if (dateParts.length === 3) {
+                  const year = parseInt(dateParts[0]);
+                  const month = parseInt(dateParts[1]);
+                  const day = parseInt(dateParts[2]);
+                  
+                  if (year && month && day && !isNaN(year) && !isNaN(month) && !isNaN(day)) {
+                    dataFinal = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+                  }
                 }
               }
               // Tenta formato DD/MM/YYYY
               else if (datePart.includes('/')) {
-                const [day, month, year] = datePart.split('/').map(p => parseInt(p));
-                if (year && month && day) {
-                  dataFinal = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+                const dateParts = datePart.split('/');
+                if (dateParts.length === 3) {
+                  const day = parseInt(dateParts[0]);
+                  const month = parseInt(dateParts[1]);
+                  const year = parseInt(dateParts[2]);
+                  
+                  if (year && month && day && !isNaN(year) && !isNaN(month) && !isNaN(day)) {
+                    dataFinal = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+                  }
                 }
               }
             }
