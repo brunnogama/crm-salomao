@@ -25,8 +25,7 @@ interface ReportItem {
   nome: string;
   socio: string; 
   diasPresentes: number;
-  // Agora armazena as datas (strings formatadas) para cada dia da semana
-  // Ex: { 1: ['02/12/24', '09/12/24'], ... } (1 = Segunda)
+  // Detalhamento para o tooltip: { 1: ['02/12/24', ...], 2: [...] }
   diasSemanaDetalhado: { [key: number]: string[] };
 }
 
@@ -100,14 +99,14 @@ export function Presencial() {
 
     setLoading(true)
     
-    // Define intervalo cobrindo todo o mês em UTC (00:00:00 dia 1 até 23:59:59 ultimo dia)
+    // Define intervalo cobrindo todo o mês em UTC
     const startObj = new Date(Date.UTC(selectedYear, selectedMonth, 1, 0, 0, 0))
     const endObj = new Date(Date.UTC(selectedYear, selectedMonth + 1, 0, 23, 59, 59, 999))
     
     const startDate = startObj.toISOString()
     const endDate = endObj.toISOString()
 
-    // Busca Presença do Mês Selecionado (Limite 100k para garantir tudo)
+    // Busca Presença do Mês Selecionado (Limite 100k)
     const { data: presenceData } = await supabase
       .from('presenca_portaria')
       .select('*')
@@ -277,7 +276,6 @@ export function Presencial() {
           socio: socioFormatted, 
           diasPresentes: item.uniqueDays.size, 
           diasSemanaDetalhado: item.weekDaysDetail,
-          datas: [] // Campo mantido na interface mas não usado na UI nova
       }
     })
     
