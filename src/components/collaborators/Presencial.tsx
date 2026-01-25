@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { 
   Upload, FileSpreadsheet, RefreshCw, Download,
-  BarChart3, Users, Briefcase,
+  BarChart3, Users, Briefcase, FileText,
   Pencil, Plus, X, Search, Filter as FilterIcon
 } from 'lucide-react'
 import * as XLSX from 'xlsx'
@@ -54,7 +54,8 @@ export function Presencial() {
   const searchInputRef = useRef<HTMLInputElement>(null)
 
   // --- NAVEGAÇÃO ---
-  const [viewMode, setViewMode] = useState<'report' | 'socios'>('report')
+  // Atualizado para incluir 'descriptive'
+  const [viewMode, setViewMode] = useState<'report' | 'descriptive' | 'socios'>('report')
   
   // Inicializa com o mês atual
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth())
@@ -144,31 +145,6 @@ export function Presencial() {
       } else {
         hasMore = false;
       }
-    }
-
-    console.log('📊 Total de registros encontrados:', allPresenceData.length);
-    if (allPresenceData.length > 0) {
-      console.log('Primeiros 3 registros do banco:', allPresenceData.slice(0, 3).map(r => ({
-        nome: r.nome_colaborador,
-        data: r.data_hora,
-        parseada: new Date(r.data_hora).toISOString()
-      })));
-      
-      // Log específico para ALEX e RICARDO
-      const alexRecords = allPresenceData.filter(r => r.nome_colaborador.includes('ALEX COSTA'));
-      const ricardoRecords = allPresenceData.filter(r => r.nome_colaborador.includes('RICARDO FREITAG'));
-      
-      console.log('🔍 ALEX COSTA - Total de registros:', alexRecords.length);
-      console.log('Datas únicas ALEX:', [...new Set(alexRecords.map(r => {
-        const d = new Date(r.data_hora);
-        return `${d.getUTCDate().toString().padStart(2, '0')}/${(d.getUTCMonth() + 1).toString().padStart(2, '0')}`;
-      }))].sort());
-      
-      console.log('🔍 RICARDO FREITAG - Total de registros:', ricardoRecords.length);
-      console.log('Datas únicas RICARDO:', [...new Set(ricardoRecords.map(r => {
-        const d = new Date(r.data_hora);
-        return `${d.getUTCDate().toString().padStart(2, '0')}/${(d.getUTCMonth() + 1).toString().padStart(2, '0')}`;
-      }))].sort());
     }
 
     // Busca Regras de Sócios
@@ -276,17 +252,12 @@ export function Presencial() {
       const normalizedName = normalizeKey(record.nome_colaborador)
       const displayName = toTitleCase(record.nome_colaborador)
       
-      // Usa UTC para garantir consistência
       const year = dateObj.getUTCFullYear()
-      const month = dateObj.getUTCMonth() + 1 // 1-12
+      const month = dateObj.getUTCMonth() + 1
       const day = dateObj.getUTCDate()
       
-      // Chave única: YYYY-MM-DD
       const dayKey = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-      
-      // Dia do mês para exibição (1-31)
       const dayNumber = String(day).padStart(2, '0')
-      
       const weekDay = dateObj.getUTCDay()
 
       if (!grouped[normalizedName]) {
@@ -298,7 +269,6 @@ export function Presencial() {
           }
       }
       
-      // Adiciona o dia apenas se ainda não existe
       if (!grouped[normalizedName].uniqueDays.has(dayKey)) {
         grouped[normalizedName].uniqueDays.add(dayKey)
         grouped[normalizedName].datesSet.add(dayNumber)
@@ -315,7 +285,6 @@ export function Presencial() {
       const socioRaw = socioMap.get(key) || '-'
       const socioFormatted = toTitleCase(socioRaw)
 
-      // Converte Set para Array e ordena numericamente
       const sortedDates = Array.from(item.datesSet)
         .map(d => parseInt(d))
         .sort((a, b) => a - b)
@@ -334,6 +303,22 @@ export function Presencial() {
 
   }, [filteredData.filteredRecords, socioMap])
 
+  // --- LÓGICA DO DESCRITIVO (NOVA) ---
+  const descriptiveData = useMemo(() => {
+    // Cria uma lista plana de registros para exibição
+    return [...filteredData.filteredRecords].sort((a, b) => {
+        // Ordena por Nome e depois por Data
+        const nameA = toTitleCase(a.nome_colaborador);
+        const nameB = toTitleCase(b.nome_colaborador);
+        
+        if (nameA < nameB) return -1;
+        if (nameA > nameB) return 1;
+        
+        // Se nomes iguais, ordena por data
+        return new Date(a.data_hora).getTime() - new Date(b.data_hora).getTime();
+    });
+  }, [filteredData.filteredRecords]);
+
   // --- UTILS EXCEL ---
   const findValue = (row: any, keys: string[]) => {
     const rowKeys = Object.keys(row)
@@ -344,7 +329,7 @@ export function Presencial() {
     return null
   }
 
-  // --- UPLOAD DE PRESENÇA (ATUALIZADO) ---
+  // --- UPLOAD DE PRESENÇA ---
   const handlePresenceUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; 
     if (!file) return;
@@ -359,19 +344,16 @@ export function Presencial() {
         const wb = XLSX.read(evt.target?.result, { type: 'binary' });
         const ws = wb.Sheets[wb.SheetNames[0]];
         
-        // ===== PASSO 1: CONVERTER SHEET PARA ARRAY, PULANDO O CABEÇALHO =====
         const allData = XLSX.utils.sheet_to_json(ws, { 
-          header: 1,  // Retorna array de arrays (não objetos)
-          raw: false  // Mantém strings quando possível
+          header: 1, 
+          raw: false 
         }) as any[][];
         
-        // Encontra a primeira linha de dados (pula cabeçalhos até achar nome válido)
         let startIndex = 0;
         for (let i = 0; i < allData.length; i++) {
           const row = allData[i];
           if (row && row[0] && typeof row[0] === 'string') {
             const firstCol = row[0].trim().toLowerCase();
-            // Pula linhas que contenham palavras de cabeçalho
             if (firstCol !== 'nome' && firstCol !== 'colaborador' && firstCol !== '' && !firstCol.includes('departamento')) {
               startIndex = i;
               break;
@@ -380,45 +362,24 @@ export function Presencial() {
         }
         
         const dataRows = allData.slice(startIndex);
-        console.log(`Linhas puladas: ${startIndex}, Total de dados: ${dataRows.length}`);
         
-        console.log(`Total de linhas após pular cabeçalho: ${dataRows.length}`);
-        console.log('Primeiras 3 linhas:', dataRows.slice(0, 3));
-        
-        // ===== PASSO 2: PROCESSAR CADA LINHA =====
         const rawRecords = dataRows
           .map((row: any[], rowIndex: number) => {
-            // Assume estrutura: [Nome, Departamento, Tempo]
-            // Coluna 0: Nome
-            // Coluna 1: Departamento (ignorar)
-            // Coluna 2: Tempo (data e hora)
-            
             if (!row || row.length < 3) return null;
             
             let nome = row[0];
             const tempoRaw = row[2];
             
-            // Debug das primeiras 5 linhas
-            if (rowIndex < 5) {
-              console.log(`Linha ${rowIndex}:`, { nome, tempoRaw, tipo: typeof tempoRaw });
-            }
-            
-            // Valida nome
             if (!nome || typeof nome !== 'string' || nome.trim() === '') return null;
             nome = nome.trim();
             
-            // ===== PASSO 3: PROCESSAR CAMPO TEMPO (data + hora) =====
             let dataFinal: Date | null = null;
             
             if (typeof tempoRaw === 'string') {
               const tempoStr = tempoRaw.trim();
-              
-              // Formato esperado: "YYYY-MM-DD HH:MM:SS" ou "DD/MM/YYYY HH:MM:SS"
-              // Vamos extrair apenas a parte da data (antes do espaço)
               const parts = tempoStr.split(' ');
               const datePart = parts[0];
               
-              // Tenta formato YYYY-MM-DD
               if (datePart.includes('-')) {
                 const dateParts = datePart.split('-');
                 if (dateParts.length === 3) {
@@ -431,7 +392,6 @@ export function Presencial() {
                   }
                 }
               }
-              // Tenta formato DD/MM/YYYY
               else if (datePart.includes('/')) {
                 const dateParts = datePart.split('/');
                 if (dateParts.length === 3) {
@@ -445,7 +405,6 @@ export function Presencial() {
                 }
               }
             }
-            // Se for número (serial do Excel)
             else if (typeof tempoRaw === 'number') {
               const dateObj = new Date((tempoRaw - 25569) * 86400 * 1000);
               dataFinal = new Date(Date.UTC(
@@ -456,19 +415,8 @@ export function Presencial() {
               ));
             }
             
-            // Valida data
             if (!dataFinal || isNaN(dataFinal.getTime())) {
-              console.warn(`Data inválida para ${nome}: ${tempoRaw}`);
               return null;
-            }
-            
-            // Debug das primeiras 5 datas processadas
-            if (rowIndex < 5) {
-              console.log(`Data processada [${rowIndex}]:`, dataFinal.toISOString(), 'UTC:', {
-                dia: dataFinal.getUTCDate(),
-                mes: dataFinal.getUTCMonth() + 1,
-                ano: dataFinal.getUTCFullYear()
-              });
             }
             
             return { 
@@ -479,63 +427,41 @@ export function Presencial() {
           })
           .filter((r: any) => r !== null);
         
-        console.log(`Registros válidos extraídos: ${rawRecords.length}`);
-        console.log('Primeiros 5 registros:', rawRecords.slice(0, 5).map(r => ({
-          nome: r.nome_colaborador,
-          data: r.data_hora.toISOString()
-        })));
-        
-        // ===== PASSO 4: DEDUPLICAÇÃO =====
-        // 4.1 - Buscar registros existentes no banco para este período
         const uniqueSet = new Set<string>();
-        
-        // Pega todas as datas únicas dos novos registros
         const allDates = rawRecords.map((r: any) => r.data_hora);
         const minDate = new Date(Math.min(...allDates.map((d: Date) => d.getTime())));
         const maxDate = new Date(Math.max(...allDates.map((d: Date) => d.getTime())));
         
-        // Busca registros existentes neste intervalo
         const { data: existingRecords } = await supabase
           .from('presenca_portaria')
           .select('nome_colaborador, data_hora')
           .gte('data_hora', minDate.toISOString())
           .lte('data_hora', maxDate.toISOString());
         
-        // 4.2 - Criar set com assinaturas existentes (nome_data)
         const existingSignatures = new Set<string>();
         if (existingRecords) {
           existingRecords.forEach(r => {
             const d = new Date(r.data_hora);
-            const dateStr = d.toISOString().split('T')[0]; // YYYY-MM-DD
+            const dateStr = d.toISOString().split('T')[0];
             const key = `${normalizeKey(r.nome_colaborador)}_${dateStr}`;
             existingSignatures.add(key);
           });
         }
         
-        console.log(`Registros já existentes no período: ${existingSignatures.size}`);
-        
-        // 4.3 - Filtrar registros novos (remove duplicatas internas E do banco)
         const recordsToInsert = rawRecords.filter((r: any) => {
           const d = r.data_hora;
           const dateStr = d.toISOString().split('T')[0];
           const key = `${normalizeKey(r.nome_colaborador)}_${dateStr}`;
           
-          // Já existe no banco?
           if (existingSignatures.has(key)) return false;
-          
-          // Já foi processado neste upload?
           if (uniqueSet.has(key)) return false;
           
-          // Marca como processado
           uniqueSet.add(key);
           return true;
         });
         
         const duplicatesSkipped = rawRecords.length - recordsToInsert.length;
-        console.log(`Registros únicos para inserir: ${recordsToInsert.length}`);
-        console.log(`Duplicatas ignoradas: ${duplicatesSkipped}`);
         
-        // ===== PASSO 5: INSERÇÃO EM LOTE =====
         if (recordsToInsert.length === 0) {
           alert('Nenhum registro novo para importar. Todos já existem no sistema.');
           setUploading(false);
@@ -549,7 +475,7 @@ export function Presencial() {
         for (let i = 0; i < recordsToInsert.length; i += BATCH_SIZE) {
           const batch = recordsToInsert.slice(i, i + BATCH_SIZE).map((r: any) => ({
             nome_colaborador: r.nome_colaborador,
-            data_hora: r.data_hora.toISOString(), // Converte para ISO string
+            data_hora: r.data_hora.toISOString(),
             arquivo_origem: r.arquivo_origem
           }));
           
@@ -565,7 +491,6 @@ export function Presencial() {
           setProgress(Math.round(((i / BATCH_SIZE) + 1) / totalBatches * 100));
         }
         
-        // ===== PASSO 6: FEEDBACK E ATUALIZAÇÃO =====
         alert(
           `✅ Importação concluída!\n\n` +
           `• ${recordsToInsert.length} registros NOVOS importados\n` +
@@ -573,7 +498,6 @@ export function Presencial() {
           `• ${rawRecords.length} linhas processadas`
         );
         
-        // Atualiza para o mês do primeiro registro importado
         if (recordsToInsert.length > 0) {
           const firstDate = new Date(recordsToInsert[0].data_hora);
           setSelectedMonth(firstDate.getUTCMonth());
@@ -758,6 +682,8 @@ export function Presencial() {
             {/* 1. SELETORES DE VISUALIZAÇÃO */}
             <div className="flex bg-gray-100 p-1 rounded-lg w-full lg:w-auto overflow-x-auto">
                 <button onClick={() => setViewMode('report')} className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all whitespace-nowrap ${viewMode === 'report' ? 'bg-white text-[#112240] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}><BarChart3 className="h-4 w-4" /> Relatório</button>
+                {/* NOVA ABA DESCRITIVO */}
+                <button onClick={() => setViewMode('descriptive')} className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all whitespace-nowrap ${viewMode === 'descriptive' ? 'bg-white text-[#112240] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}><FileText className="h-4 w-4" /> Descritivo</button>
                 <button onClick={() => setViewMode('socios')} className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all whitespace-nowrap ${viewMode === 'socios' ? 'bg-white text-[#112240] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}><Briefcase className="h-4 w-4" /> Regras</button>
             </div>
 
@@ -807,8 +733,8 @@ export function Presencial() {
                     </div>
                 </div>
 
-                {/* FILTRO DE MÊS (APARECE APENAS EM REPORT) */}
-                {viewMode === 'report' && (
+                {/* FILTRO DE MÊS (APARECE EM REPORT E DESCRITIVO) */}
+                {(viewMode === 'report' || viewMode === 'descriptive') && (
                     <div className="flex items-center gap-2 w-full sm:w-auto border-l pl-2 ml-2 border-gray-200">
                         <select value={selectedMonth} onChange={(e) => setSelectedMonth(Number(e.target.value))} className="bg-gray-50 border border-gray-200 text-gray-700 text-sm rounded-lg p-2">
                             {months.map((m, i) => <option key={i} value={i}>{m}</option>)}
@@ -915,6 +841,61 @@ export function Presencial() {
                                     </td>
                                 </tr>
                             ))}
+                        </tbody>
+                    </table>
+                )}
+            </div>
+        )}
+
+        {viewMode === 'descriptive' && (
+            <div className="flex-1 overflow-auto">
+                {descriptiveData.length === 0 ? (
+                    <div className="h-64 flex flex-col items-center justify-center text-gray-400">
+                        <FileText className="h-16 w-16 mb-4 opacity-20" />
+                        <p className="text-lg font-medium">Sem registros detalhados</p>
+                        <p className="text-sm">Nenhum dado encontrado para os filtros selecionados</p>
+                    </div>
+                ) : (
+                    <table className="w-full text-left border-collapse">
+                        <thead className="bg-gradient-to-r from-gray-50 to-gray-100 sticky top-0 z-10">
+                            <tr className="border-b-2 border-gray-200">
+                                <th className="px-6 py-4 text-xs font-bold text-gray-600 uppercase tracking-wider">Colaborador</th>
+                                <th className="px-6 py-4 text-xs font-bold text-gray-600 uppercase tracking-wider">Sócio</th> 
+                                <th className="px-6 py-4 text-xs font-bold text-gray-600 uppercase tracking-wider">Data</th>
+                                <th className="px-6 py-4 text-xs font-bold text-gray-600 uppercase tracking-wider">Dia da Semana</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                            {descriptiveData.map((record, idx) => {
+                                const normName = normalizeKey(record.nome_colaborador)
+                                const socioRaw = socioMap.get(normName) || '-'
+                                const socioFormatted = toTitleCase(socioRaw)
+                                const dateObj = new Date(record.data_hora)
+                                const weekDays = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado']
+
+                                return (
+                                    <tr key={record.id || idx} className="hover:bg-blue-50/40 transition-colors">
+                                        <td className="px-6 py-4">
+                                            <p className="font-semibold text-[#112240] text-base">{toTitleCase(record.nome_colaborador)}</p>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <span className="text-gray-700 text-sm">
+                                                {socioFormatted !== '-' ? socioFormatted : <span className="text-red-400 italic">Sem Sócio</span>}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <span className="text-gray-700 font-medium">
+                                                {dateObj.toLocaleDateString('pt-BR')}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <span className="text-gray-500 text-sm capitalize">
+                                                {weekDays[dateObj.getUTCDay()]}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                )
+                            })}
                         </tbody>
                     </table>
                 )}
