@@ -26,7 +26,7 @@ interface ReportItem {
   socio: string; 
   diasPresentes: number;
   diasSemana: { [key: string]: number };
-  datas: string[]; // Nova propriedade para armazenar os dias
+  datas: string[];
 }
 
 export function Presencial() {
@@ -74,16 +74,27 @@ export function Presencial() {
         .join(' ');
   }
 
-  // --- 1. BUSCAR DADOS ---
+  // --- 1. BUSCAR DADOS (Filtrando por Mês/Ano no Banco) ---
   const fetchRecords = async () => {
     setLoading(true)
     
-    // AUMENTO SIGNIFICATIVO DO LIMITE para evitar corte de dados
+    // Calcula intervalo do mês selecionado para buscar apenas dados relevantes
+    // Isso corrige o erro de limite cortando o início do mês
+    const startObj = new Date(selectedYear, selectedMonth, 1)
+    const endObj = new Date(selectedYear, selectedMonth + 1, 0, 23, 59, 59)
+    
+    // Formato ISO para o Supabase (YYYY-MM-DD)
+    const startDate = startObj.toISOString()
+    const endDate = endObj.toISOString()
+
+    // Busca Presença do Mês Selecionado
     const { data: presenceData } = await supabase
       .from('presenca_portaria')
       .select('*')
-      .order('data_hora', { ascending: false })
-      .limit(100000) // Aumentado para 100k para garantir histórico completo do mês
+      .gte('data_hora', startDate)
+      .lte('data_hora', endDate)
+      .order('data_hora', { ascending: true }) // Ascendente para processar do início do mês
+      .limit(50000) // Limite generoso para um único mês
 
     // Busca Regras de Sócios
     const { data: rulesData } = await supabase
@@ -94,13 +105,8 @@ export function Presencial() {
 
     if (rulesData) setSocioRules(rulesData)
 
-    if (presenceData && presenceData.length > 0) {
+    if (presenceData) {
         setRecords(presenceData)
-        
-        // --- AUTO-SELEÇÃO DE DATA RESTAURADA ---
-        const lastDate = new Date(presenceData[0].data_hora)
-        setSelectedMonth(lastDate.getMonth())
-        setSelectedYear(lastDate.getFullYear())
     } else {
         setRecords([])
     }
@@ -108,9 +114,10 @@ export function Presencial() {
     setLoading(false)
   }
 
+  // Atualiza quando muda o mês/ano ou monta o componente
   useEffect(() => {
     fetchRecords()
-  }, [])
+  }, [selectedMonth, selectedYear])
 
   // --- EFEITO: FOCA NO INPUT DE BUSCA AO ABRIR ---
   useEffect(() => {
@@ -143,9 +150,10 @@ export function Presencial() {
 
   // --- FILTRAGEM CENTRALIZADA ---
   const filteredData = useMemo(() => {
+      // 1. Filtra registros de presença
       const filteredRecords = records.filter(record => {
+          // O filtro de data já foi feito no banco, mas mantemos por segurança
           const dateObj = new Date(record.data_hora)
-          
           if (dateObj.getMonth() !== selectedMonth || dateObj.getFullYear() !== selectedYear) return false
 
           const normName = normalizeKey(record.nome_colaborador)
@@ -166,6 +174,7 @@ export function Presencial() {
           return true
       })
 
+      // 2. Filtra regras de sócios
       const filteredRules = socioRules.filter(rule => {
           const socioFormatted = toTitleCase(rule.socio_responsavel)
           const nameFormatted = toTitleCase(rule.nome_colaborador)
@@ -191,9 +200,10 @@ export function Presencial() {
     filteredData.filteredRecords.forEach(record => {
       const dateObj = new Date(record.data_hora)
       const normalizedName = normalizeKey(record.nome_colaborador)
-      
       const displayName = toTitleCase(record.nome_colaborador)
-      const dayKey = dateObj.toLocaleDateString('pt-BR') // Usado para unicidade
+      
+      // Garante que a chave do dia seja única independente da hora
+      const dayKey = dateObj.toISOString().split('T')[0] 
       const weekDay = dateObj.getDay()
 
       if (!grouped[normalizedName]) {
@@ -221,7 +231,7 @@ export function Presencial() {
 
       // Extrai os dias (DD) e ordena
       const sortedDates = Array.from(item.uniqueDays)
-        .map(d => d.split('/')[0]) // Pega só o dia
+        .map(d => d.split('-')[2]) // Pega o dia do YYYY-MM-DD
         .sort((a, b) => parseInt(a) - parseInt(b))
 
       return { 
@@ -264,12 +274,14 @@ export function Presencial() {
           const tempoRaw = findValue(row, ['tempo', 'data', 'horario'])
           let dataFinal = new Date()
           
-          // LÓGICA DE PARSING RIGOROSA PARA DATA (DESCARTA HORA)
+          // LÓGICA DE PARSING RIGOROSA (DESCARTA HORA)
           if (typeof tempoRaw === 'string') {
+               // Pega "2025-12-09" de "2025-12-09 11:29:58"
                const datePart = tempoRaw.trim().split(' ')[0]
                const parts = datePart.split('-')
                
                if (parts.length === 3) {
+                   // Cria data local ao meio-dia
                    const y = parseInt(parts[0])
                    const m = parseInt(parts[1]) - 1 
                    const d = parseInt(parts[2])
@@ -517,34 +529,34 @@ export function Presencial() {
                     <table className="w-full text-left border-collapse">
                         <thead className="bg-gray-50 sticky top-0 z-10 text-xs uppercase text-gray-500 font-semibold tracking-wider">
                             <tr>
-                                <th className="px-4 py-2 border-b">Colaborador</th>
-                                <th className="px-4 py-2 border-b">Sócio Responsável</th> 
-                                <th className="px-4 py-2 border-b w-32">Frequência</th>
-                                <th className="px-4 py-2 border-b">Semana</th>
-                                <th className="px-4 py-2 border-b">Datas</th>
+                                <th className="px-2 py-2 border-b">Colaborador</th>
+                                <th className="px-2 py-2 border-b">Sócio</th> 
+                                <th className="px-2 py-2 border-b w-24">Freq.</th>
+                                <th className="px-2 py-2 border-b">Semana</th>
+                                <th className="px-2 py-2 border-b">Datas</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
                             {reportData.map((item, idx) => (
                                 <tr key={idx} className="hover:bg-blue-50/50">
-                                    <td className="px-4 py-2 font-medium text-[#112240] text-sm">{item.nome}</td>
-                                    <td className="px-4 py-2 text-sm text-gray-600">
-                                        {item.socio !== '-' ? <span className="bg-gray-100 text-gray-700 px-1.5 py-0.5 rounded border border-gray-200 text-xs font-semibold">{item.socio}</span> : <span className="text-red-400 text-xs italic bg-red-50 px-1.5 py-0.5 rounded">Sem Sócio</span>}
+                                    <td className="px-2 py-1 font-medium text-[#112240] text-xs whitespace-nowrap">{item.nome}</td>
+                                    <td className="px-2 py-1 text-xs text-gray-600 whitespace-nowrap">
+                                        {item.socio !== '-' ? <span className="bg-gray-100 text-gray-700 px-1.5 py-0.5 rounded border border-gray-200">{item.socio}</span> : <span className="text-red-400 text-xs italic bg-red-50 px-1.5 py-0.5 rounded">Sem Sócio</span>}
                                     </td>
-                                    <td className="px-4 py-2">
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-sm font-bold text-[#112240]">{item.diasPresentes}d</span>
-                                            <div className="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden"><div className={`h-full rounded-full ${item.diasPresentes >= 20 ? 'bg-green-500' : item.diasPresentes >= 10 ? 'bg-blue-500' : 'bg-yellow-500'}`} style={{ width: `${Math.min((item.diasPresentes / 22) * 100, 100)}%` }} /></div>
+                                    <td className="px-2 py-1">
+                                        <div className="flex items-center gap-1">
+                                            <span className="text-xs font-bold text-[#112240]">{item.diasPresentes}d</span>
+                                            <div className="w-10 h-1 bg-gray-100 rounded-full overflow-hidden"><div className={`h-full rounded-full ${item.diasPresentes >= 20 ? 'bg-green-500' : item.diasPresentes >= 10 ? 'bg-blue-500' : 'bg-yellow-500'}`} style={{ width: `${Math.min((item.diasPresentes / 22) * 100, 100)}%` }} /></div>
                                         </div>
                                     </td>
-                                    <td className="px-4 py-2">
+                                    <td className="px-2 py-1">
                                         <div className="flex gap-1">
                                             {['Seg', 'Ter', 'Qua', 'Qui', 'Sex'].map(day => (
-                                                <div key={day} className={`text-[10px] px-1.5 py-0.5 rounded border ${item.diasSemana[day] ? 'bg-green-50 border-green-200 text-green-700 font-bold' : 'bg-gray-50 border-gray-100 text-gray-300'}`}>{day.charAt(0)}{item.diasSemana[day] ? `(${item.diasSemana[day]})` : ''}</div>
+                                                <div key={day} className={`text-[10px] px-1 py-0.5 rounded border ${item.diasSemana[day] ? 'bg-green-50 border-green-200 text-green-700 font-bold' : 'bg-gray-50 border-gray-100 text-gray-300'}`}>{day.charAt(0)}{item.diasSemana[day] ? `(${item.diasSemana[day]})` : ''}</div>
                                             ))}
                                         </div>
                                     </td>
-                                    <td className="px-4 py-2 text-xs text-gray-500 font-mono tracking-tighter">
+                                    <td className="px-2 py-1 text-[10px] text-gray-500 font-mono tracking-tighter truncate max-w-xs" title={item.datas.join(', ')}>
                                         {item.datas.join(', ')}
                                     </td>
                                 </tr>
