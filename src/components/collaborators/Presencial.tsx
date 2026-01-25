@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { 
   Upload, FileSpreadsheet, RefreshCw, Trash2, 
-  BarChart3, Calendar, Users, Briefcase,
-  Pencil, Plus, X, Save, Search, Filter as FilterIcon
+  BarChart3, Users, Briefcase,
+  Pencil, Plus, X, Search, Filter as FilterIcon
 } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import { supabase } from '../../lib/supabase'
@@ -77,7 +77,7 @@ export function Presencial() {
   const fetchRecords = async () => {
     setLoading(true)
     
-    // Busca Presença (Aumentado limite para evitar corte de dados em meses cheios)
+    // Busca Presença (Limite alto para garantir mês completo)
     const { data: presenceData } = await supabase
       .from('presenca_portaria')
       .select('*')
@@ -97,7 +97,6 @@ export function Presencial() {
         setRecords(presenceData)
         
         // --- AUTO-SELEÇÃO DE DATA RESTAURADA ---
-        // Ajusta o filtro para o mês/ano do registro mais recente
         const lastDate = new Date(presenceData[0].data_hora)
         setSelectedMonth(lastDate.getMonth())
         setSelectedYear(lastDate.getFullYear())
@@ -119,7 +118,7 @@ export function Presencial() {
       }
   }, [showSearch])
 
-  // --- MAPA E LISTAS PARA FILTROS (MEMOIZED & FORMATTED) ---
+  // --- MAPA E LISTAS PARA FILTROS ---
   const socioMap = useMemo(() => {
       const map = new Map<string, string>()
       socioRules.forEach(rule => {
@@ -129,7 +128,6 @@ export function Presencial() {
   }, [socioRules])
 
   const uniqueSocios = useMemo(() => {
-      // Usa toTitleCase para formatar a lista
       const socios = new Set(socioRules.map(r => toTitleCase(r.socio_responsavel)).filter(s => s !== 'Não Definido' && s !== ''))
       return Array.from(socios).sort()
   }, [socioRules])
@@ -137,35 +135,27 @@ export function Presencial() {
   const uniqueColaboradores = useMemo(() => {
       let rules = socioRules;
       if (filterSocio) {
-          // Compara formatado com formatado
           rules = rules.filter(r => toTitleCase(r.socio_responsavel) === filterSocio)
       }
       return Array.from(new Set(rules.map(r => toTitleCase(r.nome_colaborador)))).sort()
   }, [socioRules, filterSocio])
 
-  // --- FILTRAGEM CENTRALIZADA (RELATÓRIO MENSAL & REGRAS) ---
+  // --- FILTRAGEM CENTRALIZADA ---
   const filteredData = useMemo(() => {
       // 1. Filtra registros de presença
       const filteredRecords = records.filter(record => {
           const dateObj = new Date(record.data_hora)
           
-          // Filtro de Data
           if (dateObj.getMonth() !== selectedMonth || dateObj.getFullYear() !== selectedYear) return false
 
           const normName = normalizeKey(record.nome_colaborador)
           const socioRaw = socioMap.get(normName) || '-'
-          
-          // Formata para comparação com os filtros que estão em TitleCase
           const socioFormatted = toTitleCase(socioRaw)
           const nameFormatted = toTitleCase(record.nome_colaborador)
 
-          // Filtro de Sócio
           if (filterSocio && socioFormatted !== filterSocio) return false
-          
-          // Filtro de Colaborador
           if (filterColaborador && nameFormatted !== filterColaborador) return false
 
-          // Pesquisa Livre
           if (searchText) {
               const lowerSearch = searchText.toLowerCase()
               const matchesName = record.nome_colaborador.toLowerCase().includes(lowerSearch)
@@ -176,7 +166,7 @@ export function Presencial() {
           return true
       })
 
-      // 2. Filtra regras de sócios (para a aba de Sócios)
+      // 2. Filtra regras de sócios
       const filteredRules = socioRules.filter(rule => {
           const socioFormatted = toTitleCase(rule.socio_responsavel)
           const nameFormatted = toTitleCase(rule.nome_colaborador)
@@ -262,46 +252,65 @@ export function Presencial() {
         const wb = XLSX.read(evt.target?.result, { type: 'binary' });
         const data = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
         
-        // Mapeia os registros brutos
+        // Mapeia os registros brutos COM CORREÇÃO DE DATA E HORA
         const rawRecords = data.map((row: any) => {
           let nome = findValue(row, ['nome', 'colaborador', 'funcionario']) || 'Desconhecido'
           if (typeof nome === 'string') nome = nome.trim()
-          const tempoRaw = findValue(row, ['tempo', 'data', 'horario'])
           
+          const tempoRaw = findValue(row, ['tempo', 'data', 'horario'])
           let dataFinal = new Date()
+          
+          // LÓGICA DE PARSING RIGOROSA PARA DATA (DESCARTA HORA)
           if (typeof tempoRaw === 'string') {
-               // Garante compatibilidade ISO
-               dataFinal = new Date(tempoRaw.trim().replace(' ', 'T'))
+               // Pega "2025-12-09" de "2025-12-09 11:29:58"
+               const datePart = tempoRaw.trim().split(' ')[0]
+               const parts = datePart.split('-')
+               
+               if (parts.length === 3) {
+                   // Cria data local ao meio-dia para evitar shifts de timezone
+                   const y = parseInt(parts[0])
+                   const m = parseInt(parts[1]) - 1 // Mês 0-indexado
+                   const d = parseInt(parts[2])
+                   dataFinal = new Date(y, m, d, 12, 0, 0)
+               } else {
+                   // Fallback se não for YYYY-MM-DD
+                   dataFinal = new Date(tempoRaw)
+               }
           }
           else if (typeof tempoRaw === 'number') {
+               // Excel serial date
                dataFinal = new Date((tempoRaw - 25569) * 86400 * 1000)
+               dataFinal.setHours(12, 0, 0, 0) // Normaliza para meio-dia
           }
 
-          if (isNaN(dataFinal.getTime())) dataFinal = new Date()
+          if (isNaN(dataFinal.getTime())) return null;
           
           return { nome_colaborador: nome, data_hora: dataFinal, arquivo_origem: file.name }
-        }).filter((r:any) => r.nome_colaborador !== 'Desconhecido')
+        }).filter((r:any) => r && r.nome_colaborador !== 'Desconhecido')
 
-        // CRIA UM SET COM AS ASSINATURAS DOS REGISTROS JÁ EXISTENTES NO BANCO (CARREGADOS NA TELA)
-        // Isso evita inserir o mesmo registro se a planilha for importada novamente
+        // DEDUPLICAÇÃO DE NOMES E DATAS (IGNORANDO HORA)
+        const uniqueSet = new Set();
+        
+        // Gera assinaturas dos registros JÁ CARREGADOS para evitar reimportação
         const existingSignatures = new Set(records.map(r => {
              const d = new Date(r.data_hora);
-             // Usa Time para precisão de milissegundos se houver, ou apenas segundo
-             return `${normalizeKey(r.nome_colaborador)}_${d.getTime()}`
+             // Assinatura: NOME_YYYY-MM-DD
+             const dateStr = d.toISOString().split('T')[0]; 
+             return `${normalizeKey(r.nome_colaborador)}_${dateStr}`
         }));
 
-        // Remove duplicatas exatas baseadas em Nome + DataHora
-        const uniqueSet = new Set();
-        const recordsToInsert = rawRecords.filter(r => {
-            const key = `${normalizeKey(r.nome_colaborador)}_${r.data_hora.getTime()}`;
+        const recordsToInsert = rawRecords.filter((r: any) => {
+            const d = r.data_hora;
+            const dateStr = d.toISOString().split('T')[0]; // YYYY-MM-DD
+            const key = `${normalizeKey(r.nome_colaborador)}_${dateStr}`;
             
-            // 1. Remove duplicatas dentro do próprio arquivo
+            // 1. Remove duplicatas dentro do próprio arquivo (várias entradas no mesmo dia)
             if (uniqueSet.has(key)) return false;
-            uniqueSet.add(key);
             
-            // 2. Remove duplicatas se já existir no banco (baseado no estado atual)
+            // 2. Remove duplicatas se já existe no banco
             if (existingSignatures.has(key)) return false;
 
+            uniqueSet.add(key);
             return true;
         });
 
@@ -312,7 +321,7 @@ export function Presencial() {
         }
         
         const skipped = rawRecords.length - recordsToInsert.length;
-        alert(`${recordsToInsert.length} registros novos importados! (${skipped} duplicados ignorados)`); 
+        alert(`${recordsToInsert.length} registros novos importados! (${skipped} duplicados/ignorados)`); 
         fetchRecords()
       } catch (err) { alert("Erro ao importar.") } 
       finally { setUploading(false); if (presenceInputRef.current) presenceInputRef.current.value = '' }
