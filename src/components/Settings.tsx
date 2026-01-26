@@ -21,7 +21,7 @@ interface UserPermissions {
 
 interface AppUser {
   id: string; // UUID do user_profiles
-  user_id: string; // UUID do auth.users
+  user_id: string | null; // UUID do auth.users (pode ser null se pendente)
   nome: string;
   email: string;
   cargo: string;
@@ -48,15 +48,6 @@ const DEFAULT_PERMISSIONS: UserPermissions = {
 // EMAIL DO SUPER ADMIN (Hardcoded para segurança total)
 const SUPER_ADMIN_EMAIL = 'marcio.gama@salomaoadv.com.br';
 
-// Mapeamento de módulos (interface antiga → novo formato)
-const MODULE_MAP: Record<string, string> = {
-  'crm': 'crm',
-  'family': 'family',
-  'collaborators': 'collaborators', // RH
-  'operational': 'operational',
-  'financial': 'financial'
-}
-
 const CHANGELOG = [
   {
     version: '2.6.0',
@@ -66,7 +57,8 @@ const CHANGELOG = [
     changes: [
       'Sincronização completa entre Settings e ModuleSelector',
       'Migração para user_profiles com allowed_modules',
-      'Mapeamento correto de módulos do ecossistema'
+      'Mapeamento correto de módulos do ecossistema',
+      'Pré-cadastro de usuários com ativação automática no login'
     ]
   },
   {
@@ -272,13 +264,13 @@ export function Settings() {
       
       if (data) {
         setUsers(data.map((u: any) => ({
-          id: u.user_id, // UUID
+          id: u.user_id || `pending-${u.email}`, // ID temporário se pendente
           user_id: u.user_id,
           nome: u.email.split('@')[0], // Extrai nome do email
           email: u.email,
           cargo: u.role === 'admin' ? 'Administrador' : 'Colaborador',
           role: u.role || 'user',
-          ativo: true, // Por padrão ativo
+          ativo: !!u.user_id, // Ativo apenas se tiver user_id (já fez login)
           allowed_modules: u.allowed_modules || []
         })))
       }
@@ -356,13 +348,6 @@ export function Settings() {
     if (!userForm.email) return alert("E-mail obrigatório")
     
     try {
-      // Verifica se o email já existe no auth.users
-      const { data: existingUser } = await supabase
-        .from('user_profiles')
-        .select('user_id')
-        .eq('email', userForm.email)
-        .single()
-
       const role = userForm.cargo === 'Administrador' ? 'admin' : 'user'
       
       if (editingUser) {
@@ -374,42 +359,59 @@ export function Settings() {
             role: role,
             allowed_modules: userForm.allowed_modules
           })
-          .eq('user_id', editingUser.user_id)
+          .eq('email', editingUser.email) // Usa email como chave, não user_id
         
         if (error) throw error
         
         await logAction('UPDATE', 'USER_PROFILES', `Atualizou ${userForm.email}`)
+        setStatus({ type: 'success', message: 'Usuário atualizado com sucesso!' })
       } else {
-        // Novo usuário - precisa buscar o user_id do auth.users
-        const { data: authUser } = await supabase
-          .from('auth.users')
-          .select('id')
-          .eq('email', userForm.email)
-          .single()
+        // NOVO USUÁRIO - Cria perfil pendente
+        // O user_id será preenchido quando o usuário fizer login pela primeira vez
         
-        if (!authUser) {
-          alert('Usuário não encontrado no sistema de autenticação. O usuário precisa fazer login pelo menos uma vez antes de ser configurado.')
-          return
-        }
-
-        // Insere novo perfil
-        const { error } = await supabase
+        // Verifica se já existe um perfil pendente para este email
+        const { data: existingProfile } = await supabase
           .from('user_profiles')
-          .insert({
-            user_id: authUser.id,
-            email: userForm.email,
-            role: role,
-            allowed_modules: userForm.allowed_modules
+          .select('user_id, email')
+          .eq('email', userForm.email)
+          .maybeSingle()
+        
+        if (existingProfile) {
+          // Se já existe, apenas atualiza as permissões
+          const { error } = await supabase
+            .from('user_profiles')
+            .update({
+              role: role,
+              allowed_modules: userForm.allowed_modules
+            })
+            .eq('email', userForm.email)
+          
+          if (error) throw error
+          setStatus({ type: 'success', message: 'Permissões atualizadas!' })
+        } else {
+          // Cria novo perfil pendente
+          // IMPORTANTE: user_id será NULL até o primeiro login
+          const { error } = await supabase
+            .from('user_profiles')
+            .insert({
+              user_id: null, // Será preenchido no primeiro login
+              email: userForm.email,
+              role: role,
+              allowed_modules: userForm.allowed_modules
+            })
+          
+          if (error) throw error
+          
+          await logAction('CREATE', 'USER_PROFILES', `Criou perfil pendente para ${userForm.email}`)
+          setStatus({ 
+            type: 'success', 
+            message: `Usuário ${userForm.email} pré-cadastrado! As permissões serão ativadas no primeiro login.` 
           })
-        
-        if (error) throw error
-        
-        await logAction('CREATE', 'USER_PROFILES', `Criou perfil para ${userForm.email}`)
+        }
       }
       
       setIsUserModalOpen(false)
       fetchUsers()
-      setStatus({ type: 'success', message: 'Usuário salvo com sucesso!' })
       
     } catch (e: any) {
       console.error('Erro ao salvar usuário:', e)
@@ -425,13 +427,14 @@ export function Settings() {
       const { error } = await supabase
         .from('user_profiles')
         .delete()
-        .eq('user_id', user.user_id)
+        .eq('email', user.email) // Usa email como chave
       
       if (error) {
         alert('Erro: ' + error.message)
       } else {
         await logAction('DELETE', 'USER_PROFILES', `Excluiu ${user.email}`)
         fetchUsers()
+        setStatus({ type: 'success', message: 'Usuário excluído!' })
       }
     }
   }
@@ -736,20 +739,24 @@ export function Settings() {
                                 <th className="py-2 px-2 font-semibold">Email</th>
                                 <th className="py-2 px-2 font-semibold">Cargo</th>
                                 <th className="py-2 px-2 font-semibold">Módulos Permitidos</th>
+                                <th className="py-2 px-2 font-semibold">Status</th>
                                 <th className="py-2 px-2 text-right font-semibold">Ações</th>
                             </tr>
                         </thead>
                         <tbody className="text-sm">
                             {loadingUsers ? (
-                                <tr><td colSpan={4} className="py-4 text-center text-gray-400 text-xs">Carregando...</td></tr>
+                                <tr><td colSpan={5} className="py-4 text-center text-gray-400 text-xs">Carregando...</td></tr>
                             ) : users.length === 0 ? (
-                                <tr><td colSpan={4} className="py-4 text-center text-gray-400 text-xs">Nenhum usuário cadastrado</td></tr>
+                                <tr><td colSpan={5} className="py-4 text-center text-gray-400 text-xs">Nenhum usuário cadastrado</td></tr>
                             ) : users.map(user => (
                                 <tr key={user.id} className="border-b border-gray-50 hover:bg-gray-50 group">
                                     <td className="py-3 px-2">
                                         <p className="font-medium text-gray-900 text-xs">{user.email}</p>
                                         {user.email === SUPER_ADMIN_EMAIL && (
                                           <span className="text-[10px] text-yellow-600 font-bold">⭐ Super Admin</span>
+                                        )}
+                                        {!user.ativo && (
+                                          <span className="text-[10px] text-orange-600 font-medium">⏳ Aguardando login</span>
                                         )}
                                     </td>
                                     <td className="py-3 px-2">
@@ -766,6 +773,17 @@ export function Settings() {
                                             {user.allowed_modules.includes('financial') && <span className="px-1.5 py-0.5 bg-emerald-100 text-emerald-700 rounded text-[9px] font-medium">Financeiro</span>}
                                             {user.allowed_modules.length === 0 && <span className="text-[10px] text-gray-400">Nenhum módulo</span>}
                                         </div>
+                                    </td>
+                                    <td className="py-3 px-2">
+                                        {user.ativo ? (
+                                          <span className="inline-flex items-center gap-1 text-green-700 text-xs font-medium">
+                                            <Check className="h-3 w-3" /> Ativo
+                                          </span>
+                                        ) : (
+                                          <span className="inline-flex items-center gap-1 text-orange-600 text-xs font-medium">
+                                            <AlertCircle className="h-3 w-3" /> Pendente
+                                          </span>
+                                        )}
                                     </td>
                                     <td className="py-3 px-2 text-right">
                                         <div className={`inline-flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity ${!isAdmin ? 'hidden' : ''}`}>
@@ -784,7 +802,7 @@ export function Settings() {
           </div>
       )}
 
-      {/* --- OUTROS MÓDULOS (mantém o código existente) --- */}
+      {/* --- OUTROS MÓDULOS --- */}
       {activeModule === 'juridico' && (
           <div className="animate-in fade-in">
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 max-w-2xl">
