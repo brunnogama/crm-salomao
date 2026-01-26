@@ -187,8 +187,8 @@ export function ModuleSelector({ onSelect, userName }: ModuleSelectorProps) {
 
             {renderCard(
               'family', 
-              'Gestão da Família', 
-              'Administração patrimonial e familiar.', 
+              'Secretaria Executiva', 
+              'Suporte e gestão de agendas, viagens e demandas dos sócios.', 
               Home, 
               'text-purple-700', 
               'bg-purple-50'
