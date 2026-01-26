@@ -7,7 +7,7 @@ import {
   X,
   LogOut
 } from 'lucide-react'
-import { supabase } from '../../lib/supabase' // ✅ CORRIGIDO
+import { supabase } from '../../lib/supabase'
 
 interface SidebarProps {
   activePage: string;
@@ -81,7 +81,6 @@ export function Sidebar({ activePage, onNavigate, isOpen, onClose }: SidebarProp
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'presencial', label: 'Presencial', icon: MapPin },
     { id: 'kanban', label: 'Kanban', icon: KanbanSquare },
-    { id: 'historico', label: 'Histórico', icon: History },
   ]
 
   return (
@@ -95,12 +94,12 @@ export function Sidebar({ activePage, onNavigate, isOpen, onClose }: SidebarProp
       )}
 
       {/* Sidebar */}
-     <aside className={`
-  fixed md:static top-0 left-0 z-50 md:z-auto h-screen w-64 bg-[#112240] text-gray-300 flex flex-col font-sans border-r border-gray-800 shadow-2xl md:shadow-none
-  transition-transform duration-300 ease-in-out
-  ${isOpen ? 'translate-x-0' : '-translate-x-full'} 
-  md:translate-x-0
-`}>
+      <aside className={`
+        fixed md:static top-0 left-0 z-50 md:z-auto h-screen w-64 bg-[#112240] text-gray-300 flex flex-col font-sans border-r border-gray-800 shadow-2xl md:shadow-none
+        transition-transform duration-300 ease-in-out
+        ${isOpen ? 'translate-x-0' : '-translate-x-full'} 
+        md:translate-x-0
+      `}>
         
         {/* Botão Fechar (Apenas Mobile) */}
         <button 
@@ -150,12 +149,25 @@ export function Sidebar({ activePage, onNavigate, isOpen, onClose }: SidebarProp
           ))}
         </nav>
 
-        {/* 3. MENU BASE COM USER PROFILE */}
+        {/* 3. MENU BASE COM HISTÓRICO E USER PROFILE */}
         <div className="pt-4 pb-6 px-3 bg-[#112240] flex-shrink-0 mt-auto">
           <div className="border-t border-gray-700/50 mb-4 mx-2"></div>
 
+          {/* Histórico */}
+          <button 
+            onClick={() => { onNavigate('historico'); onClose(); }} 
+            className={`w-full flex items-center px-3 py-3 rounded-lg transition-colors group mb-1 ${
+              activePage === 'historico' ? 'bg-[#1e3a8a] text-white' : 'hover:bg-white/5 hover:text-white'
+            }`}
+          >
+            <History className="h-5 w-5 mr-3 text-gray-400 group-hover:text-white" />
+            <span className="text-sm">Histórico</span>
+          </button>
+
+          <div className="border-t border-gray-700/50 my-4 mx-2"></div>
+
           {/* User Profile */}
-          <div className="mt-4 pt-4 border-t border-gray-700/50 flex items-center justify-between group cursor-pointer px-2">
+          <div className="flex items-center justify-between group cursor-pointer px-2">
             <div className="flex items-center">
               <div className="relative">
                 <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-salomao-gold to-yellow-600 p-[1px]">
@@ -189,3 +201,31 @@ export function Sidebar({ activePage, onNavigate, isOpen, onClose }: SidebarProp
     </>
   )
 }
+```
+
+---
+
+## ✅ MUDANÇAS APLICADAS
+
+1. ✅ **Histórico removido** do array `mainItems`
+2. ✅ **Histórico adicionado** acima do User Profile
+3. ✅ **Divisória** antes do Histórico (linha horizontal)
+4. ✅ **Divisória** entre Histórico e User Profile
+
+---
+
+## 📊 ESTRUTURA FINAL
+```
+┌─────────────────┐
+│ Logo + Badge    │
+├─────────────────┤
+│ Dashboard       │
+│ Presencial      │
+│ Kanban          │
+│                 │ ← Espaço flexível
+├─────────────────┤ ← Divisória
+│ Histórico       │
+├─────────────────┤ ← Divisória
+│ User Profile    │
+│ + Logout        │
+└─────────────────┘
