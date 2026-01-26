@@ -5,7 +5,15 @@ import {
   KanbanSquare, 
   History, 
   X,
-  LogOut
+  LogOut,
+  Users,
+  TrendingUp,
+  Clock,
+  BarChart3,
+  RefreshCw,
+  Briefcase,
+  Banknote,
+  Scale
 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 
@@ -80,6 +88,17 @@ export function Sidebar({ activePage, onNavigate, isOpen, onClose }: SidebarProp
   const mainItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'presencial', label: 'Presencial', icon: MapPin },
+    
+    // Novos itens adicionados
+    { id: 'colaboradores', label: 'Colaboradores', icon: Users },
+    { id: 'evolucao', label: 'Evolução de Pessoal', icon: TrendingUp },
+    { id: 'tempo-casa', label: 'Tempo de casa', icon: Clock },
+    { id: 'headcount', label: 'Headcount', icon: BarChart3 },
+    { id: 'turnover', label: 'Turnover', icon: RefreshCw },
+    { id: 'vagas', label: 'Vagas', icon: Briefcase },
+    { id: 'remuneracao', label: 'Remuneração', icon: Banknote },
+    { id: 'acoes', label: 'Ações', icon: Scale },
+    
     { id: 'kanban', label: 'Kanban', icon: KanbanSquare },
   ]
 

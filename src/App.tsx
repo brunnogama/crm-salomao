@@ -35,7 +35,14 @@ import {
   History as HistoryIcon,
   Settings as SettingsIcon,
   Truck,
-  MapPin 
+  MapPin,
+  TrendingUp, // Adicionado
+  Clock,      // Adicionado
+  BarChart3,  // Adicionado
+  RefreshCw,  // Adicionado
+  Briefcase,  // Adicionado
+  Banknote,   // Adicionado
+  Scale       // Adicionado
 } from 'lucide-react'
 
 export default function App() {
@@ -87,6 +94,14 @@ export default function App() {
   const rhPageIcons: Record<string, any> = {
     dashboard: LayoutDashboard,
     presencial: MapPin,
+    colaboradores: Users,
+    evolucao: TrendingUp,
+    'tempo-casa': Clock,
+    headcount: BarChart3,
+    turnover: RefreshCw,
+    vagas: Briefcase,
+    remuneracao: Banknote,
+    acoes: Scale,
     kanban: KanbanSquare,
     historico: HistoryIcon
   }
@@ -94,6 +109,14 @@ export default function App() {
   const rhPageTitles: Record<string, string> = {
     dashboard: 'Dashboard RH',
     presencial: 'Controle Presencial',
+    colaboradores: 'Colaboradores',
+    evolucao: 'Evolução de Pessoal',
+    'tempo-casa': 'Tempo de Casa',
+    headcount: 'Headcount',
+    turnover: 'Turnover',
+    vagas: 'Vagas',
+    remuneracao: 'Remuneração',
+    acoes: 'Ações Trabalhistas',
     kanban: 'Kanban RH',
     historico: 'Histórico'
   }
@@ -101,6 +124,14 @@ export default function App() {
   const rhDescriptions: Record<string, string> = {
     dashboard: 'Visão geral de colaboradores e métricas de RH.',
     presencial: 'Gestão de presença e alocação física.',
+    colaboradores: 'Gestão da base de colaboradores ativos.',
+    evolucao: 'Análise de crescimento e desenvolvimento.',
+    'tempo-casa': 'Métricas de retenção e senioridade.',
+    headcount: 'Indicadores quantitativos da equipe.',
+    turnover: 'Índices de rotatividade de pessoal.',
+    vagas: 'Gestão de processos seletivos abertos.',
+    remuneracao: 'Gestão salarial e benefícios.',
+    acoes: 'Acompanhamento jurídico trabalhista.',
     kanban: 'Fluxo de contratações e tarefas de RH.',
     historico: 'Registro de atividades do setor.'
   }
@@ -273,6 +304,17 @@ export default function App() {
                     <>
                       {activePage === 'dashboard' && <UnderConstruction moduleName="Dashboard RH" onBack={() => {}} showBackButton={false} />}
                       {activePage === 'presencial' && <Presencial />}
+                      
+                      {/* Novas Rotas em Construção */}
+                      {activePage === 'colaboradores' && <UnderConstruction moduleName="Colaboradores" onBack={() => setActivePage('dashboard')} />}
+                      {activePage === 'evolucao' && <UnderConstruction moduleName="Evolução de Pessoal" onBack={() => setActivePage('dashboard')} />}
+                      {activePage === 'tempo-casa' && <UnderConstruction moduleName="Tempo de Casa" onBack={() => setActivePage('dashboard')} />}
+                      {activePage === 'headcount' && <UnderConstruction moduleName="Headcount" onBack={() => setActivePage('dashboard')} />}
+                      {activePage === 'turnover' && <UnderConstruction moduleName="Turnover" onBack={() => setActivePage('dashboard')} />}
+                      {activePage === 'vagas' && <UnderConstruction moduleName="Vagas" onBack={() => setActivePage('dashboard')} />}
+                      {activePage === 'remuneracao' && <UnderConstruction moduleName="Remuneração" onBack={() => setActivePage('dashboard')} />}
+                      {activePage === 'acoes' && <UnderConstruction moduleName="Ações Trabalhistas" onBack={() => setActivePage('dashboard')} />}
+                      
                       {activePage === 'kanban' && <Kanban />}
                       {activePage === 'historico' && <History />}
                     </>
