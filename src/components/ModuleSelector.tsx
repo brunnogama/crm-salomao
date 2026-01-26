@@ -26,15 +26,30 @@ export function ModuleSelector({ onSelect, userName }: ModuleSelectorProps) {
             .single()
 
           if (data && !error) {
-            setAllowedModules(data.allowed_modules || [])
-            setIsAdmin(data.role === 'admin')
+            const userRole = data.role || ''
+            const isUserAdmin = userRole.toLowerCase() === 'admin'
+            
+            setIsAdmin(isUserAdmin)
+            
+            // Se for admin, libera TODOS os módulos
+            if (isUserAdmin) {
+              setAllowedModules(['crm', 'family', 'collaborators', 'operational', 'financial'])
+            } else {
+              // Se não for admin, usa os módulos definidos na gestão de usuários
+              setAllowedModules(data.allowed_modules || [])
+            }
           } else {
-             // Fallback se não tiver perfil criado ainda: libera apenas CRM
-             setAllowedModules(['crm'])
+            // Fallback se não tiver perfil criado ainda
+            console.warn('Perfil de usuário não encontrado. Criando acesso básico ao CRM.')
+            setAllowedModules(['crm'])
+            setIsAdmin(false)
           }
         }
       } catch (error) {
         console.error('Erro ao buscar permissões:', error)
+        // Em caso de erro, libera apenas CRM por segurança
+        setAllowedModules(['crm'])
+        setIsAdmin(false)
       } finally {
         setLoading(false)
       }
@@ -43,7 +58,7 @@ export function ModuleSelector({ onSelect, userName }: ModuleSelectorProps) {
     fetchPermissions()
   }, [])
   
-  // 2. Função de Logout aprimorada (Requirement 3)
+  // 2. Função de Logout aprimorada
   const handleLogout = async () => {
     // Limpa storage local para esquecer estados anteriores
     localStorage.clear()
@@ -56,9 +71,12 @@ export function ModuleSelector({ onSelect, userName }: ModuleSelectorProps) {
     window.location.reload()
   }
 
-  // Verifica se o módulo está liberado
+  // 3. Verifica se o módulo está liberado
   const isModuleAllowed = (moduleKey: string) => {
-    if (isAdmin) return true // Admin acessa tudo
+    // Admin sempre tem acesso a tudo
+    if (isAdmin) return true
+    
+    // Usuários normais seguem as permissões definidas na gestão
     return allowedModules.includes(moduleKey)
   }
 
@@ -115,7 +133,9 @@ export function ModuleSelector({ onSelect, userName }: ModuleSelectorProps) {
       <header className="bg-[#112240] h-20 flex items-center justify-between px-8 shadow-md">
         <img src="/logo-branca.png" alt="Salomão" className="h-10 w-auto object-contain" />
         <div className="flex items-center gap-4">
-            <span className="text-white text-sm font-medium">Olá, {userName}</span>
+            <span className="text-white text-sm font-medium">
+              Olá, {userName} {isAdmin && <span className="text-yellow-400 ml-1">(Admin)</span>}
+            </span>
             <button 
                 onClick={handleLogout}
                 className="text-gray-400 hover:text-white transition-colors p-2 rounded-full hover:bg-white/10"
