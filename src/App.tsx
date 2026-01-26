@@ -44,6 +44,7 @@ import {
   Briefcase,  
   Banknote,   
   Megaphone,
+  Target, // Novo ícone para GE
   // Novos ícones Financeiro
   ArrowUpCircle,
   ArrowDownCircle,
@@ -108,6 +109,7 @@ export default function App() {
     remuneracao: Banknote,
     acoes: Megaphone,
     kanban: KanbanSquare,
+    ge: Target, // Ícone configurado
     historico: HistoryIcon
   }
 
@@ -123,6 +125,7 @@ export default function App() {
     remuneracao: 'Remuneração',
     acoes: 'Ações Internas & Marketing',
     kanban: 'Kanban RH',
+    ge: 'GE', // Título configurado
     historico: 'Histórico'
   }
 
@@ -138,6 +141,7 @@ export default function App() {
     remuneracao: 'Gestão salarial e benefícios.',
     acoes: 'Gestão de endomarketing, eventos e campanhas.',
     kanban: 'Fluxo de contratações e tarefas de RH.',
+    ge: 'Gestão Estratégica e Metas.', // Descrição configurada
     historico: 'Registro de atividades do setor.'
   }
 
@@ -349,6 +353,7 @@ export default function App() {
                       {activePage === 'acoes' && <UnderConstruction moduleName="Ações Internas & Marketing" onBack={() => setActivePage('dashboard')} />}
                       
                       {activePage === 'kanban' && <Kanban />}
+                      {activePage === 'ge' && <UnderConstruction moduleName="GE" onBack={() => setActivePage('dashboard')} />} {/* Rota GE adicionada */}
                       {activePage === 'historico' && <History />}
                     </>
                   )}
