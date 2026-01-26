@@ -7,7 +7,7 @@ import {
   X,
   LogOut
 } from 'lucide-react'
-import { supabase } from '../lib/supabase'
+import { supabase } from '../../lib/supabase' // ✅ CORRIGIDO
 
 interface SidebarProps {
   activePage: string;
