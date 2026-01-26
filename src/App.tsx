@@ -135,9 +135,17 @@ export default function App() {
   const handleLogout = async () => {
     setLoggingOut(true)
     try {
+      // ✅ SALVAR o flag do modal de boas-vindas antes de limpar
+      const hasSeenWelcome = localStorage.getItem('hasSeenWelcomeModal')
+      
       // Limpeza agressiva para garantir que nenhum dado do usuário anterior persista
       localStorage.clear()
       sessionStorage.clear()
+      
+      // ✅ RESTAURAR o flag do modal depois de limpar
+      if (hasSeenWelcome) {
+        localStorage.setItem('hasSeenWelcomeModal', hasSeenWelcome)
+      }
       
       await supabase.auth.signOut()
       setSession(null)
