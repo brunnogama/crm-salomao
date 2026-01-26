@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useMemo } from 'react'
 import { 
   Upload, FileSpreadsheet, RefreshCw, Download,
   BarChart3, Users, Briefcase, FileText,
-  Pencil, Plus, X, Search, Filter as FilterIcon, Mail, Eraser
+  Pencil, Plus, X, Search, Filter as FilterIcon, Mail, Eraser, ChevronDown
 } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import { supabase } from '../../lib/supabase'
@@ -588,13 +588,14 @@ export function Presencial() {
                     new ClipboardItem({ 'image/png': blob })
                 ]);
                 
-                // Abre o cliente de e-mail padrão
+                // Abre o cliente de e-mail padrão EM NOVA ABA
                 const subject = `Relatório de Presença - ${new Date().toLocaleDateString()}`;
                 const body = `Segue em anexo (colado) o relatório filtrado.\n\n(Pressione Ctrl+V para colar a imagem aqui)`;
                 
-                window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+                const mailtoLink = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+                window.open(mailtoLink, '_blank');
                 
-                alert("📸 Imagem copiada para a área de transferência!\n\nSeu e-mail deve abrir agora. Basta colar (Ctrl+V) no corpo da mensagem.");
+                alert("📸 Imagem copiada!\n\nCole (Ctrl+V) no corpo do e-mail que foi aberto.");
             } catch (err) {
                 console.error(err);
                 alert("Erro ao copiar imagem. Verifique as permissões do navegador.");
@@ -795,50 +796,56 @@ export function Presencial() {
                     )}
                 </div>
 
-                {/* FILTROS DROPDOWN */}
+                {/* FILTROS DROPDOWN CUSTOMIZADOS */}
                 <div className="flex items-center gap-2 w-full sm:w-auto">
-                    <div className="relative w-full sm:w-40">
-                        <FilterIcon className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
+                    
+                    {/* Filtro Sócio */}
+                    <div className="relative w-full sm:w-48 group">
+                        <FilterIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 group-hover:text-blue-600 transition-colors pointer-events-none z-10" />
                         <select 
                             value={filterSocio} 
                             onChange={(e) => setFilterSocio(e.target.value)}
-                            className="w-full bg-gray-50 border border-gray-200 text-gray-700 text-sm rounded-lg pl-8 p-2 focus:ring-blue-500 focus:border-blue-500 appearance-none"
+                            className="w-full bg-white border border-gray-200 text-gray-700 text-sm rounded-lg pl-9 pr-8 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none shadow-sm hover:border-blue-300 transition-all cursor-pointer"
                         >
                             <option value="">Todos Sócios</option>
                             {uniqueSocios.map(s => <option key={s} value={s}>{s}</option>)}
                         </select>
+                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                     </div>
-                    <div className="relative w-full sm:w-40">
-                        <Users className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
+
+                    {/* Filtro Colaborador */}
+                    <div className="relative w-full sm:w-48 group">
+                        <Users className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 group-hover:text-blue-600 transition-colors pointer-events-none z-10" />
                         <select 
                             value={filterColaborador} 
                             onChange={(e) => setFilterColaborador(e.target.value)}
-                            className="w-full bg-gray-50 border border-gray-200 text-gray-700 text-sm rounded-lg pl-8 p-2 focus:ring-blue-500 focus:border-blue-500 appearance-none"
+                            className="w-full bg-white border border-gray-200 text-gray-700 text-sm rounded-lg pl-9 pr-8 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none shadow-sm hover:border-blue-300 transition-all cursor-pointer"
                         >
                             <option value="">Todos Colab.</option>
                             {uniqueColaboradores.map(c => <option key={c} value={c}>{c}</option>)}
                         </select>
+                         <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                     </div>
 
                     {/* FILTRO DE PERÍODO */}
                     {(viewMode === 'report' || viewMode === 'descriptive') && (
                         <div className="flex items-center gap-2 w-full sm:w-auto border-l pl-2 border-gray-200">
-                            <div className="flex items-center gap-1 bg-gray-50 border border-gray-200 rounded-lg p-1">
+                            <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-lg p-1 shadow-sm hover:border-blue-300 transition-all">
                                 <span className="text-xs text-gray-400 pl-2">De</span>
                                 <input 
                                     type="date" 
                                     value={startDate} 
                                     onChange={(e) => setStartDate(e.target.value)} 
-                                    className="bg-transparent border-none text-gray-700 text-sm p-1 focus:ring-0 outline-none"
+                                    className="bg-transparent border-none text-gray-700 text-sm p-1 focus:ring-0 outline-none cursor-pointer"
                                 />
                             </div>
-                            <div className="flex items-center gap-1 bg-gray-50 border border-gray-200 rounded-lg p-1">
+                            <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-lg p-1 shadow-sm hover:border-blue-300 transition-all">
                                 <span className="text-xs text-gray-400 pl-2">Até</span>
                                 <input 
                                     type="date" 
                                     value={endDate} 
                                     onChange={(e) => setEndDate(e.target.value)} 
-                                    className="bg-transparent border-none text-gray-700 text-sm p-1 focus:ring-0 outline-none"
+                                    className="bg-transparent border-none text-gray-700 text-sm p-1 focus:ring-0 outline-none cursor-pointer"
                                 />
                             </div>
                         </div>
