@@ -8,7 +8,8 @@ import {
   FileWarning,
   X,
   Gavel,
-  Truck
+  Truck,
+  LogOut
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
@@ -21,6 +22,8 @@ interface SidebarProps {
 
 export function Sidebar({ activePage, onNavigate, isOpen, onClose }: SidebarProps) {
   const [incompleteCount, setIncompleteCount] = useState(0)
+  const [userName, setUserName] = useState('Carregando...')
+  const [userRole, setUserRole] = useState('')
 
   const fetchCount = async () => {
     // Busca apenas na tabela de clientes padrão para o contador de alertas
@@ -52,12 +55,66 @@ export function Sidebar({ activePage, onNavigate, isOpen, onClose }: SidebarProp
     }
   }
 
+  const fetchUserProfile = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      
+      if (user) {
+        // Busca dados na tabela user_profiles
+        const { data: profile } = await supabase
+          .from('user_profiles')
+          .select('role, allowed_modules')
+          .eq('user_id', user.id)
+          .single()
+
+        if (profile) {
+          // Define o nome formatado do email
+          if (user.email) {
+            const emailName = user.email.split('@')[0]
+            const formattedName = emailName
+              .split('.')
+              .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+              .join(' ')
+            setUserName(formattedName)
+          }
+
+          // Define o cargo traduzido
+          const roleLabels: Record<string, string> = {
+            admin: 'Administrador',
+            user: 'Usuário'
+          }
+          setUserRole(roleLabels[profile.role] || 'Usuário')
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao carregar dados do usuário:', error)
+      setUserName('Usuário')
+    }
+  }
+
   useEffect(() => {
     fetchCount()
+    fetchUserProfile()
     // Atualiza a cada 5 segundos para manter o badge sincronizado
     const interval = setInterval(fetchCount, 5000)
     return () => clearInterval(interval)
   }, [])
+
+  const handleLogout = async () => {
+    // Salvar o flag do modal de boas-vindas
+    const hasSeenWelcome = localStorage.getItem('hasSeenWelcomeModal')
+    
+    localStorage.clear()
+    sessionStorage.clear()
+    
+    // Restaurar o flag
+    if (hasSeenWelcome) {
+      localStorage.setItem('hasSeenWelcomeModal', hasSeenWelcome)
+    }
+    
+    await supabase.auth.signOut()
+    window.location.reload()
+  }
   
   const mainItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -75,43 +132,64 @@ export function Sidebar({ activePage, onNavigate, isOpen, onClose }: SidebarProp
 
   return (
     <>
-      {/* Overlay Mobile */}
+      {/* Backdrop Escuro (Apenas Mobile) */}
       {isOpen && (
         <div 
-          className="fixed inset-0 bg-black/60 z-40 md:hidden backdrop-blur-sm transition-opacity" 
-          onClick={onClose} 
+          className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm md:hidden animate-in fade-in duration-200"
+          onClick={onClose}
         />
       )}
 
-      <aside className={`fixed md:static inset-y-0 left-0 z-50 h-[100dvh] w-64 bg-[#112240] text-gray-300 flex flex-col font-sans border-r border-gray-800 flex-shrink-0 transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 shadow-2xl md:shadow-none`}>
-      
+      {/* Sidebar */}
+      <aside className={`
+        fixed top-0 left-0 z-50 h-screen w-64 bg-[#112240] text-gray-300 flex flex-col font-sans border-r border-gray-800 shadow-2xl
+        transition-transform duration-300 ease-in-out
+        ${isOpen ? 'translate-x-0' : '-translate-x-full'} 
+        md:translate-x-0
+      `}>
+        
+        {/* Botão Fechar (Apenas Mobile) */}
+        <button 
+          onClick={onClose}
+          className="absolute top-4 right-4 p-2 text-gray-400 hover:text-white md:hidden z-10"
+        >
+          <X className="w-6 h-6" />
+        </button>
+
         {/* 1. HEADER LOGO */}
         <div className="flex flex-col flex-shrink-0 relative bg-[#112240] pt-6 pb-4 px-6">
           <div className="flex flex-col items-center w-full gap-4">
-            <img src="/logo-branca.png" alt="Salomão" className="h-11 w-auto object-contain block" />
+            <img 
+              src="/logo-branca.png" 
+              alt="Salomão Advogados" 
+              className="h-11 w-auto object-contain block"
+            />
             <div className="bg-blue-950/30 border border-blue-800/30 rounded-lg px-4 py-2 w-full">
-                <span className="text-[10px] text-blue-300 font-bold tracking-[0.25em] uppercase leading-none whitespace-nowrap block text-center">Módulo CRM</span>
+              <span className="text-[10px] text-blue-300 font-bold tracking-[0.25em] uppercase leading-none whitespace-nowrap block text-center">
+                Módulo CRM
+              </span>
             </div>
           </div>
-          <button onClick={onClose} className="md:hidden absolute right-4 top-6 p-1 hover:bg-white/10 rounded text-gray-400 transition-colors">
-            <X className="h-6 w-6" />
-          </button>
         </div>
 
         {/* 2. MENU PRINCIPAL */}
-        <div className="flex-1 overflow-y-auto py-2 px-3 space-y-1 custom-scrollbar pt-6">
+        <nav className="flex-1 overflow-y-auto py-2 px-3 space-y-1 custom-scrollbar pt-6">
           {mainItems.map((item) => (
-            <button 
-              key={item.id} 
-              onClick={() => { onNavigate(item.id); onClose(); }} 
+            <button
+              key={item.id}
+              onClick={() => { onNavigate(item.id); onClose(); }}
               className={`w-full flex items-center justify-between px-3 py-3 rounded-lg transition-all group ${
-                activePage === item.id 
-                  ? 'bg-[#1e3a8a] text-white font-medium shadow-md border-l-4 border-yellow-500' 
+                activePage === item.id
+                  ? 'bg-[#1e3a8a] text-white font-medium shadow-md border-l-4 border-salomao-gold' 
                   : 'hover:bg-white/5 hover:text-white border-l-4 border-transparent'
               }`}
             >
               <div className="flex items-center">
-                <item.icon className={`h-5 w-5 mr-3 ${activePage === item.id ? 'text-white' : 'text-gray-400 group-hover:text-white'}`} />
+                <item.icon 
+                  className={`h-5 w-5 mr-3 transition-colors ${
+                    activePage === item.id ? 'text-white' : 'text-gray-400 group-hover:text-white'
+                  }`} 
+                />
                 <span className="text-sm">{item.label}</span>
               </div>
               
@@ -123,23 +201,55 @@ export function Sidebar({ activePage, onNavigate, isOpen, onClose }: SidebarProp
               )}
             </button>
           ))}
-        </div>
+        </nav>
 
         {/* 3. MENU BASE */}
         <div className="pt-4 pb-6 px-3 bg-[#112240] flex-shrink-0 mt-auto">
           <div className="border-t border-gray-700/50 mb-4 mx-2"></div>
+          
           {bottomItems.map((item) => (
-             <button 
-               key={item.id} 
-               onClick={() => { onNavigate(item.id); onClose(); }} 
-               className={`w-full flex items-center px-3 py-3 rounded-lg transition-colors group ${
-                 activePage === item.id ? 'bg-[#1e3a8a] text-white' : 'hover:bg-white/5 hover:text-white'
-               }`}
-             >
-               <item.icon className="h-5 w-5 mr-3 text-gray-400 group-hover:text-white" />
-               <span className="text-sm">{item.label}</span>
-             </button>
+            <button 
+              key={item.id} 
+              onClick={() => { onNavigate(item.id); onClose(); }} 
+              className={`w-full flex items-center px-3 py-3 rounded-lg transition-colors group mb-1 ${
+                activePage === item.id ? 'bg-[#1e3a8a] text-white' : 'hover:bg-white/5 hover:text-white'
+              }`}
+            >
+              <item.icon className="h-5 w-5 mr-3 text-gray-400 group-hover:text-white" />
+              <span className="text-sm">{item.label}</span>
+            </button>
           ))}
+
+          {/* User Profile */}
+          <div className="mt-4 pt-4 border-t border-gray-700/50 flex items-center justify-between group cursor-pointer px-2">
+            <div className="flex items-center">
+              <div className="relative">
+                <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-salomao-gold to-yellow-600 p-[1px]">
+                  <div className="w-full h-full rounded-full bg-[#112240] flex items-center justify-center">
+                    <span className="text-xs font-bold text-white">
+                      {userName.charAt(0)}
+                    </span>
+                  </div>
+                </div>
+                <div className="absolute bottom-0 right-0 w-2 h-2 bg-green-500 border-2 border-[#112240] rounded-full"></div>
+              </div>
+              
+              <div className="ml-3 overflow-hidden">
+                <p className="text-sm font-medium text-gray-300 group-hover:text-white transition-colors truncate max-w-[100px]" title={userName}>
+                  {userName}
+                </p>
+                <p className="text-[10px] text-gray-500 uppercase tracking-widest">{userRole}</p>
+              </div>
+            </div>
+            
+            <button 
+              onClick={handleLogout}
+              className="p-2 text-gray-500 hover:text-red-400 hover:bg-white/5 rounded-lg transition-all"
+              title="Sair do Sistema"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       </aside>
     </>
