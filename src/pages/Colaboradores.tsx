@@ -866,104 +866,106 @@ export function Colaboradores() {
 
       {/* MODAL DE DETALHES DO COLABORADOR */}
       {selectedColaborador && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200 border border-gray-200">
-            
-            {/* Header */}
-            <div className="p-6 border-b border-gray-100 flex justify-between items-start bg-gray-50/50 sticky top-0 z-10 backdrop-blur-md">
-              <div className="flex items-center gap-4">
-                <Avatar colab={selectedColaborador} size="lg" />
-                <div>
-                  <h2 className="text-xl font-bold text-gray-900">{toTitleCase(selectedColaborador.nome)}</h2>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-sm text-gray-500 font-medium">{toTitleCase(selectedColaborador.cargo) || '-'}</span>
-                    <span className="text-gray-300">•</span>
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold ${
-                      selectedColaborador.status === 'Ativo' ? 'bg-green-100 text-green-700' : 
-                      selectedColaborador.status === 'Desligado' ? 'bg-red-100 text-red-700' : 
-                      'bg-gray-100 text-gray-600'
-                    }`}>
-                      {selectedColaborador.status}
-                    </span>
-                  </div>
-                </div>
-              </div>
-              <button 
-                onClick={() => setSelectedColaborador(null)}
-                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
-              >
-                <X className="h-6 w-6" />
-              </button>
-            </div>
-
-            {/* Conteúdo */}
-            <div className="p-8 space-y-8">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] overflow-y-auto p-4 animate-in fade-in duration-200">
+          <div className="flex min-h-full items-center justify-center">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl animate-in zoom-in-95 duration-200 border border-gray-200 relative my-8">
               
-              {/* Seção Pessoal */}
-              <div>
-                <h3 className="text-sm font-bold text-[#112240] uppercase tracking-wider mb-4 flex items-center gap-2 border-b border-gray-100 pb-2">
-                  <User className="h-4 w-4" /> Dados Pessoais
-                </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                  <DetailItem label="CPF" value={selectedColaborador.cpf} />
-                  <DetailItem label="Data Nascimento" value={formatDateDisplay(selectedColaborador.data_nascimento)} icon={Calendar} />
-                  <DetailItem label="Gênero" value={selectedColaborador.genero} />
-                  <DetailItem label="Tipo" value={selectedColaborador.tipo} />
+              {/* Header */}
+              <div className="p-6 border-b border-gray-100 flex justify-between items-start bg-gray-50/50 sticky top-0 z-10 backdrop-blur-md rounded-t-2xl">
+                <div className="flex items-center gap-4">
+                  <Avatar colab={selectedColaborador} size="lg" />
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-900">{toTitleCase(selectedColaborador.nome)}</h2>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-sm text-gray-500 font-medium">{toTitleCase(selectedColaborador.cargo) || '-'}</span>
+                      <span className="text-gray-300">•</span>
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold ${
+                        selectedColaborador.status === 'Ativo' ? 'bg-green-100 text-green-700' : 
+                        selectedColaborador.status === 'Desligado' ? 'bg-red-100 text-red-700' : 
+                        'bg-gray-100 text-gray-600'
+                      }`}>
+                        {selectedColaborador.status}
+                      </span>
+                    </div>
+                  </div>
                 </div>
+                <button 
+                  onClick={() => setSelectedColaborador(null)}
+                  className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+                >
+                  <X className="h-6 w-6" />
+                </button>
               </div>
 
-              {/* Seção Endereço */}
-              <div>
-                <h3 className="text-sm font-bold text-[#112240] uppercase tracking-wider mb-4 flex items-center gap-2 border-b border-gray-100 pb-2">
-                  <MapPin className="h-4 w-4" /> Endereço
-                </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                  <DetailItem label="CEP" value={selectedColaborador.cep} />
-                  <div className="sm:col-span-2">
-                    <DetailItem label="Logradouro" value={`${selectedColaborador.endereco || ''}, ${selectedColaborador.numero || ''}`} />
+              {/* Conteúdo */}
+              <div className="p-8 space-y-8">
+                
+                {/* Seção Pessoal */}
+                <div>
+                  <h3 className="text-sm font-bold text-[#112240] uppercase tracking-wider mb-4 flex items-center gap-2 border-b border-gray-100 pb-2">
+                    <User className="h-4 w-4" /> Dados Pessoais
+                  </h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                    <DetailItem label="CPF" value={selectedColaborador.cpf} />
+                    <DetailItem label="Data Nascimento" value={formatDateDisplay(selectedColaborador.data_nascimento)} icon={Calendar} />
+                    <DetailItem label="Gênero" value={selectedColaborador.genero} />
+                    <DetailItem label="Tipo" value={selectedColaborador.tipo} />
                   </div>
-                  <DetailItem label="Bairro" value={selectedColaborador.bairro} />
-                  <DetailItem label="Cidade" value={selectedColaborador.cidade} />
-                  <DetailItem label="Estado" value={selectedColaborador.estado} />
                 </div>
+
+                {/* Seção Endereço */}
+                <div>
+                  <h3 className="text-sm font-bold text-[#112240] uppercase tracking-wider mb-4 flex items-center gap-2 border-b border-gray-100 pb-2">
+                    <MapPin className="h-4 w-4" /> Endereço
+                  </h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                    <DetailItem label="CEP" value={selectedColaborador.cep} />
+                    <div className="sm:col-span-2">
+                      <DetailItem label="Logradouro" value={`${selectedColaborador.endereco || ''}, ${selectedColaborador.numero || ''}`} />
+                    </div>
+                    <DetailItem label="Bairro" value={selectedColaborador.bairro} />
+                    <DetailItem label="Cidade" value={selectedColaborador.cidade} />
+                    <DetailItem label="Estado" value={selectedColaborador.estado} />
+                  </div>
+                </div>
+
+                {/* Seção Corporativo */}
+                <div>
+                  <h3 className="text-sm font-bold text-[#112240] uppercase tracking-wider mb-4 flex items-center gap-2 border-b border-gray-100 pb-2">
+                    <Briefcase className="h-4 w-4" /> Dados Corporativos
+                  </h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                    {/* EMAIL NO DETALHE */}
+                    <div className="md:col-span-2">
+                      <DetailItem label="E-mail" value={selectedColaborador.email} icon={Mail} />
+                    </div>
+                    <DetailItem label="Equipe" value={selectedColaborador.equipe} />
+                    <DetailItem label="Local" value={selectedColaborador.local} icon={Building2} />
+                    <DetailItem label="Líder" value={selectedColaborador.lider_equipe} />
+                    <DetailItem label="Data Admissão" value={formatDateDisplay(selectedColaborador.data_admissao)} icon={Calendar} />
+                    <DetailItem label="Data Desligamento" value={formatDateDisplay(selectedColaborador.data_desligamento)} icon={Calendar} />
+                  </div>
+                </div>
+
               </div>
 
-              {/* Seção Corporativo */}
-              <div>
-                <h3 className="text-sm font-bold text-[#112240] uppercase tracking-wider mb-4 flex items-center gap-2 border-b border-gray-100 pb-2">
-                  <Briefcase className="h-4 w-4" /> Dados Corporativos
-                </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                  {/* EMAIL NO DETALHE */}
-                  <div className="md:col-span-2">
-                    <DetailItem label="E-mail" value={selectedColaborador.email} icon={Mail} />
-                  </div>
-                  <DetailItem label="Equipe" value={selectedColaborador.equipe} />
-                  <DetailItem label="Local" value={selectedColaborador.local} icon={Building2} />
-                  <DetailItem label="Líder" value={selectedColaborador.lider_equipe} />
-                  <DetailItem label="Data Admissão" value={formatDateDisplay(selectedColaborador.data_admissao)} icon={Calendar} />
-                  <DetailItem label="Data Desligamento" value={formatDateDisplay(selectedColaborador.data_desligamento)} icon={Calendar} />
-                </div>
+              {/* Footer Ações */}
+              <div className="p-6 border-t border-gray-100 bg-gray-50 flex justify-end gap-3 sticky bottom-0 z-10 rounded-b-2xl">
+                <button 
+                  onClick={() => handleDelete(selectedColaborador.id)}
+                  className="px-4 py-2.5 text-red-600 bg-white border border-red-200 hover:bg-red-50 font-bold rounded-lg transition-colors flex items-center gap-2 shadow-sm"
+                >
+                  <Trash2 className="h-4 w-4" /> Excluir
+                </button>
+                <button 
+                  onClick={() => handleEdit(selectedColaborador)}
+                  className="px-6 py-2.5 bg-[#112240] text-white hover:bg-[#1a3a6c] font-bold rounded-lg transition-colors flex items-center gap-2 shadow-lg"
+                >
+                  <Pencil className="h-4 w-4" /> Editar
+                </button>
               </div>
 
             </div>
-
-            {/* Footer Ações */}
-            <div className="p-6 border-t border-gray-100 bg-gray-50 flex justify-end gap-3 sticky bottom-0 z-10 rounded-b-2xl">
-              <button 
-                onClick={() => handleDelete(selectedColaborador.id)}
-                className="px-4 py-2.5 text-red-600 bg-white border border-red-200 hover:bg-red-50 font-bold rounded-lg transition-colors flex items-center gap-2 shadow-sm"
-              >
-                <Trash2 className="h-4 w-4" /> Excluir
-              </button>
-              <button 
-                onClick={() => handleEdit(selectedColaborador)}
-                className="px-6 py-2.5 bg-[#112240] text-white hover:bg-[#1a3a6c] font-bold rounded-lg transition-colors flex items-center gap-2 shadow-lg"
-              >
-                <Pencil className="h-4 w-4" /> Editar
-              </button>
-            </div>
-
           </div>
         </div>
       )}
