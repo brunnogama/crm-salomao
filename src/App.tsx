@@ -50,7 +50,8 @@ import {
   ArrowUpCircle,
   ArrowDownCircle,
   Plane,
-  FolderSearch // Usado para GED
+  FolderSearch, // Usado para GED
+  Calendar
 } from 'lucide-react'
 
 export default function App() {
@@ -100,6 +101,7 @@ export default function App() {
   // --- CONFIGURAÇÕES DO RH ---
   const rhPageIcons: Record<string, any> = {
     dashboard: LayoutDashboard,
+    calendario: Calendar,
     presencial: MapPin,
     colaboradores: Users,
     evolucao: TrendingUp,
@@ -110,12 +112,12 @@ export default function App() {
     remuneracao: Banknote,
     acoes: Megaphone,
     kanban: KanbanSquare,
-    ged: FolderSearch, // Atualizado para GED
-    historico: HistoryIcon
+    ged: FolderSearch
   }
 
   const rhPageTitles: Record<string, string> = {
     dashboard: 'Dashboard RH',
+    calendario: 'Calendário',
     presencial: 'Controle Presencial',
     colaboradores: 'Colaboradores',
     evolucao: 'Evolução de Pessoal',
@@ -126,12 +128,12 @@ export default function App() {
     remuneracao: 'Remuneração',
     acoes: 'Ações Internas & Marketing',
     kanban: 'Kanban RH',
-    ged: 'GED - Gestão Eletrônica de Documentos', // Atualizado para GED
-    historico: 'Histórico'
+    ged: 'GED - Gestão Eletrônica de Documentos'
   }
 
   const rhDescriptions: Record<string, string> = {
     dashboard: 'Visão geral de colaboradores e métricas de RH.',
+    calendario: 'Calendário de eventos, aniversários e marcos importantes.',
     presencial: 'Gestão de presença e alocação física.',
     colaboradores: 'Gestão da base de colaboradores ativos.',
     evolucao: 'Análise de crescimento e desenvolvimento.',
@@ -142,8 +144,7 @@ export default function App() {
     remuneracao: 'Gestão salarial e benefícios.',
     acoes: 'Gestão de endomarketing, eventos e campanhas.',
     kanban: 'Fluxo de contratações e tarefas de RH.',
-    ged: 'Arquivo digital e organização de documentos.', // Atualizado para GED
-    historico: 'Registro de atividades do setor.'
+    ged: 'Arquivo digital e organização de documentos.'
   }
 
   // --- CONFIGURAÇÕES DO FINANCEIRO ---
@@ -342,9 +343,10 @@ export default function App() {
                   {currentModule === 'collaborators' && (
                     <>
                       {activePage === 'dashboard' && <UnderConstruction moduleName="Dashboard RH" onBack={() => {}} showBackButton={false} />}
+                      {activePage === 'calendario' && <UnderConstruction moduleName="Calendário" onBack={() => setActivePage('dashboard')} />}
                       {activePage === 'presencial' && <Presencial />}
                       
-                      {/* ROTA ATUALIZADA */}
+                      {/* ROTA COLABORADORES */}
                       {activePage === 'colaboradores' && <Colaboradores />}
                       
                       {activePage === 'evolucao' && <UnderConstruction moduleName="Evolução de Pessoal" onBack={() => setActivePage('dashboard')} />}
@@ -356,8 +358,7 @@ export default function App() {
                       {activePage === 'acoes' && <UnderConstruction moduleName="Ações Internas & Marketing" onBack={() => setActivePage('dashboard')} />}
                       
                       {activePage === 'kanban' && <Kanban />}
-                      {activePage === 'ged' && <UnderConstruction moduleName="GED" onBack={() => setActivePage('dashboard')} />} {/* Corrigido para GED */}
-                      {activePage === 'historico' && <History />}
+                      {activePage === 'ged' && <UnderConstruction moduleName="GED" onBack={() => setActivePage('dashboard')} />}
                     </>
                   )}
 

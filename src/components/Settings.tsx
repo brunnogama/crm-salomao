@@ -2,12 +2,13 @@ import { useState, useRef, useEffect } from 'react'
 import { 
   Download, Upload, FileSpreadsheet, CheckCircle, AlertCircle, 
   Users, Pencil, Trash2, Save, RefreshCw, 
-  AlertTriangle, History, Code, Shield, UserPlus, Ban, Check, Lock, Building,
+  AlertTriangle, History as HistoryIcon, Code, Shield, UserPlus, Ban, Check, Lock, Building,
   Plus, X, Tag, Briefcase, EyeOff, LayoutGrid, ArrowRight, MessageSquare
 } from 'lucide-react'
 import { utils, read, writeFile } from 'xlsx'
 import { supabase } from '../lib/supabase'
 import { logAction } from '../lib/logger'
+import { History } from './History'
 
 // --- INTERFACES ---
 interface UserPermissions {
@@ -50,6 +51,17 @@ const SUPER_ADMIN_EMAIL = 'marcio.gama@salomaoadv.com.br';
 
 const CHANGELOG = [
   {
+    version: '2.8.0',
+    date: '29/01/2026',
+    type: 'minor',
+    title: '📅 Calendário e Histórico',
+    changes: [
+      'Adicionado menu Calendário no módulo RH',
+      'Histórico movido para Settings (todas as áreas)',
+      'Melhorias na organização dos menus'
+    ]
+  },
+  {
     version: '2.7.0',
     date: '28/01/2026',
     type: 'minor',
@@ -78,8 +90,8 @@ export function Settings() {
   const [loading, setLoading] = useState(false)
   const [status, setStatus] = useState<{ type: 'success' | 'error' | null, message: string }>({ type: null, message: '' })
   
-  // Controle de Módulos (Tabs)
-  const [activeModule, setActiveModule] = useState<'menu' | 'geral' | 'crm' | 'juridico' | 'rh' | 'sistema'>('menu')
+  // Controle de Módulos (Tabs) - ADICIONADO 'historico'
+  const [activeModule, setActiveModule] = useState<'menu' | 'geral' | 'crm' | 'juridico' | 'rh' | 'historico' | 'sistema'>('menu')
   
   const [users, setUsers] = useState<AppUser[]>([])
   const [loadingUsers, setLoadingUsers] = useState(false)
@@ -516,8 +528,8 @@ export function Settings() {
     finally { setLoading(false); if (fileInputRef.current) fileInputRef.current.value = '' }
   }
 
-  const handleModuleChange = (newModule: 'menu' | 'geral' | 'crm' | 'juridico' | 'rh' | 'sistema') => {
-    if (newModule === 'menu' || isAdmin) {
+  const handleModuleChange = (newModule: 'menu' | 'geral' | 'crm' | 'juridico' | 'rh' | 'historico' | 'sistema') => {
+    if (newModule === 'menu' || newModule === 'historico' || isAdmin) {
       setActiveModule(newModule)
       return
     }
@@ -531,7 +543,7 @@ export function Settings() {
   }
 
   // --- RENDERIZAR BLOQUEIO DE ACESSO ---
-  if (activeModule !== 'menu' && !currentUserPermissions[activeModule === 'rh' ? 'collaborators' : activeModule] && !isAdmin) {
+  if (activeModule !== 'menu' && activeModule !== 'historico' && !currentUserPermissions[activeModule === 'rh' ? 'collaborators' : activeModule] && !isAdmin) {
       return (
           <div className="max-w-7xl mx-auto space-y-6">
               <div className="flex flex-wrap gap-2 border-b border-gray-200 pb-2">
@@ -568,6 +580,7 @@ export function Settings() {
           { id: 'crm', label: 'CRM', icon: Briefcase, desc: 'Clientes e Brindes', color: 'bg-blue-600', perm: currentUserPermissions.crm },
           { id: 'juridico', label: 'Jurídico', icon: Lock, desc: 'Área de Magistrados', color: 'bg-[#112240]', perm: true },
           { id: 'rh', label: 'RH', icon: Users, desc: 'Controle de Pessoal', color: 'bg-green-600', perm: currentUserPermissions.collaborators },
+          { id: 'historico', label: 'Histórico', icon: HistoryIcon, desc: 'Log de Atividades', color: 'bg-purple-600', perm: true },
           { id: 'sistema', label: 'Sistema', icon: Code, desc: 'Configurações Globais', color: 'bg-red-600', perm: currentUserPermissions.geral },
       ]
 
@@ -583,7 +596,7 @@ export function Settings() {
                   </p>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {modules.map((m) => {
                       const hasAccess = isAdmin || m.perm;
                       return (
@@ -619,7 +632,7 @@ export function Settings() {
   return (
     <div className="max-w-7xl mx-auto pb-12 space-y-6">
       
-      {/* SELETOR DE MÓDULOS */}
+      {/* SELETOR DE MÓDULOS - ADICIONADO HISTÓRICO */}
       <div className="flex flex-wrap gap-2 border-b border-gray-200 pb-2">
           <button onClick={() => handleModuleChange('menu')} className="px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors mr-2"><LayoutGrid className="h-4 w-4" /> Menu</button>
           
@@ -627,6 +640,7 @@ export function Settings() {
           <button onClick={() => handleModuleChange('crm')} className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors ${activeModule === 'crm' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-blue-50'}`}><Briefcase className="h-4 w-4" /> CRM</button>
           <button onClick={() => handleModuleChange('juridico')} className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors ${activeModule === 'juridico' ? 'bg-[#112240] text-white' : 'bg-white text-gray-600 hover:bg-gray-100'}`}><Lock className="h-4 w-4" /> Jurídico</button>
           <button onClick={() => handleModuleChange('rh')} className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors ${activeModule === 'rh' ? 'bg-green-600 text-white' : 'bg-white text-gray-600 hover:bg-green-50'}`}><Users className="h-4 w-4" /> RH</button>
+          <button onClick={() => handleModuleChange('historico')} className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors ${activeModule === 'historico' ? 'bg-purple-600 text-white' : 'bg-white text-gray-600 hover:bg-purple-50'}`}><HistoryIcon className="h-4 w-4" /> Histórico</button>
           <button onClick={() => handleModuleChange('sistema')} className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors ${activeModule === 'sistema' ? 'bg-red-600 text-white' : 'bg-white text-gray-600 hover:bg-red-50'}`}><Code className="h-4 w-4" /> Sistema</button>
       </div>
       
@@ -820,6 +834,22 @@ export function Settings() {
           </div>
       )}
 
+      {/* --- MÓDULO HISTÓRICO --- */}
+      {activeModule === 'historico' && (
+          <div className="animate-in fade-in">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div className="flex items-center gap-3 mb-6">
+                    <div className="p-2 bg-purple-50 rounded-lg"><HistoryIcon className="h-5 w-5 text-purple-700" /></div>
+                    <div>
+                        <h3 className="font-bold text-gray-900 text-base">Histórico de Atividades</h3>
+                        <p className="text-xs text-gray-500">Audit Log - Rastreabilidade completa de ações no sistema</p>
+                    </div>
+                </div>
+                <History />
+            </div>
+          </div>
+      )}
+
       {/* --- OUTROS MÓDULOS --- */}
       {activeModule === 'juridico' && (
           <div className="animate-in fade-in">
@@ -897,12 +927,12 @@ export function Settings() {
       {activeModule === 'sistema' && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-in fade-in">
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                  <div className="flex items-center gap-3 mb-6"><div className="p-2 bg-gray-100 rounded-lg"><History className="h-5 w-5 text-gray-700" /></div><h3 className="font-bold text-gray-900 text-base">Histórico de Versões</h3></div>
+                  <div className="flex items-center gap-3 mb-6"><div className="p-2 bg-gray-100 rounded-lg"><HistoryIcon className="h-5 w-5 text-gray-700" /></div><h3 className="font-bold text-gray-900 text-base">Histórico de Versões</h3></div>
                   <div className="space-y-4">{CHANGELOG.slice(0, showAllVersions ? CHANGELOG.length : 3).map((log) => (<div key={log.version} className="border-l-2 border-gray-300 pl-4"><div className="flex items-center gap-2 mb-2"><span className={`px-2 py-0.5 text-xs font-bold rounded ${log.type === 'major' ? 'bg-red-100 text-red-700' : log.type === 'minor' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}`}>v{log.version}</span><span className="text-xs text-gray-500">{log.date}</span></div><h4 className="font-bold text-gray-900 text-sm mb-2">{log.title}</h4><ul className="space-y-1">{log.changes.map((change, idx) => (<li key={idx} className="text-xs text-gray-600 flex items-start gap-2"><span className="text-gray-400 mt-1">•</span><span>{change}</span></li>))}</ul></div>))}{CHANGELOG.length > 3 && (<button onClick={() => setShowAllVersions(!showAllVersions)} className="w-full mt-4 py-2.5 border border-gray-300 rounded-lg text-xs font-bold text-gray-700 hover:bg-gray-50">{showAllVersions ? 'Mostrar Menos' : `Ver Todas (${CHANGELOG.length})`}</button>)}</div>
               </div>
               <div className="space-y-6">
                 <div className="bg-white rounded-xl shadow-sm border-2 border-red-200 p-6"><div className="flex items-center gap-3 mb-6"><div className="p-2 bg-red-50 rounded-lg"><AlertTriangle className="h-5 w-5 text-red-600" /></div><div><h3 className="font-bold text-gray-900 text-base">Reset Geral do Sistema</h3><p className="text-xs text-gray-500">Ações irreversíveis</p></div></div><div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4"><p className="text-xs font-bold text-red-900 mb-2">⚠️ Atenção</p><ul className="text-xs text-red-700 space-y-1"><li>• Apagará TODOS os dados do sistema</li><li>• Clientes, magistrados e tarefas serão removidos</li></ul></div><button onClick={handleSystemReset} disabled={!isAdmin} className={`w-full flex items-center justify-center gap-3 py-4 font-bold rounded-lg ${isAdmin ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}><Trash2 className="h-5 w-5" /><div className="text-left"><p>Resetar Sistema Completo</p><p className="text-xs font-normal text-red-100">{isAdmin ? 'Apagar todos os dados' : 'Apenas Administradores'}</p></div></button></div>
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6"><div className="flex items-center gap-3 mb-6"><Code className="h-5 w-5 text-gray-700" /><h3 className="font-bold text-gray-900 text-base">Créditos</h3></div><div className="p-4 bg-gray-50 rounded-lg border border-gray-200"><div className="flex items-center gap-2 mb-2"><Building className="h-4 w-4 text-gray-600" /><p className="font-bold text-gray-900 text-xs">Empresa</p></div><p className="font-bold text-gray-900">Flow Metrics</p><p className="text-xs text-gray-600 mt-1">Análise de Dados e Desenvolvimento</p></div><div className="mt-4 flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"><div className="flex items-center gap-2"><Shield className="h-4 w-4 text-gray-600" /><span className="text-xs font-medium text-gray-600">Versão</span></div><span className="px-3 py-1 bg-gray-900 text-white rounded-full text-xs font-bold">v2.7.0</span></div></div>
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6"><div className="flex items-center gap-3 mb-6"><Code className="h-5 w-5 text-gray-700" /><h3 className="font-bold text-gray-900 text-base">Créditos</h3></div><div className="p-4 bg-gray-50 rounded-lg border border-gray-200"><div className="flex items-center gap-2 mb-2"><Building className="h-4 w-4 text-gray-600" /><p className="font-bold text-gray-900 text-xs">Empresa</p></div><p className="font-bold text-gray-900">Flow Metrics</p><p className="text-xs text-gray-600 mt-1">Análise de Dados e Desenvolvimento</p></div><div className="mt-4 flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"><div className="flex items-center gap-2"><Shield className="h-4 w-4 text-gray-600" /><span className="text-xs font-medium text-gray-600">Versão</span></div><span className="px-3 py-1 bg-gray-900 text-white rounded-full text-xs font-bold">v2.8.0</span></div></div>
               </div>
           </div>
       )}

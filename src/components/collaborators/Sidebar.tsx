@@ -3,7 +3,6 @@ import {
   LayoutDashboard, 
   MapPin, 
   KanbanSquare, 
-  History, 
   X,
   LogOut,
   Users,
@@ -14,7 +13,8 @@ import {
   Briefcase,
   Banknote,
   Megaphone,
-  FolderSearch 
+  FolderSearch,
+  Calendar
 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 
@@ -79,9 +79,10 @@ export function Sidebar({ activePage, onNavigate, isOpen, onClose }: SidebarProp
   
   const mainItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'calendario', label: 'Calendário', icon: Calendar },
     { id: 'presencial', label: 'Presencial', icon: MapPin },
     
-    // Novo item Colaboradores
+    // Item Colaboradores
     { id: 'colaboradores', label: 'Colaboradores', icon: Users },
     
     { id: 'evolucao', label: 'Evolução de Pessoal', icon: TrendingUp },
@@ -161,22 +162,9 @@ export function Sidebar({ activePage, onNavigate, isOpen, onClose }: SidebarProp
           ))}
         </nav>
 
-        {/* 3. MENU BASE COM HISTÓRICO E USER PROFILE */}
+        {/* 3. MENU BASE COM USER PROFILE (SEM HISTÓRICO) */}
         <div className="pt-4 pb-6 px-3 bg-[#112240] flex-shrink-0 mt-auto">
           <div className="border-t border-gray-700/50 mb-4 mx-2"></div>
-
-          {/* Histórico */}
-          <button 
-            onClick={() => { onNavigate('historico'); onClose(); }} 
-            className={`w-full flex items-center px-3 py-3 rounded-lg transition-colors group mb-1 ${
-              activePage === 'historico' ? 'bg-[#1e3a8a] text-white' : 'hover:bg-white/5 hover:text-white'
-            }`}
-          >
-            <History className="h-5 w-5 mr-3 text-gray-400 group-hover:text-white" />
-            <span className="text-sm">Histórico</span>
-          </button>
-
-          <div className="border-t border-gray-700/50 my-4 mx-2"></div>
 
           {/* User Profile */}
           <div className="flex items-center justify-between group cursor-pointer px-2">
