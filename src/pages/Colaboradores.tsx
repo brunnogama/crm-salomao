@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { 
   Search, Upload, Download, Plus, X, 
   MapPin, User, Briefcase, Trash2, Pencil, Save, 
-  Users, UserMinus, CheckCircle, UserX, Filter
+  Users, UserMinus, CheckCircle, UserX, Filter, Calendar, Building2
 } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import { supabase } from '../lib/supabase'
@@ -47,6 +47,7 @@ export function Colaboradores() {
   const [colaboradores, setColaboradores] = useState<Colaborador[]>([])
   const [loading, setLoading] = useState(false)
   const [viewMode, setViewMode] = useState<'list' | 'form'>('list')
+  const [selectedColaborador, setSelectedColaborador] = useState<Colaborador | null>(null)
   
   // Estados de Filtro
   const [searchTerm, setSearchTerm] = useState('')
@@ -74,6 +75,12 @@ export function Colaboradores() {
     return str.toLowerCase().split(' ').map(word => {
       return (word.length > 2) ? word.charAt(0).toUpperCase() + word.slice(1) : word;
     }).join(' ');
+  }
+
+  const formatDateDisplay = (str?: string) => {
+    if (!str) return '-'
+    const date = new Date(str)
+    return new Date(date.valueOf() + date.getTimezoneOffset() * 60000).toLocaleDateString('pt-BR')
   }
 
   // --- BUSCAS ---
@@ -166,12 +173,14 @@ export function Colaboradores() {
       data_desligamento: toFormDate(colab.data_desligamento),
     })
     setViewMode('form')
+    setSelectedColaborador(null) // Fecha o modal de detalhes se estiver aberto
   }
 
   const handleDelete = async (id: number) => {
     if(!confirm('Excluir colaborador?')) return
     await supabase.from('colaboradores').delete().eq('id', id)
     fetchColaboradores()
+    setSelectedColaborador(null) // Fecha o modal de detalhes se estiver aberto
   }
 
   // --- IMPORTAÇÃO / EXPORTAÇÃO ---
@@ -271,6 +280,17 @@ export function Colaboradores() {
   const totalAtivos = colaboradores.filter(c => c.status?.toLowerCase() === 'ativo').length
   const totalDesligados = colaboradores.filter(c => c.status?.toLowerCase() === 'desligado').length
   const totalInativos = colaboradores.filter(c => c.status?.toLowerCase() === 'inativo').length
+
+  // Helper para renderizar campo no modal
+  const DetailItem = ({ label, value, icon: Icon }: { label: string, value?: string | number, icon?: any }) => (
+    <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
+      <div className="flex items-center gap-2 mb-1">
+        {Icon && <Icon className="h-3.5 w-3.5 text-gray-400" />}
+        <p className="text-xs font-bold text-gray-500 uppercase">{label}</p>
+      </div>
+      <p className="text-gray-900 text-sm font-medium">{value || '-'}</p>
+    </div>
+  )
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 pb-12">
@@ -400,7 +420,11 @@ export function Colaboradores() {
                 {filteredData.map(colab => {
                   const statusLower = colab.status?.toLowerCase() || '';
                   return (
-                    <tr key={colab.id} className="hover:bg-blue-50/50 group transition-colors">
+                    <tr 
+                      key={colab.id} 
+                      onClick={() => setSelectedColaborador(colab)}
+                      className="hover:bg-blue-50/50 group transition-colors cursor-pointer"
+                    >
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 border border-gray-300 flex items-center justify-center text-gray-600 font-bold shadow-sm">
@@ -433,10 +457,18 @@ export function Colaboradores() {
                       </td>
                       <td className="px-6 py-4 text-right">
                         <div className="opacity-0 group-hover:opacity-100 transition-opacity flex justify-end gap-2">
-                          <button onClick={() => handleEdit(colab)} className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors" title="Editar">
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); handleEdit(colab); }} 
+                            className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors" 
+                            title="Editar"
+                          >
                             <Pencil className="h-4 w-4" />
                           </button>
-                          <button onClick={() => handleDelete(colab.id)} className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-colors" title="Excluir">
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); handleDelete(colab.id); }} 
+                            className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-colors" 
+                            title="Excluir"
+                          >
                             <Trash2 className="h-4 w-4" />
                           </button>
                         </div>
@@ -596,6 +628,108 @@ export function Colaboradores() {
           <div className="flex justify-end gap-4 mt-8 pt-6 border-t border-gray-100">
             <button onClick={() => setViewMode('list')} className="px-6 py-2.5 rounded-lg border border-gray-300 text-gray-700 font-bold hover:bg-gray-50 transition-colors shadow-sm">Cancelar</button>
             <button onClick={handleSave} className="px-6 py-2.5 rounded-lg bg-green-600 text-white font-bold hover:bg-green-700 shadow-md transition-colors flex items-center gap-2"><Save className="h-4 w-4"/> Salvar</button>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DE DETALHES DO COLABORADOR */}
+      {selectedColaborador && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200 border border-gray-200">
+            
+            {/* Header */}
+            <div className="p-6 border-b border-gray-100 flex justify-between items-start bg-gray-50/50 sticky top-0 z-10 backdrop-blur-md">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-full bg-[#112240] text-white flex items-center justify-center text-2xl font-bold shadow-md">
+                  {selectedColaborador.nome?.charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">{toTitleCase(selectedColaborador.nome)}</h2>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-sm text-gray-500 font-medium">{toTitleCase(selectedColaborador.cargo) || '-'}</span>
+                    <span className="text-gray-300">•</span>
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold ${
+                      selectedColaborador.status === 'Ativo' ? 'bg-green-100 text-green-700' : 
+                      selectedColaborador.status === 'Desligado' ? 'bg-red-100 text-red-700' : 
+                      'bg-gray-100 text-gray-600'
+                    }`}>
+                      {selectedColaborador.status}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <button 
+                onClick={() => setSelectedColaborador(null)}
+                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            {/* Conteúdo */}
+            <div className="p-8 space-y-8">
+              
+              {/* Seção Pessoal */}
+              <div>
+                <h3 className="text-sm font-bold text-[#112240] uppercase tracking-wider mb-4 flex items-center gap-2 border-b border-gray-100 pb-2">
+                  <User className="h-4 w-4" /> Dados Pessoais
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                  <DetailItem label="CPF" value={selectedColaborador.cpf} />
+                  <DetailItem label="Data Nascimento" value={formatDateDisplay(selectedColaborador.data_nascimento)} icon={Calendar} />
+                  <DetailItem label="Gênero" value={selectedColaborador.genero} />
+                  <DetailItem label="Tipo" value={selectedColaborador.tipo} />
+                </div>
+              </div>
+
+              {/* Seção Endereço */}
+              <div>
+                <h3 className="text-sm font-bold text-[#112240] uppercase tracking-wider mb-4 flex items-center gap-2 border-b border-gray-100 pb-2">
+                  <MapPin className="h-4 w-4" /> Endereço
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                  <DetailItem label="CEP" value={selectedColaborador.cep} />
+                  <div className="sm:col-span-2">
+                    <DetailItem label="Logradouro" value={`${selectedColaborador.endereco || ''}, ${selectedColaborador.numero || ''}`} />
+                  </div>
+                  <DetailItem label="Bairro" value={selectedColaborador.bairro} />
+                  <DetailItem label="Cidade" value={selectedColaborador.cidade} />
+                  <DetailItem label="Estado" value={selectedColaborador.estado} />
+                </div>
+              </div>
+
+              {/* Seção Corporativo */}
+              <div>
+                <h3 className="text-sm font-bold text-[#112240] uppercase tracking-wider mb-4 flex items-center gap-2 border-b border-gray-100 pb-2">
+                  <Briefcase className="h-4 w-4" /> Dados Corporativos
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                  <DetailItem label="Equipe" value={selectedColaborador.equipe} />
+                  <DetailItem label="Local" value={selectedColaborador.local} icon={Building2} />
+                  <DetailItem label="Líder" value={selectedColaborador.lider_equipe} />
+                  <DetailItem label="Data Admissão" value={formatDateDisplay(selectedColaborador.data_admissao)} icon={Calendar} />
+                  <DetailItem label="Data Desligamento" value={formatDateDisplay(selectedColaborador.data_desligamento)} icon={Calendar} />
+                </div>
+              </div>
+
+            </div>
+
+            {/* Footer Ações */}
+            <div className="p-6 border-t border-gray-100 bg-gray-50 flex justify-end gap-3 sticky bottom-0 z-10 rounded-b-2xl">
+              <button 
+                onClick={() => handleDelete(selectedColaborador.id)}
+                className="px-4 py-2.5 text-red-600 bg-white border border-red-200 hover:bg-red-50 font-bold rounded-lg transition-colors flex items-center gap-2 shadow-sm"
+              >
+                <Trash2 className="h-4 w-4" /> Excluir
+              </button>
+              <button 
+                onClick={() => handleEdit(selectedColaborador)}
+                className="px-6 py-2.5 bg-[#112240] text-white hover:bg-[#1a3a6c] font-bold rounded-lg transition-colors flex items-center gap-2 shadow-lg"
+              >
+                <Pencil className="h-4 w-4" /> Editar
+              </button>
+            </div>
+
           </div>
         </div>
       )}
