@@ -5,8 +5,6 @@ import {
   ChevronRight, 
   Cake, 
   Users, 
-  Gift,
-  Star,
   Sparkles,
   PartyPopper,
   Clock,
@@ -28,7 +26,6 @@ interface AniversarioData {
   dia: number;
   mes: number;
   ano: number;
-  idade: number;
   diasRestantes: number;
   isHoje: boolean;
   isEstaSemana: boolean;
@@ -75,9 +72,17 @@ export function Calendario() {
     }).join(' ');
   }
 
-  const calcularIdade = (dataNascimento: string, ano: number): number => {
-    const nascimento = new Date(dataNascimento)
-    return ano - nascimento.getFullYear()
+  const formatName = (nome: string) => {
+    if (!nome) return ''
+    const cleanName = nome.trim()
+    const parts = cleanName.split(/\s+/)
+    
+    if (parts.length === 1) {
+      return toTitleCase(parts[0])
+    }
+    
+    // Pega o primeiro e o último nome
+    return toTitleCase(`${parts[0]} ${parts[parts.length - 1]}`)
   }
 
   const calcularDiasRestantes = (dia: number, mes: number): number => {
@@ -105,14 +110,12 @@ export function Calendario() {
         const ano = nascimento.getFullYear()
         
         const diasRestantes = calcularDiasRestantes(dia, mes)
-        const idade = calcularIdade(colab.data_nascimento, hoje.getFullYear())
         
         aniversarios.push({
           colaborador: colab,
           dia,
           mes,
           ano,
-          idade,
           diasRestantes,
           isHoje: diasRestantes === 0,
           isEstaSemana: diasRestantes <= 7 && diasRestantes >= 0,
@@ -186,11 +189,11 @@ export function Calendario() {
                 <div
                   key={idx}
                   className="flex items-center gap-1 bg-white/90 backdrop-blur-sm px-1.5 py-0.5 rounded-md shadow-sm border border-blue-100"
-                  title={`${toTitleCase(aniv.colaborador.nome)} - ${aniv.idade} anos`}
+                  title={formatName(aniv.colaborador.nome)}
                 >
                   <Cake className="h-3 w-3 text-blue-600 flex-shrink-0" />
                   <span className="text-[9px] font-medium text-gray-700 truncate">
-                    {toTitleCase(aniv.colaborador.nome).split(' ')[0]}
+                    {formatName(aniv.colaborador.nome).split(' ')[0]}
                   </span>
                 </div>
               ))}
@@ -243,77 +246,59 @@ export function Calendario() {
   return (
     <div className="max-w-7xl mx-auto space-y-6">
       
-      {/* HEADER */}
-      <div className="bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 rounded-2xl shadow-xl p-8 text-white">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-white/20 backdrop-blur-sm rounded-xl">
-              <CalendarIcon className="h-8 w-8" />
+      {/* TOOLBAR & STATS */}
+      <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+        <div className="flex gap-4 w-full md:w-auto overflow-x-auto pb-2 md:pb-0">
+          <div className="flex items-center gap-2 px-4 py-2 bg-white rounded-lg shadow-sm border border-gray-100 min-w-max">
+            <div className="p-1.5 bg-yellow-100 rounded-md">
+              <Sparkles className="h-4 w-4 text-yellow-600" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold">Calendário de Aniversários</h1>
-              <p className="text-blue-100 mt-1">Celebre momentos especiais com a equipe</p>
+              <p className="text-xs text-gray-500">Hoje</p>
+              <p className="text-lg font-bold text-gray-900 leading-none">{aniversariosHoje.length}</p>
             </div>
           </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setViewMode('calendario')}
-              className={`px-4 py-2 rounded-lg font-bold transition-all ${
-                viewMode === 'calendario'
-                  ? 'bg-white text-blue-700 shadow-lg'
-                  : 'bg-white/20 hover:bg-white/30'
-              }`}
-            >
-              Calendário
-            </button>
-            <button
-              onClick={() => setViewMode('proximos')}
-              className={`px-4 py-2 rounded-lg font-bold transition-all ${
-                viewMode === 'proximos'
-                  ? 'bg-white text-blue-700 shadow-lg'
-                  : 'bg-white/20 hover:bg-white/30'
-              }`}
-            >
-              Próximos
-            </button>
+          <div className="flex items-center gap-2 px-4 py-2 bg-white rounded-lg shadow-sm border border-gray-100 min-w-max">
+            <div className="p-1.5 bg-pink-100 rounded-md">
+              <PartyPopper className="h-4 w-4 text-pink-600" />
+            </div>
+            <div>
+              <p className="text-xs text-gray-500">Esta Semana</p>
+              <p className="text-lg font-bold text-gray-900 leading-none">{aniversariosEstaSemana.length}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 px-4 py-2 bg-white rounded-lg shadow-sm border border-gray-100 min-w-max">
+            <div className="p-1.5 bg-blue-100 rounded-md">
+              <Users className="h-4 w-4 text-blue-600" />
+            </div>
+            <div>
+              <p className="text-xs text-gray-500">Total</p>
+              <p className="text-lg font-bold text-gray-900 leading-none">{colaboradores.length}</p>
+            </div>
           </div>
         </div>
 
-        {/* STATS */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-yellow-400/20 rounded-lg">
-                <Sparkles className="h-5 w-5 text-yellow-300" />
-              </div>
-              <div>
-                <p className="text-sm text-blue-100">Hoje</p>
-                <p className="text-2xl font-bold">{aniversariosHoje.length}</p>
-              </div>
-            </div>
-          </div>
-          <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-pink-400/20 rounded-lg">
-                <PartyPopper className="h-5 w-5 text-pink-300" />
-              </div>
-              <div>
-                <p className="text-sm text-blue-100">Esta Semana</p>
-                <p className="text-2xl font-bold">{aniversariosEstaSemana.length}</p>
-              </div>
-            </div>
-          </div>
-          <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-400/20 rounded-lg">
-                <Users className="h-5 w-5 text-blue-300" />
-              </div>
-              <div>
-                <p className="text-sm text-blue-100">Total Cadastrado</p>
-                <p className="text-2xl font-bold">{colaboradores.length}</p>
-              </div>
-            </div>
-          </div>
+        <div className="flex gap-2 w-full md:w-auto">
+          <button
+            onClick={() => setViewMode('calendario')}
+            className={`flex-1 md:flex-none px-4 py-2 rounded-lg font-medium transition-all text-sm ${
+              viewMode === 'calendario'
+                ? 'bg-blue-600 text-white shadow-md'
+                : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+            }`}
+          >
+            Calendário
+          </button>
+          <button
+            onClick={() => setViewMode('proximos')}
+            className={`flex-1 md:flex-none px-4 py-2 rounded-lg font-medium transition-all text-sm ${
+              viewMode === 'proximos'
+                ? 'bg-blue-600 text-white shadow-md'
+                : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+            }`}
+          >
+            Próximos
+          </button>
         </div>
       </div>
 
@@ -350,12 +335,8 @@ export function Calendario() {
                     </div>
                   )}
                   <div className="flex-1">
-                    <p className="font-bold text-gray-900">{toTitleCase(aniv.colaborador.nome)}</p>
+                    <p className="font-bold text-gray-900">{formatName(aniv.colaborador.nome)}</p>
                     <p className="text-sm text-gray-600">{toTitleCase(aniv.colaborador.cargo)}</p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Gift className="h-4 w-4 text-yellow-600" />
-                      <span className="text-sm font-bold text-yellow-700">{aniv.idade} anos</span>
-                    </div>
                   </div>
                 </div>
               </div>
@@ -457,7 +438,7 @@ export function Calendario() {
                     </div>
                   )}
                   <div>
-                    <p className="font-bold text-gray-900 text-lg">{toTitleCase(aniv.colaborador.nome)}</p>
+                    <p className="font-bold text-gray-900 text-lg">{formatName(aniv.colaborador.nome)}</p>
                     <p className="text-sm text-gray-600">{toTitleCase(aniv.colaborador.cargo)}</p>
                   </div>
                 </div>
@@ -468,13 +449,6 @@ export function Calendario() {
                     <p className="font-bold text-gray-900">
                       {aniv.dia} de {MESES[aniv.mes]}
                     </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm text-gray-500">Idade</p>
-                    <div className="flex items-center gap-1">
-                      <Star className="h-4 w-4 text-yellow-500" />
-                      <p className="font-bold text-gray-900">{aniv.idade} anos</p>
-                    </div>
                   </div>
                   <div className="text-right">
                     <p className="text-sm text-gray-500">Faltam</p>
