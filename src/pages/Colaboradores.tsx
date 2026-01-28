@@ -19,6 +19,7 @@ interface Colaborador {
   cep: string;
   endereco: string;
   numero: string;
+  complemento: string; // Novo campo
   bairro: string;
   cidade: string;
   estado: string;
@@ -242,6 +243,7 @@ export function Colaboradores() {
       nome: toTitleCase(formData.nome || ''),
       email: formData.email?.toLowerCase() || '',
       endereco: toTitleCase(formData.endereco || ''),
+      complemento: toTitleCase(formData.complemento || ''), // Adicionado
       bairro: toTitleCase(formData.bairro || ''),
       cidade: toTitleCase(formData.cidade || ''),
       lider_equipe: toTitleCase(formData.lider_equipe || ''),
@@ -342,6 +344,7 @@ export function Colaboradores() {
           cep: normalize('CEP'),
           endereco: toTitleCase(normalize('ENDEREÇO')),
           numero: normalize('NÚMERO'),
+          complemento: normalize('COMPLEMENTO'), // Importação
           bairro: toTitleCase(normalize('BAIRRO')),
           cidade: toTitleCase(normalize('CIDADE')),
           estado: toTitleCase(normalize('ESTADO')),
@@ -402,8 +405,8 @@ export function Colaboradores() {
   const totalInativos = colaboradores.filter(c => c.status?.toLowerCase() === 'inativo').length
 
   // Helper para renderizar campo no modal
-  const DetailItem = ({ label, value, icon: Icon }: { label: string, value?: string | number, icon?: any }) => (
-    <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
+  const DetailItem = ({ label, value, icon: Icon, className }: { label: string, value?: string | number, icon?: any, className?: string }) => (
+    <div className={`bg-gray-50 p-3 rounded-lg border border-gray-100 ${className}`}>
       <div className="flex items-center gap-2 mb-1">
         {Icon && <Icon className="h-3.5 w-3.5 text-gray-400" />}
         <p className="text-xs font-bold text-gray-500 uppercase">{label}</p>
@@ -483,7 +486,6 @@ export function Colaboradores() {
       )}
 
       {/* 2. BARRA DE FERRAMENTAS E FILTROS */}
-      {/* Alteração aqui: Removido sticky top-4 z-10 */}
       <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-200 mb-6">
         <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
             
@@ -741,10 +743,19 @@ export function Colaboradores() {
               <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Endereço</label>
               <input className="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 outline-none" value={formData.endereco || ''} onChange={e => setFormData({...formData, endereco: e.target.value})} />
             </div>
-            <div>
-              <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Número</label>
-              <input className="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 outline-none" value={formData.numero || ''} onChange={e => setFormData({...formData, numero: e.target.value})} />
+
+            {/* Linha agrupando Número e Complemento */}
+            <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Número</label>
+                  <input className="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 outline-none" value={formData.numero || ''} onChange={e => setFormData({...formData, numero: e.target.value})} />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Complemento</label>
+                  <input className="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 outline-none" value={formData.complemento || ''} onChange={e => setFormData({...formData, complemento: e.target.value})} />
+                </div>
             </div>
+
             <div>
               <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Bairro</label>
               <input className="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 outline-none" value={formData.bairro || ''} onChange={e => setFormData({...formData, bairro: e.target.value})} />
@@ -769,7 +780,7 @@ export function Colaboradores() {
                 </h3>
             </div>
 
-            {/* CAMPO EMAIL ADICIONADO AQUI */}
+            {/* CAMPO EMAIL */}
             <div className="md:col-span-2">
               <label className="block text-xs font-bold text-gray-700 uppercase mb-1">E-mail Corporativo</label>
               <input type="email" className="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 outline-none transition-all" value={formData.email || ''} onChange={e => setFormData({...formData, email: e.target.value})} placeholder="exemplo@empresa.com.br" />
@@ -866,12 +877,11 @@ export function Colaboradores() {
 
       {/* MODAL DE DETALHES DO COLABORADOR */}
       {selectedColaborador && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] overflow-y-auto p-4 animate-in fade-in duration-200">
-          <div className="flex min-h-full items-center justify-center">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl animate-in zoom-in-95 duration-200 border border-gray-200 relative my-8">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] p-4 flex items-center justify-center animate-in fade-in duration-200">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[95vh] flex flex-col animate-in zoom-in-95 duration-200 border border-gray-200 relative">
               
               {/* Header */}
-              <div className="p-6 border-b border-gray-100 flex justify-between items-start bg-gray-50/50 sticky top-0 z-10 backdrop-blur-md rounded-t-2xl">
+              <div className="p-6 border-b border-gray-100 flex justify-between items-start bg-gray-50/50 rounded-t-2xl shrink-0">
                 <div className="flex items-center gap-4">
                   <Avatar colab={selectedColaborador} size="lg" />
                   <div>
@@ -897,60 +907,70 @@ export function Colaboradores() {
                 </button>
               </div>
 
-              {/* Conteúdo */}
-              <div className="p-8 space-y-8">
+              {/* Conteúdo - Ajustado para caber sem rolar */}
+              <div className="p-8 space-y-6 overflow-y-auto">
                 
-                {/* Seção Pessoal */}
-                <div>
-                  <h3 className="text-sm font-bold text-[#112240] uppercase tracking-wider mb-4 flex items-center gap-2 border-b border-gray-100 pb-2">
-                    <User className="h-4 w-4" /> Dados Pessoais
-                  </h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                    <DetailItem label="CPF" value={selectedColaborador.cpf} />
-                    <DetailItem label="Data Nascimento" value={formatDateDisplay(selectedColaborador.data_nascimento)} icon={Calendar} />
-                    <DetailItem label="Gênero" value={selectedColaborador.genero} />
-                    <DetailItem label="Tipo" value={selectedColaborador.tipo} />
-                  </div>
-                </div>
+                {/* Grid principal para distribuir espaço */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    
+                    {/* Coluna Esquerda: Pessoal + Endereço */}
+                    <div className="space-y-6">
+                        {/* Seção Pessoal */}
+                        <div>
+                          <h3 className="text-sm font-bold text-[#112240] uppercase tracking-wider mb-4 flex items-center gap-2 border-b border-gray-100 pb-2">
+                            <User className="h-4 w-4" /> Dados Pessoais
+                          </h3>
+                          <div className="grid grid-cols-2 gap-4">
+                            <DetailItem label="CPF" value={selectedColaborador.cpf} />
+                            <DetailItem label="Data Nascimento" value={formatDateDisplay(selectedColaborador.data_nascimento)} icon={Calendar} />
+                            <DetailItem label="Gênero" value={selectedColaborador.genero} />
+                            <DetailItem label="Tipo" value={selectedColaborador.tipo} />
+                          </div>
+                        </div>
 
-                {/* Seção Endereço */}
-                <div>
-                  <h3 className="text-sm font-bold text-[#112240] uppercase tracking-wider mb-4 flex items-center gap-2 border-b border-gray-100 pb-2">
-                    <MapPin className="h-4 w-4" /> Endereço
-                  </h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                    <DetailItem label="CEP" value={selectedColaborador.cep} />
-                    <div className="sm:col-span-2">
-                      <DetailItem label="Logradouro" value={`${selectedColaborador.endereco || ''}, ${selectedColaborador.numero || ''}`} />
+                        {/* Seção Endereço */}
+                        <div>
+                          <h3 className="text-sm font-bold text-[#112240] uppercase tracking-wider mb-4 flex items-center gap-2 border-b border-gray-100 pb-2">
+                            <MapPin className="h-4 w-4" /> Endereço
+                          </h3>
+                          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                            <DetailItem label="CEP" value={selectedColaborador.cep} />
+                            <div className="col-span-2">
+                                <DetailItem label="Logradouro" value={`${selectedColaborador.endereco || ''}, ${selectedColaborador.numero || ''}`} />
+                            </div>
+                            <DetailItem label="Complemento" value={selectedColaborador.complemento} />
+                            <DetailItem label="Bairro" value={selectedColaborador.bairro} />
+                            <DetailItem label="Cidade/UF" value={`${selectedColaborador.cidade} - ${selectedColaborador.estado}`} />
+                          </div>
+                        </div>
                     </div>
-                    <DetailItem label="Bairro" value={selectedColaborador.bairro} />
-                    <DetailItem label="Cidade" value={selectedColaborador.cidade} />
-                    <DetailItem label="Estado" value={selectedColaborador.estado} />
-                  </div>
-                </div>
 
-                {/* Seção Corporativo */}
-                <div>
-                  <h3 className="text-sm font-bold text-[#112240] uppercase tracking-wider mb-4 flex items-center gap-2 border-b border-gray-100 pb-2">
-                    <Briefcase className="h-4 w-4" /> Dados Corporativos
-                  </h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                    {/* EMAIL NO DETALHE */}
-                    <div className="md:col-span-2">
-                      <DetailItem label="E-mail" value={selectedColaborador.email} icon={Mail} />
+                    {/* Coluna Direita: Corporativo */}
+                    <div className="space-y-6">
+                        {/* Seção Corporativo */}
+                        <div>
+                          <h3 className="text-sm font-bold text-[#112240] uppercase tracking-wider mb-4 flex items-center gap-2 border-b border-gray-100 pb-2">
+                            <Briefcase className="h-4 w-4" /> Dados Corporativos
+                          </h3>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="col-span-2">
+                              <DetailItem label="E-mail" value={selectedColaborador.email} icon={Mail} />
+                            </div>
+                            <DetailItem label="Equipe" value={selectedColaborador.equipe} />
+                            <DetailItem label="Cargo" value={selectedColaborador.cargo} />
+                            <DetailItem label="Local" value={selectedColaborador.local} icon={Building2} />
+                            <DetailItem label="Líder" value={selectedColaborador.lider_equipe} />
+                            <DetailItem label="Data Admissão" value={formatDateDisplay(selectedColaborador.data_admissao)} icon={Calendar} />
+                            <DetailItem label="Data Desligamento" value={formatDateDisplay(selectedColaborador.data_desligamento)} icon={Calendar} />
+                          </div>
+                        </div>
                     </div>
-                    <DetailItem label="Equipe" value={selectedColaborador.equipe} />
-                    <DetailItem label="Local" value={selectedColaborador.local} icon={Building2} />
-                    <DetailItem label="Líder" value={selectedColaborador.lider_equipe} />
-                    <DetailItem label="Data Admissão" value={formatDateDisplay(selectedColaborador.data_admissao)} icon={Calendar} />
-                    <DetailItem label="Data Desligamento" value={formatDateDisplay(selectedColaborador.data_desligamento)} icon={Calendar} />
-                  </div>
                 </div>
 
               </div>
 
               {/* Footer Ações */}
-              <div className="p-6 border-t border-gray-100 bg-gray-50 flex justify-end gap-3 sticky bottom-0 z-10 rounded-b-2xl">
+              <div className="p-6 border-t border-gray-100 bg-gray-50 flex justify-end gap-3 rounded-b-2xl shrink-0">
                 <button 
                   onClick={() => handleDelete(selectedColaborador.id)}
                   className="px-4 py-2.5 text-red-600 bg-white border border-red-200 hover:bg-red-50 font-bold rounded-lg transition-colors flex items-center gap-2 shadow-sm"
@@ -966,7 +986,6 @@ export function Colaboradores() {
               </div>
 
             </div>
-          </div>
         </div>
       )}
     </div>
