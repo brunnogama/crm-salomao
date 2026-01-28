@@ -22,7 +22,7 @@ import { UnderConstruction } from './components/UnderConstruction'
 // Componentes do RH
 import { Presencial } from './components/collaborators/Presencial' 
 import { Colaboradores } from './pages/Colaboradores'
-import { Calendario } from './pages/Calendario'
+import { Calendario } from './components/collaborators/Calendario'
 
 import { 
   Menu, 
