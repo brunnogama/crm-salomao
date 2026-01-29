@@ -59,7 +59,6 @@ export function Colaboradores() {
   const [filterLider, setFilterLider] = useState('')
   const [filterLocal, setFilterLocal] = useState('')
   const [filterCargo, setFilterCargo] = useState('')
-  const [searchExpanded, setSearchExpanded] = useState(false)
 
   // Estado do Formulário
   const [formData, setFormData] = useState<Partial<Colaborador>>({
@@ -79,7 +78,6 @@ export function Colaboradores() {
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const photoInputRef = useRef<HTMLInputElement>(null)
-  const searchInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     fetchColaboradores()
@@ -100,22 +98,6 @@ export function Colaboradores() {
     window.addEventListener('keydown', handleEscape)
     return () => window.removeEventListener('keydown', handleEscape)
   }, [viewingPhoto, selectedColaborador])
-
-  // Efeito para fechar busca ao clicar fora
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (searchInputRef.current && !searchInputRef.current.contains(event.target as Node)) {
-        if (searchExpanded && searchTerm === '') {
-          setSearchExpanded(false)
-        }
-      }
-    }
-
-    if (searchExpanded) {
-      document.addEventListener('mousedown', handleClickOutside)
-      return () => document.removeEventListener('mousedown', handleClickOutside)
-    }
-  }, [searchExpanded, searchTerm])
 
   // --- HELPER: CAMEL CASE ---
   const toTitleCase = (str: string) => {
@@ -437,7 +419,6 @@ export function Colaboradores() {
     setFilterLider('')
     setFilterLocal('')
     setFilterCargo('')
-    setSearchExpanded(false)
   }
 
   const unicosLideres = Array.from(new Set(colaboradores.map(c => c.lider_equipe).filter(Boolean))).sort()
@@ -538,45 +519,20 @@ export function Colaboradores() {
 
       {/* 2. BARRA DE FERRAMENTAS E FILTROS */}
       <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-200 mb-6">
-        <div className="flex items-center justify-end gap-3">
+        <div className="flex items-center gap-3">
             
-          {/* Tudo alinhado à direita */}
+          {/* Busca - Sempre visível e expandida */}
           {viewMode === 'list' && (
             <>
-              {/* Busca Expansível */}
-              <div className="flex items-center">
-                {!searchExpanded ? (
-                  <button
-                    onClick={() => setSearchExpanded(true)}
-                    className="p-2.5 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
-                    title="Buscar"
-                  >
-                    <Search className="h-5 w-5" />
-                  </button>
-                ) : (
-                  <div ref={searchInputRef} className="relative animate-in slide-in-from-left-4 fade-in duration-300">
-                    <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
-                    <input 
-                      type="text" 
-                      placeholder="Buscar nome ou CPF..." 
-                      className="w-[280px] pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                      value={searchTerm}
-                      onChange={e => setSearchTerm(e.target.value)}
-                      autoFocus
-                    />
-                    {searchTerm && (
-                      <button
-                        onClick={() => {
-                          setSearchTerm('')
-                          setSearchExpanded(false)
-                        }}
-                        className="absolute right-2 top-2 p-1 text-gray-400 hover:text-gray-600 rounded transition-colors"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
-                    )}
-                  </div>
-                )}
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
+                <input 
+                  type="text" 
+                  placeholder="Buscar nome ou CPF..." 
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                  value={searchTerm}
+                  onChange={e => setSearchTerm(e.target.value)}
+                />
               </div>
 
               {/* Filtros */}
